@@ -81,6 +81,7 @@ export default function GameClient() {
     Object.fromEntries(cases.map((item) => [item.id, initialChat(item)]))
   );
   const [evidence, setEvidence] = useState<Record<string, string[]>>({});
+  const [openedLinks, setOpenedLinks] = useState<Record<string, boolean>>({});
   const [results, setResults] = useState<Result[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -142,7 +143,8 @@ export default function GameClient() {
   async function checkModel() {
     setModelState('checking');
     try {
-      await requestLocalQwen(activeCase, [{ role: 'user', content: '간단히 인사해 주세요.' }]);
+      const testCase = cases.find((item) => item.mode === 'chat') ?? activeCase;
+      await requestLocalQwen(testCase, [{ role: 'user', content: '간단히 인사해 주세요.' }]);
       setModelState('connected');
     } catch {
       setModelState('fallback');
@@ -152,7 +154,7 @@ export default function GameClient() {
   async function sendMessage(event: FormEvent) {
     event.preventDefault();
     const content = draft.trim();
-    if (!content || sending || activeResult) return;
+    if (!content || sending || activeResult || activeCase.mode !== 'chat') return;
     const nextMessages = [...activeChat, { role: 'user' as const, content }];
     setChats((current) => ({ ...current, [activeCase.id]: nextMessages }));
     setDraft('');
@@ -247,6 +249,7 @@ export default function GameClient() {
     setLocation('home');
     setResults([]);
     setEvidence({});
+    setOpenedLinks({});
     setShowDebrief(false);
     setNotice('새로운 하루가 시작됐다. 도착한 연락을 차분히 확인해 보자.');
     setChats(Object.fromEntries(cases.map((item) => [item.id, initialChat(item)])));
@@ -349,13 +352,14 @@ export default function GameClient() {
                     <div className="contact-title"><span>오늘의 연락</span><b>{cases.length}</b></div>
                     {cases.map((item, index) => {
                       const result = results.find((entry) => entry.caseId === item.id);
-                      return <button key={item.id} className={`contact-card ${index === activeIndex ? 'selected' : ''}`} onClick={() => openCase(index)}><i>{item.sender.slice(0, 1)}</i><span><b>{item.sender}</b><small>{item.preview}</small></span>{result ? <em>{result.correct ? 'OK' : '!'}</em> : <em className="unread">●</em>}</button>;
+                      return <button key={item.id} className={`contact-card ${index === activeIndex ? 'selected' : ''}`} onClick={() => openCase(index)}><i>{item.sender.slice(0, 1)}</i><span><b>{item.sender}</b><small>{item.preview}</small><u>{item.mode === 'chat' ? '대화' : item.mode === 'notice' ? '안내' : '링크'}</u></span>{result ? <em>{result.correct ? 'OK' : '!'}</em> : <em className="unread">●</em>}</button>;
                     })}
                   </aside>
-                  <section className="messenger-panel">
-                    <header className="chat-header"><button onClick={() => setPhoneApp('home')} aria-label="홈 화면으로">◀</button><div><b>{activeCase.sender}</b><small>{activeCase.handle} · {activeCase.channel}</small></div><span className={`model-dot ${modelState}`}>{modelLabel}</span></header>
-                    <div className="chat-area"><span className="date-pill">오늘</span>{activeChat.map((message, index) => <div key={`${message.role}-${index}`} className={`message ${message.role}`}><p>{message.content}</p><time>{formatClock(9 * 60 + 3 + index * 2)}</time></div>)}{sending && <div className="typing" aria-label="상대방이 입력 중"><i/><i/><i/></div>}</div>
-                    <form className="reply-row" onSubmit={sendMessage}><input aria-label="메시지" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={activeResult ? '판정이 완료된 연락입니다' : '상대에게 질문하기'} disabled={Boolean(activeResult)} /><button type="submit" disabled={!draft.trim() || sending || Boolean(activeResult)}>전송</button></form>
+                  <section className={`messenger-panel mode-${activeCase.mode}`}>
+                    <header className="chat-header"><button onClick={() => setPhoneApp('home')} aria-label="홈 화면으로">◀</button><div><b>{activeCase.sender}</b><small>{activeCase.handle} · {activeCase.channel}</small></div><span className={`model-dot ${activeCase.mode === 'chat' ? modelState : 'static'}`}>{activeCase.mode === 'chat' ? modelLabel : activeCase.mode === 'notice' ? '읽기 전용' : '링크 포함'}</span></header>
+                    {activeCase.mode === 'chat' && <><div className="chat-area"><span className="date-pill">오늘</span>{activeChat.map((message, index) => <div key={`${message.role}-${index}`} className={`message ${message.role}`}><p>{message.content}</p><time>{formatClock(9 * 60 + 3 + index * 2)}</time></div>)}{sending && <div className="typing" aria-label="상대방이 입력 중"><i/><i/><i/></div>}</div><form className="reply-row" onSubmit={sendMessage}><input aria-label="메시지" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={activeResult ? '판정이 완료된 연락입니다' : '상대에게 질문하기'} disabled={Boolean(activeResult)} /><button type="submit" disabled={!draft.trim() || sending || Boolean(activeResult)}>전송</button></form></>}
+                    {activeCase.mode === 'notice' && <div className="read-only-surface notice-surface"><span className="date-pill">오늘</span><article><header><span>{activeCase.channel}</span><time>{formatClock(9 * 60 + 8)}</time></header><div className="notice-brand"><i>{activeCase.sender.slice(0,1)}</i><div><b>{activeCase.sender}</b><small>{activeCase.handle}</small></div></div><h2>{activeCase.initialMessages[0]}</h2>{activeCase.initialMessages.slice(1).map((text) => <p key={text}>{text}</p>)}<div className="no-reply-note"><b>답장할 수 없는 안내입니다</b><span>이 화면에는 채팅 입력창이 없습니다. 발신 정보는 별도의 공식 경로로 확인하세요.</span></div><button className="official-app-button" onClick={() => setPhoneApp(activeCase.id === 'bank-fraud-check' ? 'bank' : activeCase.id === 'official-etf-fill' ? 'stocks' : 'browser')}>메시지를 닫고 관련 앱 직접 열기</button></article></div>}
+                    {activeCase.mode === 'link' && <div className="read-only-surface link-surface"><span className="date-pill">오늘</span><article className="one-way-message"><header><b>{activeCase.handle}</b><time>{formatClock(10 * 60 + 17)}</time></header>{activeCase.initialMessages.map((text) => <p key={text}>{text}</p>)}<button className="embedded-link" onClick={() => setOpenedLinks((current) => ({ ...current, [activeCase.id]: true }))}><span>외부 페이지</span><b>{activeCase.linkLabel}</b><small>{activeCase.displayUrl}</small></button></article>{openedLinks[activeCase.id] && <section className="simulated-landing"><div className="landing-address"><span>교육용 가상 주소</span><b>{activeCase.displayUrl}</b></div><div className="landing-copy"><small>SPONSORED INFORMATION</small><h2>{activeCase.landingTitle}</h2><p>{activeCase.landingCopy}</p><button disabled>{activeCase.landingCta}</button><span>시뮬레이션에서는 정보 제출과 결제가 실행되지 않습니다.</span></div></section>}<div className="no-reply-note"><b>일방형 문자·광고</b><span>답장 기능은 없으며, 링크를 열어도 상대와 대화가 시작되지 않습니다.</span></div></div>}
                   </section>
                 </div>
               )}

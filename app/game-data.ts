@@ -1,11 +1,13 @@
 export type Verdict = 'normal' | 'caution' | 'scam';
 export type LocationId = 'home' | 'bank' | 'cafe' | 'police' | 'library';
+export type ContactMode = 'chat' | 'notice' | 'link';
 
 export type CaseData = {
   id: string;
   sender: string;
   handle: string;
   channel: '메신저' | '문자' | '앱 알림' | 'SNS';
+  mode: ContactMode;
   preview: string;
   verdict: Verdict;
   category: string;
@@ -18,6 +20,11 @@ export type CaseData = {
   clueLabels: string[];
   debrief: string;
   safeAction: string;
+  displayUrl?: string;
+  linkLabel?: string;
+  landingTitle?: string;
+  landingCopy?: string;
+  landingCta?: string;
 };
 
 export const locations: { id: LocationId; label: string; hint: string }[] = [
@@ -30,7 +37,7 @@ export const locations: { id: LocationId; label: string; hint: string }[] = [
 
 export const cases: CaseData[] = [
   {
-    id: 'official-etf-fill', sender: '채움증권', handle: '공식 앱 알림', channel: '앱 알림',
+    id: 'official-etf-fill', sender: '채움증권', handle: '공식 앱 알림', channel: '앱 알림', mode: 'notice',
     preview: '주문하신 ETF가 체결되었습니다.', verdict: 'normal', category: '정상 금융 알림',
     initialMessages: ['오전 9시 8분에 주문하신 ETF 3주가 체결되었습니다.', '체결 내역은 채움증권 앱의 주문·체결 메뉴에서 확인할 수 있습니다.'],
     role: '공식 증권사 앱의 자동 안내', npcGoal: '사용자가 공식 앱 내부에서 체결 내역을 확인하도록 안내한다.',
@@ -42,7 +49,7 @@ export const cases: CaseData[] = [
     safeAction: '공식 앱 내부에서 체결 내역을 확인합니다.'
   },
   {
-    id: 'friend-hot-tip', sender: '준호', handle: '@jun_ho', channel: '메신저',
+    id: 'friend-hot-tip', sender: '준호', handle: '@jun_ho', channel: '메신저', mode: 'chat',
     preview: '이 종목 다음 달에 진짜 크게 간대.', verdict: 'caution', category: '근거 부족한 지인 추천',
     initialMessages: ['친구 형이 증권사 쪽인데 이 종목 다음 달에 진짜 크게 간대.', '나도 조금 샀어. 너도 관심 있으면 공식 증권 앱에서 찾아봐.'],
     role: '악의는 없지만 투자 지식이 부족한 가까운 친구', npcGoal: '자신이 들은 소문을 공유하지만 돈을 받거나 가입을 강요하지 않는다.',
@@ -54,7 +61,7 @@ export const cases: CaseData[] = [
     safeAction: '투자 판단을 보류하고 공시와 위험 정보를 직접 확인합니다.'
   },
   {
-    id: 'vip-research-room', sender: 'VIP 자산연구소', handle: '@value_center', channel: 'SNS',
+    id: 'vip-research-room', sender: 'VIP 자산연구소', handle: '@value_center', channel: 'SNS', mode: 'chat',
     preview: '무료 분석 대상자로 선정되셨습니다.', verdict: 'scam', category: '투자리딩방 사기',
     initialMessages: ['재테크 콘텐츠에 관심을 보인 이용자 중 일부에게 무료 시장 분석을 제공하고 있습니다.', '가입비는 없고 투자도 원하실 때만 진행하시면 됩니다. 궁금한 점부터 편하게 물어보세요.'],
     role: '차분하고 전문적으로 보이는 가상의 투자리딩방 매니저', npcGoal: '즉시 돈을 요구하지 않고 대화를 유지한 뒤 가상의 VIP 거래 화면으로 유도한다.',
@@ -66,31 +73,32 @@ export const cases: CaseData[] = [
     safeAction: '대화를 중단하고 공식 금융회사 등록 여부를 독립적으로 확인합니다.'
   },
   {
-    id: 'bank-fraud-check', sender: '새봄은행', handle: '공식 앱 보안센터', channel: '앱 알림',
+    id: 'bank-fraud-check', sender: '새봄은행', handle: '[Web발신] 대표번호', channel: '문자', mode: 'notice',
     preview: '평소와 다른 결제가 감지되었습니다.', verdict: 'normal', category: '정상 이상거래 확인',
-    initialMessages: ['평소와 다른 해외 결제가 감지되어 확인을 요청드립니다.', '이 알림을 닫고 새봄은행 공식 앱의 보안센터에서 본인 거래 여부를 선택해 주세요.'],
-    role: '공식 은행 앱의 보안 알림', npcGoal: '이 채팅에서 정보를 받지 않고 공식 앱 내부 확인을 안내한다.',
+    initialMessages: ['[Web발신] 새봄은행 이상거래 안내', '평소와 다른 해외 결제가 감지되었습니다. 문자에 답장하거나 문자 속 번호로 연락하지 말고, 직접 새봄은행 공식 앱의 보안센터에서 본인 거래 여부를 확인해 주세요.'],
+    role: '공식 은행의 일방형 이상거래 안내 문자', npcGoal: '답장을 받지 않고 사용자가 직접 공식 앱에서 확인하도록 안내한다.',
     allowedClaims: ['공식 앱 안에서만 확인', '인증번호와 비밀번호를 요구하지 않음'],
     fallbackReplies: ['이 채팅에는 카드번호나 인증번호를 입력하지 마세요.', '직접 앱을 열어 보안센터에서 확인하거나 카드 뒷면의 번호로 연락해 주세요.'],
-    checks: { bank: '은행 직원이 공식 시스템에서 동일한 이상거래 확인 요청을 찾았습니다.', home: '알림의 앱 정보가 기존에 설치한 공식 은행 앱과 일치합니다.' },
-    clueLabels: ['알림을 닫고 공식 앱에서 재확인 가능', '민감정보·송금 요구 없음'],
+    checks: { bank: '은행 직원이 공식 시스템에서 동일한 이상거래 확인 요청을 찾았습니다.', home: '직접 연 공식 은행 앱의 보안센터에 동일한 이상거래 확인 요청이 있습니다.' },
+    clueLabels: ['문자를 닫고 공식 앱에서 재확인 가능', '민감정보·송금 요구 없음'],
     debrief: '정상적인 이상거래 확인입니다. 긴급한 표현만으로 사기라고 단정하면 안 되며, 독립적인 공식 경로로 확인해야 합니다.',
     safeAction: '알림 링크가 아니라 직접 공식 은행 앱을 열어 확인합니다.'
   },
   {
-    id: 'paid-market-class', sender: '월가읽기 클래스', handle: '@wall_read', channel: 'SNS',
+    id: 'paid-market-class', sender: '월가읽기 클래스', handle: '스폰서 콘텐츠', channel: 'SNS', mode: 'link',
     preview: '주식 기초 강의 얼리버드 40% 할인', verdict: 'caution', category: '과장된 투자 교육 광고',
     initialMessages: ['초보 투자자를 위한 4주 온라인 강의입니다. 오늘까지 얼리버드 할인이 적용됩니다.', '수강한다고 수익이 보장되지는 않으며 모든 투자의 책임은 본인에게 있습니다.'],
-    role: '실재하는 교육 업체의 다소 과장된 영업 상담원', npcGoal: '유료 강의를 판매하지만 투자금 송금이나 수익 보장은 하지 않는다.',
+    role: '실재하는 교육 업체의 다소 과장된 일방형 광고 페이지', npcGoal: '유료 강의를 홍보하지만 투자금 송금이나 수익 보장은 하지 않는다.',
     allowedClaims: ['수강료와 환불 규정 공개', '수익 비보장 고지', '과장된 마감 홍보'],
     fallbackReplies: ['강의는 교육 서비스이며 종목 추천이나 수익 보장은 제공하지 않습니다.', '환불 조건은 결제 전 약관에서 확인하실 수 있습니다.'],
     checks: { library: '사업자와 환불 약관은 확인되지만 광고 후기 일부가 지나치게 선별돼 있습니다.', cafe: '친구는 강의 내용이 기초적이었다며 가격 대비 가치는 낮았다고 말합니다.' },
     clueLabels: ['실제 업체와 환불 규정 존재', '과장 광고와 시간 압박은 주의'],
     debrief: '사기로 확인되지는 않지만 광고가 과장됐고 충동 결제를 유도합니다. 안전하다는 뜻과 좋은 상품이라는 뜻은 다릅니다.',
-    safeAction: '결제를 미루고 커리큘럼·환불 규정·독립 후기를 비교합니다.'
+    safeAction: '결제를 미루고 커리큘럼·환불 규정·독립 후기를 비교합니다.',
+    displayUrl: 'wallread-class.invalid/early', linkLabel: '강의 소개 페이지 보기', landingTitle: '초보자를 위한 4주 시장 읽기', landingCopy: '수강료 89,000원 · 결제 후 7일 이내 미수강 강의 환불 가능 · 투자 수익은 보장되지 않습니다.', landingCta: '수강 신청 검토'
   },
   {
-    id: 'fixed-match-ai', sender: '데이터픽 AI', handle: '@data_pick_pro', channel: '메신저',
+    id: 'fixed-match-ai', sender: '데이터픽 AI', handle: '@data_pick_pro', channel: '메신저', mode: 'chat',
     preview: 'AI 적중률 체험픽을 무료로 드립니다.', verdict: 'scam', category: '도박 예측방 사기',
     initialMessages: ['자체 AI가 경기 데이터를 분석해 일반 이용자보다 안정적인 선택을 돕습니다.', '첫 체험은 무료입니다. 결과를 보신 뒤 VIP 데이터가 필요한지 결정하세요.'],
     role: '도박을 데이터 투자처럼 포장하는 예측방 운영자', npcGoal: '무료 예측으로 신뢰를 만든 뒤 가상의 베팅 사이트 충전으로 유도한다.',
@@ -102,19 +110,20 @@ export const cases: CaseData[] = [
     safeAction: '사이트 이용과 송금을 중단하고 관련 계좌·사이트를 신고합니다.'
   },
   {
-    id: 'recovery-team', sender: '공동피해 회복센터', handle: '@asset_return', channel: '문자',
+    id: 'recovery-team', sender: '공동피해 회복센터', handle: '[Web발신] 미등록 발신자', channel: '문자', mode: 'link',
     preview: '리딩방 피해자 명단에서 연락드렸습니다.', verdict: 'scam', category: '피해금 회수 사기',
     initialMessages: ['최근 폐쇄된 투자방 피해자 명단에서 연락드렸습니다.', '해외 서버에 남은 잔액을 확인해 드리며 초기 상담은 무료입니다.'],
-    role: '피해자를 다시 노리는 가상의 회수 전문가', npcGoal: '공감과 전문성을 보여 개인정보 또는 가상의 처리 비용 제공으로 유도한다.',
+    role: '피해자를 다시 노리는 가상의 피해금 조회 링크', npcGoal: '공식기관처럼 보이는 페이지에서 개인정보 또는 가상의 처리 비용 제공으로 유도한다.',
     allowedClaims: ['피해자 명단을 확보했다고 주장', '초기 무료 상담', '환급 가능성을 암시'],
     fallbackReplies: ['많이 불안하실 겁니다. 우선 피해 내역 화면만 확인해 보겠습니다.', '정식 절차라 시간이 중요하지만 바로 비용을 결정하실 필요는 없습니다.', '경찰 신고와 별개로 해외 플랫폼 정산 절차를 진행할 수 있습니다.'],
     checks: { police: '경찰은 해당 명칭의 공식 회복기관이 없고 같은 문구의 2차 피해 신고가 있다고 안내합니다.', library: '센터 주소와 자격 정보를 확인할 수 없습니다.' },
     clueLabels: ['피해 사실을 먼저 알고 접근', '공식기관처럼 보이지만 신원 확인 불가', '환급을 미끼로 추가 정보 요구'],
     debrief: '기존 피해자의 절박함을 이용하는 2차 사기입니다. 피해금 회수를 보장하는 낯선 연락을 신뢰해서는 안 됩니다.',
-    safeAction: '추가 정보 제공을 멈추고 1394 또는 경찰의 공식 경로로 상담합니다.'
+    safeAction: '추가 정보 제공을 멈추고 1394 또는 경찰의 공식 경로로 상담합니다.',
+    displayUrl: 'asset-return-check.invalid/start', linkLabel: '남은 잔액 조회', landingTitle: '해외 플랫폼 피해 자산 조회', landingCopy: '피해 계정 확인을 위해 이름과 이용 플랫폼 정보를 준비하라고 안내합니다. 운영 주체와 자격 정보는 표시되어 있지 않습니다.', landingCta: '조회 절차 시작'
   },
   {
-    id: 'official-maintenance', sender: '푸른투자', handle: '공식 앱 공지', channel: '앱 알림',
+    id: 'official-maintenance', sender: '푸른투자', handle: '공식 앱 공지', channel: '앱 알림', mode: 'notice',
     preview: '주말 시스템 점검으로 일부 서비스가 중단됩니다.', verdict: 'normal', category: '정상 서비스 공지',
     initialMessages: ['토요일 01:00~05:00 시스템 점검으로 주문 정정과 이체 서비스가 일시 중단됩니다.', '점검 일정은 공식 홈페이지와 앱 공지사항에서도 확인할 수 있습니다.'],
     role: '공식 금융 앱의 시스템 점검 안내', npcGoal: '점검 일정을 알리고 공식 공지를 확인하게 한다.',
