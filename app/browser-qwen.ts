@@ -35,6 +35,10 @@ async function loadPipeline(onProgress?: (event: ProgressEvent) => void) {
   return pipelinePromise;
 }
 
+export async function prepareBrowserQwen(onProgress?: (event: ProgressEvent) => void) {
+  await loadPipeline(onProgress);
+}
+
 function extractText(output: unknown) {
   if (!Array.isArray(output) || !output.length) throw new Error('empty browser response');
   const first = output[0] as { generated_text?: unknown };
@@ -49,7 +53,7 @@ function extractText(output: unknown) {
 
 export function validateBrowserQwenText(text: string) {
   const trimmed = text.trim();
-  if (trimmed.length < 2 || trimmed.length > 420) return false;
+  if (trimmed.length < 2 || trimmed.length > 220) return false;
   if (/https?:\/\/|www\.|계좌번호\s*[:：]?\s*\d{4}|\b\d{2,4}[- ]\d{3,4}[- ]\d{4}\b/i.test(trimmed)) return false;
   if (/정답|판정 결과|시스템 프롬프트|개발자 메시지|범죄 실행|수사 회피/.test(trimmed)) return false;
   return true;
@@ -59,14 +63,14 @@ export async function generateBrowserQwen(
   messages: BrowserQwenMessage[],
   options: { timeoutMs?: number; onProgress?: (event: ProgressEvent) => void } = {},
 ) {
-  const timeoutMs = options.timeoutMs ?? 30000;
+  const timeoutMs = options.timeoutMs ?? 8000;
   const generation = (async () => {
     const pipeline = await loadPipeline(options.onProgress);
     return pipeline(messages, {
-      max_new_tokens: 140,
+      max_new_tokens: 56,
       do_sample: true,
-      temperature: 0.72,
-      top_p: 0.9,
+      temperature: 0.6,
+      top_p: 0.85,
       return_full_text: false,
     }).then(extractText);
   })();
