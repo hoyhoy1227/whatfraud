@@ -1,6 +1,12 @@
 # Pixel asset notes
 
-이 폴더의 `town-map.png`와 `player-sprites.png`는 WhatFraud의 클래식 휴대용 게임기풍 화면을 위해 새로 생성한 오리지널 이미지입니다.
+이 폴더의 PNG 파일은 WhatFraud의 클래식 휴대용 게임기풍 화면을 위해 새로 생성한 오리지널 이미지입니다.
+
+- `town-map.png`: 마을 탐색 화면
+- `player-sprites.png`: 플레이어 이동 스프라이트
+- `start-screen.png`: 시뮬레이션 타이틀 배경
+- `phone-wallpaper.png`: 잠금·홈 화면 배경화면
+- `phone-app-icons.png`: 4×3 휴대폰 앱 아이콘 스프라이트 시트(투명 배경)
 
 - 기존 게임의 지도, 캐릭터, 로고 또는 상표를 복제하지 않았습니다.
 - 특정 게임 작품이 아니라 1990년대 휴대용 게임기의 낮은 해상도, 제한된 팔레트, 픽셀 가장자리 표현만 참고했습니다.
