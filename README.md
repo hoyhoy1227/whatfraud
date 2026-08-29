@@ -34,11 +34,11 @@ pnpm dialogue:check
 
 ## 테스트 링크
 
-GitHub Pages가 `main` 브랜치의 정적 빌드를 배포하도록 설정되면 다음 주소에서 확인할 수 있습니다.
+다음 공개 데모 주소에서 설치 없이 게임을 체험할 수 있습니다.
 
-<https://hoyhoy1227.github.io/whatfraud/>
+<https://whatfraud-demo.hoyhoy1227.chatgpt.site>
 
-저장소 Settings → Pages에서 배포 소스를 먼저 활성화해야 하며, Pages가 아직 설정되지 않은 경우에는 주소가 404로 표시될 수 있습니다.
+링크를 받은 누구나 접속할 수 있으며, 브라우저 Qwen이 지원되지 않는 환경에서도 내장 대체 대사로 모든 사건을 끝까지 플레이할 수 있습니다.
 
 ## 유료 API를 사용하지 않습니다
 
