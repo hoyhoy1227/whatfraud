@@ -261,16 +261,14 @@ export default function GameClient() {
         <img src="/assets/pixel/start-screen.png" alt="저녁 마을이 내려다보이는 방과 책상 위 휴대폰" />
         <div className="intro-shade" />
         <section className="intro-panel" aria-labelledby="game-title">
-          <span className="intro-kicker">DIGITAL SAFETY SIMULATION</span>
+          <span className="intro-kicker">디지털 안전 시뮬레이션</span>
           <h1 id="game-title"><small>투자·도박 사기 판별 게임</small>수익률 24시</h1>
-          <p>평범한 하루, 휴대폰으로 도착한 여덟 개의 연락. 대화하고 공식 경로로 확인한 뒤 정상·주의·사기를 판별하세요.</p>
-          <div className="intro-features"><span>8개의 실전형 연락</span><span>마을 조사</span><span>로컬 Qwen 선택</span></div>
+          <p>휴대폰으로 도착한 여덟 개의 연락.<br />공식 경로로 확인하고 정상·주의·사기를 판별하세요.</p>
           <button className={`start-simulation ${booting ? 'booting' : ''}`} onClick={startSimulation} disabled={booting}>
             <b>{booting ? '시뮬레이션 불러오는 중' : '시뮬레이션 시작'}</b><i>{booting ? '•••' : '▶'}</i>
           </button>
           <small className="intro-disclaimer">교육용 가상 시뮬레이션 · 실제 금융기관과 무관합니다</small>
         </section>
-        <div className="intro-version">WHATFRAUD / DAY 01</div>
       </main>
     );
   }
@@ -278,11 +276,11 @@ export default function GameClient() {
   return (
     <main className={`game-shell view-${view}`}>
       <header className="game-hud">
-        <div className="brand-block"><span className="brand-kicker">DIGITAL SAFETY RPG</span><h1>수익률 24시</h1></div>
+        <div className="brand-block"><span className="brand-kicker">투자·도박 사기 판별</span><h1>수익률 24시</h1></div>
         <div className="hud-stats" aria-label="게임 상태">
-          <span><small>TIME</small><b>{gameTime}</b></span>
-          <span><small>CASE</small><b>{Math.min(results.length + 1, cases.length)}/{cases.length}</b></span>
-          <span><small>SCORE</small><b>{score}</b></span>
+          <span><small>시간</small><b>{gameTime}</b></span>
+          <span><small>사건</small><b>{Math.min(results.length + 1, cases.length)}/{cases.length}</b></span>
+          <span><small>점수</small><b>{score}</b></span>
         </div>
       </header>
 
