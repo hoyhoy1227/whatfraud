@@ -6,9 +6,15 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "content:build": "node scripts/build-content.mjs",
+    "content:check": "node scripts/build-content.mjs --check",
+    "dialogue:check": "node scripts/evaluate-dialogue.mjs",
+    "predev": "pnpm content:build",
     "dev": "vinext dev",
+    "prebuild": "pnpm content:build && pnpm dialogue:check",
     "build": "vinext build",
     "start": "vinext start",
+    "prelint": "pnpm content:check && pnpm dialogue:check",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
   },
   "dependencies": {

@@ -20,6 +20,18 @@
 
 전체 구현 순서와 연락 표현 원칙은 [ROADMAP.md](ROADMAP.md)에 정리되어 있습니다.
 
+## 시나리오 추가와 검증
+
+각 사건은 `content/cases/*.json`에 독립된 파일로 저장됩니다. 새 사건 파일을 추가하거나 기존 내용을 수정한 뒤 다음 명령으로 필드와 안전 규칙을 검사하고 게임용 데이터로 통합합니다.
+
+```bash
+pnpm content:build
+pnpm content:check
+pnpm dialogue:check
+```
+
+콘텐츠 검사기는 중복 ID, 누락된 대화·복기 필드, 독립 확인 경로 부족, 실제 접속 URL, `.invalid`가 아닌 링크와 판정·연락 유형 불균형을 차단합니다. 대화 검사기는 후보 응답의 위험 패턴, 주제 편중과 사건 간 완전 중복을 확인합니다. 필드 정의는 `content/schema/case.schema.json`에서 확인할 수 있습니다.
+
 ## 테스트 링크
 
 GitHub Pages가 `main` 브랜치의 정적 빌드를 배포하도록 설정되면 다음 주소에서 확인할 수 있습니다.
