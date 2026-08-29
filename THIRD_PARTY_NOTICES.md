@@ -20,8 +20,11 @@
 | Vinext | 1.0.0-beta.3 | MIT License | [Vinext 공식 저장소](https://github.com/cloudflare/vinext) |
 | Vite | 8.0.13 | MIT License | [Vite 라이선스](https://github.com/vitejs/vite/blob/main/LICENSE) |
 | Tailwind CSS | 4.2.1 | MIT License | [Tailwind CSS 공식 저장소](https://github.com/tailwindlabs/tailwindcss) |
+| Transformers.js | 3.8.1 (브라우저 CDN 선택 로드) | Apache License 2.0 | [공식 저장소](https://github.com/huggingface/transformers.js) |
 
 위 표는 이해를 돕기 위한 주요 항목 요약이며 전체 전이 의존성 목록을 대신하지 않습니다. 빌드 결과나 의존성 자체를 배포하기 전에는 설치된 각 패키지에 포함된 `LICENSE`, `NOTICE`, `COPYING` 파일과 패키지 메타데이터를 확인하고 필요한 고지를 함께 제공해야 합니다. 특히 프레임워크가 묶어 배포하는 전이 의존성에는 서로 다른 라이선스가 적용될 수 있습니다.
+
+브라우저 Qwen 기능은 `onnx-community/Qwen2.5-0.5B-Instruct`의 ONNX 가중치를 방문자 브라우저가 Hugging Face에서 선택적으로 내려받습니다. 가중치는 저장소에 포함하지 않으며, 모델을 재배포하거나 미러링할 때에는 [모델 페이지](https://huggingface.co/onnx-community/Qwen2.5-0.5B-Instruct)의 라이선스와 원본 Qwen 라이선스를 별도로 확인해야 합니다.
 
 ## 프로젝트 자료와 제3자 자료의 관계
 
