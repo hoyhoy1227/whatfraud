@@ -635,3 +635,104 @@ p, li, small, span { overflow-wrap: break-word; }
   .tutorial-actions { grid-template-columns: 1fr; }
   .tutorial-skip { order: 2; }
 }
+
+/* Global help, app information, and anywhere verdict access */
+.intro-guide-button { display: block; width: min(360px,100%); margin-top: 10px; padding: 10px; border: 0; background: transparent; color: #d7e4ce; font-size: 11px; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.intro-guide-button:disabled { opacity: .45; }
+.hud-right { display: flex; align-items: center; gap: 8px; }
+.game-help-button { flex: 0 0 auto; width: 38px; height: 38px; border: 0; border-radius: 50%; background: #294d31; color: #f8f1d4; font-size: 17px; font-weight: 900; cursor: pointer; }
+.game-help-button:hover, .game-help-button:focus-visible { background: #467344; outline: 2px solid #9bbf55; outline-offset: 2px; }
+
+.view-switcher { grid-template-columns: repeat(3, 116px); }
+.view-switcher .verdict-action { background: #e2be62; }
+.view-switcher .verdict-action.active { background: #f1d17c; }
+.view-switcher .verdict-action.ready { animation: verdictReady 1.2s ease-in-out 2; }
+@keyframes verdictReady { 50% { box-shadow: inset 0 0 0 3px #fff0b8; } }
+
+.native-app-header { grid-template-columns: 44px minmax(0,1fr) 82px; }
+.native-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+.native-header-actions > button { width: 34px; height: 34px; border: 0; border-radius: 50%; background: #d8e3cb; color: #163421; font-size: 16px; cursor: pointer; }
+.native-header-actions .app-info-button { background: #294d31; color: #fff6d6; font-family: Georgia,serif; font-size: 17px; font-weight: 700; }
+
+.verdict-overlay-backdrop, .app-info-backdrop { position: fixed; z-index: 55; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(4,15,9,.82); backdrop-filter: blur(4px); }
+.verdict-overlay { width: min(960px,100%); max-height: min(88vh,840px); overflow: hidden; border-radius: 12px; background: #e8edc8; box-shadow: 0 24px 80px rgba(0,0,0,.56); }
+.verdict-overlay > header { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 16px; background: #17351f; color: #f8f1d4; }
+.verdict-overlay > header h2 { margin: 4px 0 0; font-size: 20px; }
+.verdict-overlay > header .pixel-label { color: #bcd48a; }
+.verdict-overlay > header > button { width: 38px; height: 38px; border: 0; border-radius: 50%; background: rgba(255,255,255,.12); color: white; font-size: 25px; cursor: pointer; }
+.verdict-overlay-content { height: auto; max-height: calc(88vh - 68px); grid-template-columns: minmax(0,1fr) minmax(300px,.8fr); }
+
+.app-info-sheet { width: min(520px,100%); max-height: 88vh; overflow: auto; padding: 22px; border-radius: 12px; background: #f5f1d9; box-shadow: 0 24px 70px rgba(0,0,0,.55); }
+.app-info-sheet > header { display: grid; grid-template-columns: 58px 1fr 38px; gap: 12px; align-items: center; }
+.app-info-sheet > header .app-icon { width: 54px; height: 54px; }
+.app-info-sheet h2 { margin: 4px 0 0; font-size: 26px; }
+.app-info-sheet > header > button { width: 36px; height: 36px; border: 0; border-radius: 50%; background: #d9dfc8; font-size: 22px; cursor: pointer; }
+.app-info-sheet dl { display: grid; gap: 8px; margin: 20px 0; }
+.app-info-sheet dl div { padding: 12px; border-radius: 7px; background: #e5eacb; }
+.app-info-sheet dt { margin-bottom: 4px; color: #49624e; font-size: 9px; font-weight: 900; }
+.app-info-sheet dd { margin: 0; font-size: 11px; line-height: 1.65; }
+.app-info-close { width: 100%; padding: 12px; border: 0; border-radius: 6px; background: #294d31; color: #fff8d8; font-weight: 900; cursor: pointer; }
+
+.safety-history { background: #dfe7c6; }
+.safety-overview { padding: 18px; border-radius: 10px; background: #23472d; color: #f6f2d8; }
+.safety-overview .pixel-label { color: #bcd48a; }
+.safety-overview h2 { margin: 6px 0 15px; font-size: 25px; }
+.safety-overview > div { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
+.safety-overview > div span { display: grid; gap: 3px; padding: 9px; border-radius: 6px; background: rgba(255,255,255,.09); }
+.safety-overview > div b { font-size: 18px; }.safety-overview > div small { color: #d6e1c5; font-size: 8px; }
+.safety-records { display: grid; gap: 7px; margin-top: 14px; }
+.safety-records button { width: 100%; display: grid; grid-template-columns: 38px minmax(0,1fr) 44px; gap: 9px; align-items: center; padding: 10px; border: 0; border-radius: 7px; background: #f8f5df; text-align: left; cursor: pointer; }
+.safety-records button > i { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: #bdd38f; font-style: normal; font-weight: 900; }
+.safety-records button span { min-width: 0; display: grid; gap: 3px; }.safety-records button b { font-size: 11px; }.safety-records button small { overflow: hidden; color: #57695a; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.safety-records button em { padding: 5px; border-radius: 4px; font-size: 8px; font-style: normal; font-weight: 900; text-align: center; }.safety-records button em.safe { background: #b9d78a; }.safety-records button em.review { background: #ecd18b; }
+.safety-empty { margin-top: 14px; padding: 22px; border-radius: 8px; background: rgba(255,255,255,.42); text-align: center; }.safety-empty b { font-size: 13px; }.safety-empty p { margin: 7px 0 0; font-size: 10px; }
+.safety-current-action { margin-top: 14px; }
+
+.tutorial-card { max-height: 92vh; overflow: auto; }
+.tutorial-card.guide-apps { width: min(880px,100%); }
+.control-guide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; }
+.control-guide-grid article { display: grid; gap: 5px; padding: 13px; border-radius: 7px; background: #e0e8c1; text-align: left; }
+.control-guide-grid b { font-size: 12px; }.control-guide-grid span { font-size: 10px; }.control-guide-grid small { color: #5b6c5a; font-size: 8px; }
+.interface-guide { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 20px 0 0; padding: 0; list-style: none; text-align: left; }
+.interface-guide li { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: center; padding: 10px; border-radius: 7px; background: #e6e9ce; }
+.interface-guide li > i { width: 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; background: #31583a; color: white; font-style: normal; font-weight: 900; }.interface-guide li span { display: grid; gap: 3px; }.interface-guide b { font-size: 9px; }.interface-guide small { color: #5d6a5d; font-size: 7px; }
+.place-guide-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 7px; margin-top: 18px; text-align: left; }
+.place-guide-grid article { display: grid; grid-template-columns: 54px 1fr; gap: 8px; align-items: center; padding: 10px; border-radius: 7px; background: #e3e9c5; }
+.place-guide-grid article:last-child { grid-column: 1/-1; }
+.place-guide-grid article i { display: grid; place-items: center; min-height: 35px; border-radius: 5px; background: #365d3d; color: white; font-size: 10px; font-style: normal; font-weight: 900; }.place-guide-grid article span { font-size: 9px; line-height: 1.5; }
+.app-guide-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-top: 18px; text-align: left; }
+.app-guide-grid article { min-width: 0; display: grid; grid-template-columns: 36px 1fr; gap: 8px; align-items: center; padding: 8px; border-radius: 7px; background: #e5e9ce; }
+.app-guide-grid .app-icon { width: 34px; height: 34px; }.app-guide-grid article > span { min-width: 0; display: grid; gap: 2px; }.app-guide-grid b { font-size: 9px; }.app-guide-grid small { color: #596959; font-size: 7px; line-height: 1.35; }
+.tutorial-nav-demo { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; width: min(360px,100%); margin: 22px auto 0; padding: 5px; border-radius: 11px; background: #dce3c6; }
+.tutorial-nav-demo > span { display: grid; place-items: center; gap: 2px; padding: 10px; border-radius: 7px; font-size: 20px; }.tutorial-nav-demo small { display: block; font-size: 8px; font-weight: 900; }.tutorial-nav-demo .highlight { background: #e4bd5c; box-shadow: 0 0 0 3px #fff0b0; }
+.score-guide-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; margin-top: 20px; }
+.score-guide-grid span { display: grid; gap: 5px; padding: 10px 5px; border-radius: 7px; background: #e4e9ca; font-size: 8px; }.score-guide-grid strong { font-size: 15px; }
+.simulated-outcome { display: grid; gap: 5px; margin: 14px 0; padding: 12px; border-radius: 6px; background: #e4e8ca; font-size: 10px; line-height: 1.55; }
+.summary-lead { margin-top: -5px; color: #536455; }
+
+@media (max-width: 680px) {
+  .hud-right { gap: 4px; }.game-help-button { width: 32px; height: 32px; }
+  .view-switcher { grid-template-columns: repeat(3, 88px); }
+  .view-switcher button { min-height: 52px; font-size: 10px; }
+  .verdict-overlay-backdrop { padding: 8px; align-items: end; }
+  .verdict-overlay { max-height: 94vh; border-radius: 12px 12px 0 0; }
+  .verdict-overlay-content { max-height: calc(94vh - 64px); grid-template-columns: 1fr; }
+  .verdict-overlay > header { min-height: 64px; }
+  .app-info-backdrop { padding: 0; align-items: end; }
+  .app-info-sheet { width: 100%; max-height: 84vh; border-radius: 14px 14px 0 0; }
+  .app-guide-grid { grid-template-columns: repeat(2,1fr); }
+  .tutorial-card.guide-apps { padding-inline: 13px; }
+  .place-guide-grid, .control-guide-grid, .interface-guide { grid-template-columns: 1fr; }
+  .place-guide-grid article:last-child { grid-column: auto; }
+  .score-guide-grid { grid-template-columns: repeat(2,1fr); }
+}
+
+@media (max-width: 430px) {
+  .hud-stats span:nth-child(3) { display: none; }
+  .native-app-header { grid-template-columns: 38px minmax(0,1fr) 76px; }
+  .app-guide-grid { grid-template-columns: 1fr; }
+  .tutorial-card.guide-apps .tutorial-icon { display: none; }
+  .tutorial-card.guide-apps .tutorial-progress { margin-bottom: 12px; }
+  .safety-overview > div { grid-template-columns: 1fr 1fr; }
+  .safety-overview > div span:last-child { grid-column: 1/-1; }
+}
