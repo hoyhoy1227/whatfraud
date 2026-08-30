@@ -7,7 +7,7 @@
   "required": [
     "id", "sender", "handle", "channel", "mode", "preview", "verdict", "category",
     "initialMessages", "role", "npcGoal", "allowedClaims", "checks", "clueLabels",
-    "debrief", "safeAction"
+    "debrief", "safeAction", "review"
   ],
   "properties": {
     "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
@@ -39,6 +39,7 @@
     "clueLabels": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1 } },
     "debrief": { "type": "string", "minLength": 1 },
     "safeAction": { "type": "string", "minLength": 1 },
+    "review": { "$ref": "#/$defs/review" },
     "displayUrl": { "type": "string", "pattern": "^[a-z0-9.-]+\\.invalid(?:/[^\\s]*)?$" },
     "linkLabel": { "type": "string", "minLength": 1 },
     "landingTitle": { "type": "string", "minLength": 1 },
@@ -81,6 +82,32 @@
             "risk": { "type": "string", "minLength": 1 },
             "money": { "type": "string", "minLength": 1 },
             "default": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceBasis", "adaptationScope", "verdictReason", "verificationPaths",
+        "misdirection", "learningObjectives", "safetyAudit"
+      ],
+      "properties": {
+        "sourceBasis": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "adaptationScope": { "type": "string", "minLength": 1 },
+        "verdictReason": { "type": "string", "minLength": 1 },
+        "verificationPaths": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "misdirection": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "learningObjectives": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1 } },
+        "safetyAudit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["containsPersonalData", "containsLiveUrl", "containsOperationalCrimeInfo"],
+          "properties": {
+            "containsPersonalData": { "const": false },
+            "containsLiveUrl": { "const": false },
+            "containsOperationalCrimeInfo": { "const": false }
           }
         }
       }

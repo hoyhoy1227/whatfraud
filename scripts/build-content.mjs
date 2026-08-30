@@ -16,7 +16,7 @@ const commonKeys = new Set([
   'id', 'sender', 'handle', 'channel', 'mode', 'preview', 'verdict', 'category',
   'initialMessages', 'role', 'npcGoal', 'allowedClaims', 'fallbackReplies', 'dialogue',
   'checks', 'clueLabels', 'debrief', 'safeAction', 'displayUrl', 'linkLabel',
-  'landingTitle', 'landingCopy', 'landingCta',
+  'landingTitle', 'landingCopy', 'landingCta', 'review',
 ]);
 
 function isRecord(value) {
@@ -53,6 +53,27 @@ function validateCase(data, file, errors) {
   requireStringArray(data, 'initialMessages', 1, errors, file);
   requireStringArray(data, 'allowedClaims', 1, errors, file);
   requireStringArray(data, 'clueLabels', 2, errors, file);
+
+  if (!isRecord(data.review)) {
+    addError(errors, file, 'review 콘텐츠 검수표가 필요합니다.');
+  } else {
+    requireStringArray(data.review, 'sourceBasis', 1, errors, file);
+    requireString(data.review, 'adaptationScope', errors, file);
+    requireString(data.review, 'verdictReason', errors, file);
+    requireStringArray(data.review, 'verificationPaths', 2, errors, file);
+    requireStringArray(data.review, 'misdirection', 1, errors, file);
+    requireStringArray(data.review, 'learningObjectives', 2, errors, file);
+    if (!isRecord(data.review.safetyAudit)) {
+      addError(errors, file, 'review.safetyAudit 객체가 필요합니다.');
+    } else {
+      for (const key of ['containsPersonalData', 'containsLiveUrl', 'containsOperationalCrimeInfo']) {
+        if (data.review.safetyAudit[key] !== false) addError(errors, file, `review.safetyAudit.${key}는 검수 완료를 뜻하는 false여야 합니다.`);
+      }
+    }
+    if (new Set(data.review.verificationPaths ?? []).size !== (data.review.verificationPaths ?? []).length) {
+      addError(errors, file, 'review.verificationPaths에는 서로 다른 독립 확인 경로가 필요합니다.');
+    }
+  }
 
   if (!verdicts.has(data.verdict)) addError(errors, file, 'verdict는 normal, caution, scam 중 하나여야 합니다.');
   if (!modes.has(data.mode)) addError(errors, file, 'mode는 chat, notice, link 중 하나여야 합니다.');
@@ -100,6 +121,7 @@ function validateCase(data, file, errors) {
   }
 
   if (/https?:\/\//i.test(JSON.stringify(data))) addError(errors, file, '실제 접속 형식의 URL이 포함되어 있습니다.');
+  if (/\b\d{2,4}[- ]\d{3,4}[- ]\d{4}\b/.test(JSON.stringify(data))) addError(errors, file, '실존 개인정보로 오인할 수 있는 전화번호 형태가 포함되어 있습니다.');
 }
 
 async function main() {

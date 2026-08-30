@@ -1,8 +1,9 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { CaseData, cases, DialogueTopic, LocationId, locations, Verdict, verdictLabels } from './game-data';
 import { browserQwenSupported, generateBrowserQwen, prepareBrowserQwen, validateBrowserQwenText } from './browser-qwen';
+import { ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore, formatGameClock } from './game-rules';
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 type ResponseAction = 'verify' | 'pause' | 'block';
@@ -40,13 +41,11 @@ const phoneApps: PhoneAppDefinition[] = [
 ];
 
 const confidenceOptions = [50, 70, 90];
-const arrivalMinutes = [8 * 60 + 20, 9 * 60 + 35, 11 * 60 + 10, 12 * 60 + 40, 14 * 60 + 15, 15 * 60 + 50, 17 * 60 + 20, 18 * 60 + 50];
 const responseActions: { id: ResponseAction; label: string; description: string }[] = [
   { id: 'verify', label: '공식 경로로 확인', description: '연락 속 링크가 아닌 공식 앱·번호로 다시 확인한다.' },
   { id: 'pause', label: '대화 중단·보류', description: '결제와 정보 제공을 멈추고 판단 시간을 확보한다.' },
   { id: 'block', label: '차단·신고', description: '연락을 끊고 안전센터나 관계 기관에 신고한다.' },
 ];
-const idealAction: Record<Verdict, ResponseAction> = { normal: 'verify', caution: 'pause', scam: 'block' };
 const tutorialSteps: { kind: TutorialKind; eyebrow: string; title: string; body: string; icon: string }[] = [
   {
     kind: 'controls', eyebrow: '먼저 조작 방법', title: '선택하고, 읽고, 닫으세요',
@@ -146,13 +145,8 @@ NPC의 현재 목표: ${gameCase.npcGoal}
 - 모든 돈과 서비스는 이 가상 게임 안의 것으로 취급한다.`;
 }
 
-function formatClock(minutes: number) {
-  const hour = Math.floor(minutes / 60) % 24;
-  const minute = minutes % 60;
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-}
-
 export default function GameClient() {
+  const dialogReturnFocus = useRef<HTMLElement | null>(null);
   const [started, setStarted] = useState(false);
   const [booting, setBooting] = useState(false);
   const [view, setView] = useState<GameView>('world');
@@ -180,6 +174,10 @@ export default function GameClient() {
   const [infoApp, setInfoApp] = useState<AppId | null>(null);
   const [showDebrief, setShowDebrief] = useState(false);
   const [modelState, setModelState] = useState<ModelState>('unchecked');
+  const [modelProgress, setModelProgress] = useState<number | null>(null);
+  const [modelLoadMs, setModelLoadMs] = useState<number | null>(null);
+  const [lastResponseMs, setLastResponseMs] = useState<number | null>(null);
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [llmMode, setLlmMode] = useState<LlmMode>('browser');
   const [llmUrl, setLlmUrl] = useState('http://127.0.0.1:8080/v1/chat/completions');
   const [modelName, setModelName] = useState('qwen-local');
@@ -196,7 +194,7 @@ export default function GameClient() {
   const groundedCount = results.filter((result) => result.selectedEvidence.length > 0).length;
   const availableCases = cases.slice(0, availableCount);
   const unreadCount = availableCases.filter((item) => !results.some((result) => result.caseId === item.id)).length;
-  const gameTime = formatClock(arrivalMinutes[Math.min(availableCount - 1, arrivalMinutes.length - 1)] + activeEvidence.length * 6);
+  const gameTime = formatGameClock(ARRIVAL_MINUTES[Math.min(availableCount - 1, ARRIVAL_MINUTES.length - 1)] + activeEvidence.length * 6);
   const currentPlace = locations.find((item) => item.id === location) ?? locations[0];
   const playerPosition = locationPosition[location];
   const activeAppInfo = infoApp ? phoneApps.find((app) => app.id === infoApp) : undefined;
@@ -224,25 +222,69 @@ export default function GameClient() {
 
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
+      const dialog = document.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]');
+      if (event.key === 'Tab' && dialog) {
+        const focusable = Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+        return;
+      }
       if (event.key !== 'Escape') return;
-      setInfoApp(null);
-      setShowVerdictPanel(false);
-      if (tutorialStep !== null) setTutorialStep(null);
+      if (infoApp) setInfoApp(null);
+      else if (showVerdictPanel) setShowVerdictPanel(false);
+      else if (tutorialStep !== null) setTutorialStep(null);
     }
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [tutorialStep]);
+  }, [infoApp, showVerdictPanel, tutorialStep]);
+
+  useEffect(() => {
+    const hasDialog = Boolean(showVerdictPanel || infoApp || tutorialStep !== null || showDebrief || complete);
+    if (hasDialog) {
+      if (!dialogReturnFocus.current) dialogReturnFocus.current = document.activeElement as HTMLElement | null;
+      const timer = window.setTimeout(() => {
+        const dialog = document.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]');
+        const target = dialog?.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled])') ?? dialog;
+        target?.focus();
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+    dialogReturnFocus.current?.focus();
+    dialogReturnFocus.current = null;
+  }, [complete, infoApp, showDebrief, showVerdictPanel, tutorialStep]);
 
   const modelLabel = useMemo(() => ({
     unchecked: llmMode === 'browser' ? '브라우저 AI 준비 전' : '로컬 AI 연결 전', checking: 'AI 준비 중', connected: 'Qwen 연결', fallback: '대체 대사'
   })[modelState], [llmMode, modelState]);
+
+  function trackModelProgress(event: { progress?: number }) {
+    if (typeof event.progress !== 'number' || !Number.isFinite(event.progress)) return;
+    const value = event.progress <= 1 ? event.progress * 100 : event.progress;
+    setModelProgress(Math.max(0, Math.min(100, Math.round(value))));
+  }
+
+  function explainFallback(error: unknown) {
+    const message = error instanceof Error ? error.message : '';
+    if (/WebGPU/i.test(message)) return '이 브라우저는 WebGPU를 지원하지 않아 내장 대사를 사용했습니다.';
+    if (/timeout|abort/i.test(message)) return '8초 응답 제한을 넘어 내장 대사로 즉시 전환했습니다.';
+    if (/unsafe|repeated/i.test(message)) return '안전 검사 또는 반복 검사에서 제외되어 검수된 대사를 사용했습니다.';
+    return llmMode === 'local' ? '로컬 서버 연결이 되지 않아 내장 대사를 사용했습니다.' : '모델 준비가 완료되지 않아 내장 대사를 사용했습니다.';
+  }
 
   async function requestBrowserQwen(gameCase: CaseData, messages: ChatMessage[]) {
     if (gameCase.mode !== 'chat' || !gameCase.dialogue) throw new Error('read-only contact');
     const userTurns = messages.filter((message) => message.role === 'user').length;
     return generateBrowserQwen(
       [{ role: 'system', content: buildSystemPrompt(gameCase, userTurns) }, ...messages.slice(-6)],
-      { timeoutMs: 8000 },
+      { timeoutMs: 8000, onProgress: trackModelProgress },
     );
   }
 
@@ -275,16 +317,20 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
 
   async function checkModel() {
     setModelState('checking');
+    setFallbackReason(null);
+    const startedAt = performance.now();
     try {
       const testCase = cases.find((item) => item.mode === 'chat') ?? activeCase;
       if (llmMode === 'browser') {
         if (!browserQwenSupported()) throw new Error('WebGPU unavailable');
-        await prepareBrowserQwen();
+        await prepareBrowserQwen(trackModelProgress);
       } else {
         await requestLocalQwen(testCase, [{ role: 'user', content: '간단히 인사해 주세요.' }]);
       }
+      setModelLoadMs(Math.round(performance.now() - startedAt));
       setModelState('connected');
-    } catch {
+    } catch (error) {
+      setFallbackReason(explainFallback(error));
       setModelState('fallback');
     }
   }
@@ -297,6 +343,7 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
     setChats((current) => ({ ...current, [activeCase.id]: nextMessages }));
     setDraft('');
     setSending(true);
+    const responseStartedAt = performance.now();
     try {
       if (modelState !== 'connected') setModelState('checking');
       const reply = llmMode === 'browser'
@@ -305,12 +352,16 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
       const normalizedReply = reply.replace(/\s+/g, ' ').trim();
       const repeated = activeChat.some((message) => message.role === 'assistant' && message.content.replace(/\s+/g, ' ').trim() === normalizedReply);
       if (repeated) throw new Error('repeated response');
+      setLastResponseMs(Math.round(performance.now() - responseStartedAt));
+      setFallbackReason(null);
       setModelState('connected');
       setChats((current) => ({
         ...current,
         [activeCase.id]: [...(current[activeCase.id] ?? nextMessages), { role: 'assistant', content: reply }],
       }));
-    } catch {
+    } catch (error) {
+      setLastResponseMs(Math.round(performance.now() - responseStartedAt));
+      setFallbackReason(explainFallback(error));
       setModelState('fallback');
       setChats((current) => ({
         ...current,
@@ -354,12 +405,8 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
   function submitVerdict() {
     if (activeResult || !picked || !selectedAction) return;
     const correct = picked === activeCase.verdict;
-    const actionCorrect = selectedAction === idealAction[activeCase.verdict];
-    const reward = confidence === 90 ? 120 : confidence === 70 ? 100 : 80;
-    const evidenceBonus = selectedEvidence.length * 20;
-    const actionBonus = actionCorrect ? 50 : 0;
-    const penalty = confidence === 90 ? 90 : confidence === 70 ? 60 : 35;
-    const caseScore = correct ? reward + evidenceBonus + actionBonus : -penalty + evidenceBonus + actionBonus;
+    const actionCorrect = selectedAction === IDEAL_ACTION[activeCase.verdict];
+    const caseScore = calculateCaseScore({ correct, actionCorrect, confidence, evidenceCount: selectedEvidence.length });
     setResults((current) => [...current, { caseId: activeCase.id, correct, actionCorrect, score: caseScore, picked, confidence, action: selectedAction, selectedEvidence }]);
     setShowVerdictPanel(false);
     setShowDebrief(true);
@@ -376,14 +423,14 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
 
   function nextCase() {
     setShowDebrief(false);
-    if (activeIndex < availableCount - 1) {
-      setActiveIndex(availableCount - 1);
+    const progress = advanceCaseProgress({ activeIndex, availableCount, resultCount: results.length, totalCases: cases.length });
+    if (!progress.unlocked) {
+      setActiveIndex(progress.activeIndex);
       setPhoneApp('messages');
       return;
     }
-    if (results.length >= cases.length) return;
-    const nextIndex = Math.min(availableCount, cases.length - 1);
-    setAvailableCount((current) => Math.min(current + 1, cases.length));
+    const nextIndex = progress.activeIndex;
+    setAvailableCount(progress.availableCount);
     setActiveIndex(nextIndex);
     setPicked(null);
     setConfidence(70);
@@ -393,14 +440,25 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
     setPhoneApp('home');
     setPhoneLocked(true);
     setView('phone');
-    setNotice(`${formatClock(arrivalMinutes[nextIndex])}, 새로운 연락이 도착했다.`);
+    setNotice(`${formatGameClock(ARRIVAL_MINUTES[nextIndex])}, 새로운 연락이 도착했다.`);
   }
 
   function startSimulation(forceGuide = false) {
     setBooting(true);
     if (llmMode === 'browser' && browserQwenSupported()) {
       setModelState('checking');
-      void prepareBrowserQwen().then(() => setModelState('connected')).catch(() => setModelState('fallback'));
+      setFallbackReason(null);
+      const startedAt = performance.now();
+      void prepareBrowserQwen(trackModelProgress).then(() => {
+        setModelLoadMs(Math.round(performance.now() - startedAt));
+        setModelState('connected');
+      }).catch((error) => {
+        setFallbackReason(explainFallback(error));
+        setModelState('fallback');
+      });
+    } else if (llmMode === 'browser') {
+      setFallbackReason('이 브라우저는 WebGPU를 지원하지 않아 내장 대사를 사용합니다.');
+      setModelState('fallback');
     }
     window.setTimeout(() => {
       const guideComplete = window.localStorage.getItem('profit-24-guide-complete') === '1';
@@ -514,7 +572,7 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
                 return <button key={place.id} className={`map-hotspot hotspot-${place.id} ${location === place.id ? 'current' : ''}`} style={{ left: position.left, top: position.top }} onClick={() => visit(place.id)} aria-label={`${place.label}로 이동`}><span>{locationKeys[place.id]}</span></button>;
               })}
               <div className={`player-sprite row-${playerPosition.spriteRow}`} style={{ left: playerPosition.left, top: playerPosition.top }} role="img" aria-label={`${currentPlace.label}에 있는 플레이어`} />
-              <div className="map-objective"><span>현재 사건 · {formatClock(arrivalMinutes[activeIndex])}</span><b>{activeCase.sender}</b><small>{activeCase.preview}</small></div>
+              <div className="map-objective"><span>현재 사건 · {formatGameClock(ARRIVAL_MINUTES[activeIndex])}</span><b>{activeCase.sender}</b><small>{activeCase.preview}</small></div>
             </div>
             <div className="dialog-window" aria-live="polite"><div className="speaker-tag">{currentPlace.label}</div><p>{notice}</p><span className="dialog-arrow">▼</span></div>
           </div>
@@ -548,7 +606,7 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
             <>
               {phoneApp === 'home' && (
                 <div className="phone-home-screen">
-                    <div className="home-notification" onClick={() => selectPhoneApp('messages')} role="button" tabIndex={0}><i className="mini-icon icon-messages"/><span><b>{activeCase.sender}</b><small>{activeCase.preview}</small></span><em>{formatClock(arrivalMinutes[activeIndex])}</em></div>
+                    <button className="home-notification" onClick={() => selectPhoneApp('messages')}><i className="mini-icon icon-messages"/><span><b>{activeCase.sender}</b><small>{activeCase.preview}</small></span><em>{formatGameClock(ARRIVAL_MINUTES[activeIndex])}</em></button>
                   <div className="home-widgets">
                     <div><span>오늘의 판별 훈련</span><strong>{results.length}/{cases.length}</strong><small>정확도 {accuracy}% · 점수 {score}</small></div>
                     <div><span>현재 위치</span><strong>{currentPlace.label}</strong><small>{currentPlace.hint}</small></div>
@@ -575,14 +633,14 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
                   </aside>
                   <section className={`messenger-panel mode-${activeCase.mode}`}>
                     <header className="chat-header"><button onClick={() => setPhoneApp('home')} aria-label="홈 화면으로">◀</button><div><b>{activeCase.sender}</b><small>{activeCase.handle} · {activeCase.channel}</small></div>{activeCase.mode === 'chat' && <span className={`model-dot ${modelState}`}>{modelLabel}</span>}</header>
-                    {activeCase.mode === 'chat' && <><div className="chat-area"><span className="date-pill">오늘</span>{activeChat.map((message, index) => <div key={`${message.role}-${index}`} className={`message ${message.role}`}><p>{message.content}</p><time>{formatClock(9 * 60 + 3 + index * 2)}</time></div>)}{!activeResult && activeCase.dialogue && <div className="quick-questions" aria-label="추천 질문"><span>어떤 점을 물어볼까요?</span><div>{activeCase.dialogue.quickQuestions.map((question) => <button key={question} type="button" onClick={() => setDraft(question)}>{question}</button>)}</div></div>}{sending && <div className="typing" aria-label="상대방이 입력 중"><i/><i/><i/></div>}</div><form className="reply-row" onSubmit={sendMessage}><input aria-label="메시지" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={activeResult ? '판정이 완료된 연락입니다' : '상대에게 질문하거나 직접 입력하기'} disabled={Boolean(activeResult)} /><button type="submit" disabled={!draft.trim() || sending || Boolean(activeResult)}>전송</button></form></>}
-                    {activeCase.mode === 'notice' && <div className="read-only-surface notice-surface"><span className="date-pill">오늘</span><article><header><span>{activeCase.channel}</span><time>{formatClock(9 * 60 + 8)}</time></header><div className="notice-brand"><i>{activeCase.sender.slice(0,1)}</i><div><b>{activeCase.sender}</b><small>{activeCase.handle}</small></div></div><h2>{activeCase.initialMessages[0]}</h2>{activeCase.initialMessages.slice(1).map((text) => <p key={text}>{text}</p>)}<button className="official-app-button" onClick={() => setPhoneApp(activeCase.id === 'bank-fraud-check' ? 'bank' : activeCase.id === 'official-etf-fill' ? 'stocks' : 'browser')}>메시지를 닫고 관련 앱 직접 열기</button></article></div>}
-                    {activeCase.mode === 'link' && <div className="read-only-surface link-surface"><span className="date-pill">오늘</span><article className="one-way-message"><header><b>{activeCase.handle}</b><time>{formatClock(10 * 60 + 17)}</time></header>{activeCase.initialMessages.map((text) => <p key={text}>{text}</p>)}<button className="embedded-link" onClick={() => setOpenedLinks((current) => ({ ...current, [activeCase.id]: true }))}><span>외부 페이지</span><b>{activeCase.linkLabel}</b><small>{activeCase.displayUrl}</small></button></article>{openedLinks[activeCase.id] && <section className="simulated-landing"><div className="landing-address"><span>교육용 가상 주소</span><b>{activeCase.displayUrl}</b></div><div className="landing-copy"><small>SPONSORED INFORMATION</small><h2>{activeCase.landingTitle}</h2><p>{activeCase.landingCopy}</p><button disabled>{activeCase.landingCta}</button><span>시뮬레이션에서는 정보 제출과 결제가 실행되지 않습니다.</span></div></section>}</div>}
+                    {activeCase.mode === 'chat' && <><div className="chat-area" aria-live="polite"><span className="date-pill">오늘</span>{activeChat.map((message, index) => <div key={`${message.role}-${index}`} className={`message ${message.role}`}><p>{message.content}</p><time>{formatGameClock(9 * 60 + 3 + index * 2)}</time></div>)}{!activeResult && activeCase.dialogue && <div className="quick-questions" aria-label="추천 질문"><span>어떤 점을 물어볼까요?</span><div>{activeCase.dialogue.quickQuestions.map((question) => <button key={question} type="button" onClick={() => setDraft(question)}>{question}</button>)}</div></div>}{sending && <div className="typing" aria-label="상대방이 입력 중"><i/><i/><i/></div>}</div><form className="reply-row" onSubmit={sendMessage}><input aria-label="메시지" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={activeResult ? '판정이 완료된 연락입니다' : '상대에게 질문하거나 직접 입력하기'} disabled={Boolean(activeResult)} /><button type="submit" disabled={!draft.trim() || sending || Boolean(activeResult)}>전송</button></form></>}
+                    {activeCase.mode === 'notice' && <div className="read-only-surface notice-surface"><span className="date-pill">오늘</span><article><header><span>{activeCase.channel}</span><time>{formatGameClock(9 * 60 + 8)}</time></header><div className="notice-brand"><i>{activeCase.sender.slice(0,1)}</i><div><b>{activeCase.sender}</b><small>{activeCase.handle}</small></div></div><h2>{activeCase.initialMessages[0]}</h2>{activeCase.initialMessages.slice(1).map((text) => <p key={text}>{text}</p>)}<button className="official-app-button" onClick={() => setPhoneApp(activeCase.id === 'bank-fraud-check' ? 'bank' : activeCase.id === 'official-etf-fill' ? 'stocks' : 'browser')}>메시지를 닫고 관련 앱 직접 열기</button></article></div>}
+                    {activeCase.mode === 'link' && <div className="read-only-surface link-surface"><span className="date-pill">오늘</span><article className="one-way-message"><header><b>{activeCase.handle}</b><time>{formatGameClock(10 * 60 + 17)}</time></header>{activeCase.initialMessages.map((text) => <p key={text}>{text}</p>)}<button className="embedded-link" onClick={() => setOpenedLinks((current) => ({ ...current, [activeCase.id]: true }))}><span>외부 페이지</span><b>{activeCase.linkLabel}</b><small>{activeCase.displayUrl}</small></button></article>{openedLinks[activeCase.id] && <section className="simulated-landing"><div className="landing-address"><span>교육용 가상 주소</span><b>{activeCase.displayUrl}</b></div><div className="landing-copy"><small>SPONSORED INFORMATION</small><h2>{activeCase.landingTitle}</h2><p>{activeCase.landingCopy}</p><button disabled>{activeCase.landingCta}</button><span>시뮬레이션에서는 정보 제출과 결제가 실행되지 않습니다.</span></div></section>}</div>}
                   </section>
                 </div>
               )}
 
-              {phoneApp === 'calls' && <div className="native-app phone-app-body"><h2>최근 통화</h2><p className="app-lead">발신자 이름만 믿지 말고 공식 번호를 직접 찾아 다시 거세요.</p><div className="call-list">{availableCases.slice(0,5).map((item,index) => <button key={item.id} onClick={() => openCase(index)}><i>{item.sender.slice(0,1)}</i><span><b>{item.sender}</b><small>{item.channel} · {index % 2 ? '부재중' : '수신'}</small></span><em>{formatClock(arrivalMinutes[index])}</em></button>)}</div></div>}
+              {phoneApp === 'calls' && <div className="native-app phone-app-body"><h2>최근 통화</h2><p className="app-lead">발신자 이름만 믿지 말고 공식 번호를 직접 찾아 다시 거세요.</p><div className="call-list">{availableCases.slice(0,5).map((item,index) => <button key={item.id} onClick={() => openCase(index)}><i>{item.sender.slice(0,1)}</i><span><b>{item.sender}</b><small>{item.channel} · {index % 2 ? '부재중' : '수신'}</small></span><em>{formatGameClock(ARRIVAL_MINUTES[index])}</em></button>)}</div></div>}
 
               {phoneApp === 'bank' && <div className="native-app phone-app-body bank-app"><div className="app-account"><small>새봄은행 생활계좌</small><strong>1,284,600원</strong><span>오늘 출금 45,000원</span></div><h3>최근 거래</h3><div className="transaction-list"><p><span>청년교통카드</span><b>- 45,000원</b></p><p><span>월급</span><b className="positive">+ 2,140,000원</b></p><p><span>주식 주문 연결</span><b>- 82,450원</b></p></div><div className="official-banner"><b>안심 확인</b><span>낯선 사람이 알려 준 계좌로 보내기 전, 수취인과 금융회사 등록 여부를 확인하세요.</span></div><button className="app-primary" onClick={() => { visit('bank'); setView('world'); }}>은행에서 공식 확인하기</button></div>}
 
@@ -606,7 +664,7 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
                 </div>
               )}
 
-              {phoneApp === 'settings' && <div className="settings-screen phone-app-body"><span className="pixel-label">GAME GUIDE</span><h2>게임 방법</h2><p>연락 확인 → 공식 조사 → 근거·판정·대응 선택의 순서로 진행합니다. 사건은 판정을 마칠 때마다 하나씩 도착합니다.</p><button className="guide-replay" onClick={() => setTutorialStep(0)}>게임 방법 다시 보기</button><span className="pixel-label settings-section-label">FAST ON-DEVICE AI</span><h2>Qwen 대화 설정</h2><p>Qwen은 1~2문장으로 짧게 답합니다. 8초 안에 답하지 못하거나 WebGPU를 지원하지 않으면 상황에 맞는 후보 대사로 즉시 전환합니다.</p><div className="ai-mode-buttons" role="group" aria-label="AI 실행 방식"><button className={llmMode === 'browser' ? 'active' : ''} onClick={() => { setLlmMode('browser'); setModelState('unchecked'); }}>브라우저 Qwen <small>기본</small></button><button className={llmMode === 'local' ? 'active' : ''} onClick={() => { setLlmMode('local'); setModelState('unchecked'); }}>내 로컬 서버</button></div>{llmMode === 'local' && <><label>서버 주소<input value={llmUrl} onChange={(event) => setLlmUrl(event.target.value)} /></label><label>모델 이름<input value={modelName} onChange={(event) => setModelName(event.target.value)} /></label></>}<button className={`model-test ${modelState}`} onClick={checkModel} disabled={modelState === 'checking'}>{modelLabel} · 연결 시험</button><div className="privacy-note"><b>기기 안에서 처리</b><span>{llmMode === 'browser' ? '브라우저 Qwen을 선택하면 대화가 외부 서버로 전송되지 않습니다. 시작 안내를 보는 동안 모델을 미리 준비합니다.' : '로컬 서버 주소로 대화가 전송됩니다. 실제 계좌번호·비밀번호·개인정보를 입력하지 마세요.'}</span></div></div>}
+              {phoneApp === 'settings' && <div className="settings-screen phone-app-body"><span className="pixel-label">GAME GUIDE</span><h2>게임 방법</h2><p>연락 확인 → 공식 조사 → 근거·판정·대응 선택의 순서로 진행합니다. 사건은 판정을 마칠 때마다 하나씩 도착합니다.</p><button className="guide-replay" onClick={() => setTutorialStep(0)}>게임 방법 다시 보기</button><span className="pixel-label settings-section-label">FAST ON-DEVICE AI</span><h2>Qwen 대화 설정</h2><p>Qwen은 1~2문장으로 짧게 답합니다. 8초 안에 답하지 못하거나 WebGPU를 지원하지 않으면 상황에 맞는 후보 대사로 즉시 전환합니다.</p><div className="ai-mode-buttons" role="group" aria-label="AI 실행 방식"><button className={llmMode === 'browser' ? 'active' : ''} onClick={() => { setLlmMode('browser'); setModelState('unchecked'); setFallbackReason(null); }}>브라우저 Qwen <small>기본</small></button><button className={llmMode === 'local' ? 'active' : ''} onClick={() => { setLlmMode('local'); setModelState('unchecked'); setFallbackReason(null); }}>내 로컬 서버</button></div>{llmMode === 'local' && <><label>서버 주소<input value={llmUrl} onChange={(event) => setLlmUrl(event.target.value)} /></label><label>모델 이름<input value={modelName} onChange={(event) => setModelName(event.target.value)} /></label></>}<button className={`model-test ${modelState}`} onClick={checkModel} disabled={modelState === 'checking'}>{modelLabel} · 연결 시험</button><div className="ai-runtime-summary" aria-live="polite"><span><b>실행 범위</b><small>대화형 사건 3건만 Qwen 사용</small></span><span><b>준비 상태</b><small>{modelState === 'checking' && modelProgress !== null ? `${modelProgress}% 준비 중` : modelLabel}</small></span><span><b>측정값</b><small>{lastResponseMs !== null ? `최근 답변 ${lastResponseMs}ms` : modelLoadMs !== null ? `모델 준비 ${modelLoadMs}ms` : '아직 측정 전'}</small></span>{fallbackReason && <p>{fallbackReason}</p>}</div><div className="privacy-note"><b>기기 안에서 처리</b><span>{llmMode === 'browser' ? '브라우저 Qwen을 선택하면 대화가 외부 서버로 전송되지 않습니다. 시작 안내를 보는 동안 모델을 미리 준비합니다.' : '로컬 서버 주소로 대화가 전송됩니다. 실제 계좌번호·비밀번호·개인정보를 입력하지 마세요.'}</span></div></div>}
 
               {phoneApp === 'photos' && <div className="native-app phone-app-body photos-app"><h2>사진</h2><p className="app-lead">시뮬레이션 기록은 실제 개인정보를 포함하지 않습니다.</p><div className="photo-grid"><figure><img src="/assets/pixel/town-map.png" alt="마을 지도 기록"/><figcaption>오늘의 마을</figcaption></figure><figure><img src="/assets/pixel/phone-wallpaper.png" alt="휴대폰 배경화면"/><figcaption>기본 배경</figcaption></figure><div className="empty-photo">+<span>증거 화면은 원본 링크와 함께 공식기관에 보관하세요.</span></div></div></div>}
 
@@ -628,9 +686,9 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
 
       {tutorialStep !== null && <div className="tutorial-backdrop" role="dialog" aria-modal="true" aria-labelledby="tutorial-title"><section className={`tutorial-card guide-${tutorialSteps[tutorialStep].kind}`}><div className="tutorial-progress" aria-label={`${tutorialStep + 1}단계 / ${tutorialSteps.length}단계`}>{tutorialSteps.map((_, index) => <i key={index} className={index <= tutorialStep ? 'active' : ''}/>)}</div><div className="tutorial-icon">{tutorialSteps[tutorialStep].icon}</div><span className="pixel-label">{tutorialSteps[tutorialStep].eyebrow}</span><h2 id="tutorial-title">{tutorialSteps[tutorialStep].title}</h2><p>{tutorialSteps[tutorialStep].body}</p>{tutorialSteps[tutorialStep].kind === 'controls' && <div className="control-guide-grid"><article><b>PC</b><span>클릭 · Tab 이동 · Enter 실행</span><small>ESC로 열린 창 닫기</small></article><article><b>모바일</b><span>터치로 선택 · 위아래 스크롤</span><small>하단 메뉴로 화면 전환</small></article></div>}{tutorialSteps[tutorialStep].kind === 'interface' && <ol className="interface-guide"><li><i>1</i><span><b>상단 상태와 ? 도움말</b><small>시간·사건·점수와 전체 안내</small></span></li><li><i>2</i><span><b>현재 목표</b><small>지금 필요한 다음 행동</small></span></li><li><i>3</i><span><b>하단 고정 메뉴</b><small>마을 · 휴대폰 · 판정하기</small></span></li><li><i>4</i><span><b>설정과 앱 i</b><small>휴대폰 설정 및 앱별 도움말</small></span></li></ol>}{tutorialSteps[tutorialStep].kind === 'mission' && <div className="tutorial-loop"><span>연락 확인</span><i>→</i><span>공식 조사</span><i>→</i><span>판정·대응</span></div>}{tutorialSteps[tutorialStep].kind === 'places' && <div className="place-guide-grid">{locations.map((place) => <article key={place.id}><i>{locationKeys[place.id]}</i><span>{place.hint}</span></article>)}</div>}{tutorialSteps[tutorialStep].kind === 'apps' && <div className="app-guide-grid">{phoneApps.map((app) => <article key={app.id}><i className={`app-icon icon-${app.icon}`}/><span><b>{app.label}</b><small>{app.purpose}</small></span></article>)}</div>}{tutorialSteps[tutorialStep].kind === 'verdict' && <div className="tutorial-nav-demo"><span>⌂<small>마을</small></span><span>▣<small>휴대폰</small></span><span className="highlight">!<small>판정하기</small></span></div>}{tutorialSteps[tutorialStep].kind === 'score' && <div className="score-guide-grid"><span>판정<strong>45%</strong></span><span>근거<strong>25%</strong></span><span>대응<strong>20%</strong></span><span>확신도<strong>10%</strong></span></div>}<div className="tutorial-actions"><button className="tutorial-skip" onClick={closeTutorial}>건너뛰기</button><button className="tutorial-next" onClick={() => tutorialStep === tutorialSteps.length - 1 ? closeTutorial() : setTutorialStep(tutorialStep + 1)}>{tutorialStep === tutorialSteps.length - 1 ? '첫 연락 확인하기' : '다음'}</button></div></section></div>}
 
-      {showDebrief && activeResult && <div className="modal-backdrop" role="dialog" aria-modal="true"><section className={`debrief ${activeResult.correct ? 'correct' : 'wrong'}`}><span className="pixel-label">판정 결과 · {activeCase.category}</span><h2>{activeResult.correct ? '정확한 판정입니다!' : `실제 판정은 “${verdictLabels[activeCase.verdict]}”입니다`}</h2><p>{activeCase.debrief}</p><div className="simulated-outcome"><b>이 선택이 이어졌다면</b><span>{activeCase.verdict === 'scam' ? activeResult.actionCorrect ? '연락을 끊고 신고해 추가 입금과 개인정보 노출 위험을 막을 수 있었습니다.' : '대화를 계속했다면 추가 입금이나 개인정보 요구로 피해가 커질 수 있었습니다.' : activeCase.verdict === 'caution' ? activeResult.actionCorrect ? '결정을 보류해 과도한 위험을 다시 검토할 시간을 확보했습니다.' : '서둘러 행동했다면 사기는 아니더라도 감당하기 어려운 손실로 이어질 수 있었습니다.' : activeResult.actionCorrect ? '공식 경로 확인 후 정상적인 안내를 안전하게 처리할 수 있었습니다.' : '정상 연락도 공식 경로 확인 없이 처리하면 다른 위조 연락에 취약해질 수 있습니다.'}</span></div><div className={`action-result ${activeResult.actionCorrect ? 'correct' : 'needs-review'}`}><b>{activeResult.actionCorrect ? '안전한 대응을 선택했습니다' : '대응 행동도 다시 확인해 보세요'}</b><span>나의 선택: {responseActions.find((action) => action.id === activeResult.action)?.label}</span></div><h3>확인해야 했던 핵심 단서</h3><ul>{activeCase.clueLabels.map((clue) => <li key={clue}>{clue}</li>)}</ul><div className="safe-action"><b>현실에서의 권장 행동</b><span>{activeCase.safeAction}</span></div><div className="debrief-score"><span>판정·근거·대응 점수</span><strong>{activeResult.score > 0 ? '+' : ''}{activeResult.score}</strong></div><button onClick={nextCase}>{activeIndex < availableCount - 1 ? '현재 연락으로 돌아가기' : results.length === cases.length ? '최종 결과 보기' : '다음 시간으로'}</button></section></div>}
+      {showDebrief && activeResult && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="debrief-title" tabIndex={-1}><section className={`debrief ${activeResult.correct ? 'correct' : 'wrong'}`}><span className="pixel-label">판정 결과 · {activeCase.category}</span><h2 id="debrief-title">{activeResult.correct ? '정확한 판정입니다!' : `실제 판정은 “${verdictLabels[activeCase.verdict]}”입니다`}</h2><p>{activeCase.debrief}</p><div className="simulated-outcome"><b>이 선택이 이어졌다면</b><span>{activeCase.verdict === 'scam' ? activeResult.actionCorrect ? '연락을 끊고 신고해 추가 입금과 개인정보 노출 위험을 막을 수 있었습니다.' : '대화를 계속했다면 추가 입금이나 개인정보 요구로 피해가 커질 수 있었습니다.' : activeCase.verdict === 'caution' ? activeResult.actionCorrect ? '결정을 보류해 과도한 위험을 다시 검토할 시간을 확보했습니다.' : '서둘러 행동했다면 사기는 아니더라도 감당하기 어려운 손실로 이어질 수 있었습니다.' : activeResult.actionCorrect ? '공식 경로 확인 후 정상적인 안내를 안전하게 처리할 수 있었습니다.' : '정상 연락도 공식 경로 확인 없이 처리하면 다른 위조 연락에 취약해질 수 있습니다.'}</span></div><div className={`action-result ${activeResult.actionCorrect ? 'correct' : 'needs-review'}`}><b>{activeResult.actionCorrect ? '안전한 대응을 선택했습니다' : '대응 행동도 다시 확인해 보세요'}</b><span>나의 선택: {responseActions.find((action) => action.id === activeResult.action)?.label}</span></div><h3>확인해야 했던 핵심 단서</h3><ul>{activeCase.clueLabels.map((clue) => <li key={clue}>{clue}</li>)}</ul><div className="safe-action"><b>현실에서의 권장 행동</b><span>{activeCase.safeAction}</span></div><div className="debrief-score"><span>판정·근거·대응 점수</span><strong>{activeResult.score > 0 ? '+' : ''}{activeResult.score}</strong></div><button onClick={nextCase}>{activeIndex < availableCount - 1 ? '현재 연락으로 돌아가기' : results.length === cases.length ? '최종 결과 보기' : '다음 시간으로'}</button></section></div>}
 
-      {complete && !showDebrief && <div className="modal-backdrop" role="dialog" aria-modal="true"><section className="summary-card"><span className="pixel-label">DAY CLEAR!</span><h2>{playerTitle}</h2><p className="summary-lead">판정 정확도 {accuracy}% · 안전 대응 {actionAccuracy}%</p><div className="summary-grid"><div><span>최종 점수</span><strong>{score}</strong></div><div><span>근거 판정</span><strong>{groundedCount}/{results.length}</strong></div><div><span>공식 확인</span><strong>{Object.values(evidence).flat().length}회</strong></div></div><p>사기범을 말로 이기는 것보다, 돈을 보내기 전에 독립적인 공식 경로로 확인하는 습관이 중요합니다.</p><button onClick={restart}>새로운 하루 시작</button></section></div>}
+      {complete && !showDebrief && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="summary-title" tabIndex={-1}><section className="summary-card"><span className="pixel-label">DAY CLEAR!</span><h2 id="summary-title">{playerTitle}</h2><p className="summary-lead">판정 정확도 {accuracy}% · 안전 대응 {actionAccuracy}%</p><div className="summary-grid"><div><span>최종 점수</span><strong>{score}</strong></div><div><span>근거 판정</span><strong>{groundedCount}/{results.length}</strong></div><div><span>공식 확인</span><strong>{Object.values(evidence).flat().length}회</strong></div></div><p>사기범을 말로 이기는 것보다, 돈을 보내기 전에 독립적인 공식 경로로 확인하는 습관이 중요합니다.</p><button onClick={restart}>새로운 하루 시작</button></section></div>}
     </main>
   );
 }

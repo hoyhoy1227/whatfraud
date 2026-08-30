@@ -25,5 +25,14 @@
   "linkLabel": "강의 소개 페이지 보기",
   "landingTitle": "초보자를 위한 4주 시장 읽기",
   "landingCopy": "수강료 89,000원 · 결제 후 7일 이내 미수강 강의 환불 가능 · 투자 수익은 보장되지 않습니다.",
-  "landingCta": "수강 신청 검토"
+  "landingCta": "수강 신청 검토",
+  "review": {
+    "sourceBasis": ["투자 교육 상품이 할인 마감과 성공 후기를 강조해 충동 결제를 유도하는 일반적인 광고 유형"],
+    "adaptationScope": "실존 업체와 후기를 사용하지 않고 가격, 약관과 광고 문구를 가상으로 합성했습니다.",
+    "verdictReason": "사업자와 환불 조건은 확인되지만 과장된 후기와 시간 압박 때문에 합리적인 비교가 필요해 주의로 분류합니다.",
+    "verificationPaths": ["사업자 정보와 환불 약관 독립 확인", "광고와 무관한 수강 후기 및 대체 강의 비교"],
+    "misdirection": ["오늘까지라는 할인 마감", "선별된 성공 후기", "정상 업체라면 좋은 상품일 것이라는 오해"],
+    "learningObjectives": ["정상 거래와 좋은 구매 결정을 구분한다", "결제 전에 약관과 독립 후기를 비교한다"],
+    "safetyAudit": { "containsPersonalData": false, "containsLiveUrl": false, "containsOperationalCrimeInfo": false }
+  }
 }

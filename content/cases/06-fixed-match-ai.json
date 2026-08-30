@@ -48,5 +48,14 @@
   },
   "clueLabels": ["성공 기록만 선별한 적중률", "특정 제휴 사이트 충전 유도", "출금 조건이 불투명"],
   "debrief": "무료 예측과 AI라는 표현으로 신뢰를 얻은 뒤 조작된 사이트에 충전시키는 도박 사기입니다.",
-  "safeAction": "사이트 이용과 송금을 중단하고 관련 계좌·사이트를 신고합니다."
+  "safeAction": "사이트 이용과 송금을 중단하고 관련 계좌·사이트를 신고합니다.",
+  "review": {
+    "sourceBasis": ["무료 예측과 높은 적중 사례로 신뢰를 만든 뒤 특정 불법 도박 사이트 충전을 유도하는 사기 유형"],
+    "adaptationScope": "실제 경기, 배당, 사이트, 계좌와 베팅 방법은 제거하고 AI 권위와 선택적 성과 제시만 합성했습니다.",
+    "verdictReason": "전체 성과를 공개하지 않고 운영 주체와 무관한 개인 명의 충전 및 출금 제한 사이트로 유도합니다.",
+    "verificationPaths": ["전체 예측 표본과 실패 기록 독립 검증", "사이트 운영 주체와 충전 계좌 예금주 비교", "공식 신고 경로에서 출금 제한 피해 유형 확인"],
+    "misdirection": ["AI라는 기술 권위", "첫 체험 무료", "성공한 기록만 보여 주는 선택 편향", "소액부터 시작하라는 위험 축소"],
+    "learningObjectives": ["AI가 확률과 수익을 보장하지 않음을 안다", "충전 전에 운영 주체와 출금 조건을 독립 확인한다"],
+    "safetyAudit": { "containsPersonalData": false, "containsLiveUrl": false, "containsOperationalCrimeInfo": false }
+  }
 }

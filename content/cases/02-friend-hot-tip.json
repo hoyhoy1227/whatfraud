@@ -45,5 +45,14 @@
   },
   "clueLabels": ["금전 요구는 없지만 정보 출처 불명확", "확정적인 표현과 또래 압력"],
   "debrief": "조직적인 사기는 아니지만 근거가 부족한 고위험 권유입니다. 틀린 추천이 곧 사기를 의미하지는 않습니다.",
-  "safeAction": "투자 판단을 보류하고 공시와 위험 정보를 직접 확인합니다."
+  "safeAction": "투자 판단을 보류하고 공시와 위험 정보를 직접 확인합니다.",
+  "review": {
+    "sourceBasis": ["지인과 온라인 커뮤니티를 통해 출처가 불분명한 종목 소문이 확산되는 투자 피해 유형"],
+    "adaptationScope": "실존 인물과 종목을 사용하지 않고 청년 친구 관계의 또래 압력만 합성했습니다.",
+    "verdictReason": "조직적 금전 편취 정황은 없지만 확인 가능한 근거가 없고 손실 가능성이 큰 권유이므로 주의로 분류합니다.",
+    "verificationPaths": ["지인에게 원문의 존재와 전달 경로 확인", "공식 공시와 독립적인 위험 정보 검색"],
+    "misdirection": ["가까운 친구라는 신뢰", "친구도 샀다는 또래 압력", "증권사 지인에게 들었다는 간접 권위"],
+    "learningObjectives": ["친밀함과 정보의 신뢰도를 분리한다", "사기는 아니어도 근거 없는 권유는 보류한다"],
+    "safetyAudit": { "containsPersonalData": false, "containsLiveUrl": false, "containsOperationalCrimeInfo": false }
+  }
 }

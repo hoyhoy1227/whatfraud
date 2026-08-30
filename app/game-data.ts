@@ -13,6 +13,20 @@ export type DialogueProfile = {
   fallbackByTopic: Record<DialogueTopic, string>;
 };
 
+export type ContentReview = {
+  sourceBasis: string[];
+  adaptationScope: string;
+  verdictReason: string;
+  verificationPaths: string[];
+  misdirection: string[];
+  learningObjectives: string[];
+  safetyAudit: {
+    containsPersonalData: false;
+    containsLiveUrl: false;
+    containsOperationalCrimeInfo: false;
+  };
+};
+
 export type CaseData = {
   id: string;
   sender: string;
@@ -32,6 +46,7 @@ export type CaseData = {
   clueLabels: string[];
   debrief: string;
   safeAction: string;
+  review: ContentReview;
   displayUrl?: string;
   linkLabel?: string;
   landingTitle?: string;
@@ -64,6 +79,10 @@ export function validateCases(items: CaseData[]) {
     if (!item.initialMessages.length) errors.push(`${item.id}: 표시할 최초 연락이 없습니다.`);
     if (Object.keys(item.checks).length < 2) errors.push(`${item.id}: 독립 확인 장소가 2곳 이상 필요합니다.`);
     if (item.clueLabels.length < 2) errors.push(`${item.id}: 복기 단서가 2개 이상 필요합니다.`);
+    if (!item.review || item.review.sourceBasis.length < 1) errors.push(`${item.id}: 실제 유형 근거가 포함된 콘텐츠 검수표가 필요합니다.`);
+    if ((item.review?.verificationPaths.length ?? 0) < 2) errors.push(`${item.id}: 콘텐츠 검수표에 독립 확인 경로가 2개 이상 필요합니다.`);
+    if ((item.review?.learningObjectives.length ?? 0) < 2) errors.push(`${item.id}: 학습 목표가 2개 이상 필요합니다.`);
+    if (item.review && Object.values(item.review.safetyAudit).some(Boolean)) errors.push(`${item.id}: 개인정보·작동 링크·범죄 실행 정보 안전 검수를 통과하지 못했습니다.`);
 
     if (item.mode === 'chat') {
       if (!item.dialogue) errors.push(`${item.id}: 대화형 사건에 dialogue 설정이 없습니다.`);

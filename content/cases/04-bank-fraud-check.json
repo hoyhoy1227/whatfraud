@@ -20,5 +20,14 @@
   },
   "clueLabels": ["문자를 닫고 공식 앱에서 재확인 가능", "민감정보·송금 요구 없음"],
   "debrief": "정상적인 이상거래 확인입니다. 긴급한 표현만으로 사기라고 단정하면 안 되며, 독립적인 공식 경로로 확인해야 합니다.",
-  "safeAction": "알림 링크가 아니라 직접 공식 은행 앱을 열어 확인합니다."
+  "safeAction": "알림 링크가 아니라 직접 공식 은행 앱을 열어 확인합니다.",
+  "review": {
+    "sourceBasis": ["은행이 평소와 다른 결제를 탐지해 공식 앱에서 본인 거래 여부를 확인시키는 정상 이상거래 안내"],
+    "adaptationScope": "은행명과 거래 상황을 가상화하고 실제 고객·카드·거래 정보는 포함하지 않았습니다.",
+    "verdictReason": "문자에 답하거나 민감정보를 보내게 하지 않고 사용자가 직접 연 공식 앱에서 동일 요청을 확인할 수 있습니다.",
+    "verificationPaths": ["직접 연 공식 은행 앱의 보안센터", "은행의 공식 시스템을 이용한 독립 확인"],
+    "misdirection": ["긴급한 금융 문구와 Web발신 표기만 보고 사기로 단정할 수 있음"],
+    "learningObjectives": ["긴급성이나 Web발신 표기만으로 판정하지 않는다", "알림을 닫고 공식 앱에서 같은 사건을 확인한다"],
+    "safetyAudit": { "containsPersonalData": false, "containsLiveUrl": false, "containsOperationalCrimeInfo": false }
+  }
 }
