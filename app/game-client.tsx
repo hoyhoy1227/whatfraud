@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { CaseData, cases, DialogueTopic, LocationId, locations, Verdict, verdictLabels } from './game-data';
 import { browserQwenSupported, generateBrowserQwen, prepareBrowserQwen, validateBrowserQwenText } from './browser-qwen';
 import { ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore, formatGameClock } from './game-rules';
+import GameLoadingScreen from './game-loading';
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 type ResponseAction = 'verify' | 'pause' | 'block';
@@ -24,6 +25,32 @@ type PhoneApp = 'home' | 'messages' | 'calls' | 'bank' | 'stocks' | 'browser' | 
 type AppId = Exclude<PhoneApp, 'home'>;
 type TutorialKind = 'controls' | 'interface' | 'mission' | 'places' | 'apps' | 'verdict' | 'score';
 type PhoneAppDefinition = { id: AppId; label: string; icon: string; purpose: string; useWhen: string; caution: string };
+type LoadingTask = { kind: 'startup' | 'case'; progress: number; title: string; detail: string };
+
+const startupAssets = [
+  '/assets/pixel/start-screen.png',
+  '/assets/pixel/town-map.png',
+  '/assets/pixel/player-sprites.png',
+  '/assets/pixel/phone-wallpaper.png',
+  '/assets/pixel/phone-app-icons.png',
+];
+const loadingSteps = {
+  startup: ['사건 데이터 확인', '마을·휴대폰 자산 준비', '플레이 기록과 AI 경로 설정'],
+  case: ['판정 기록 반영', '게임 시간 진행', '새 연락 수신'],
+};
+
+function wait(milliseconds: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+function preloadAsset(source: string) {
+  return new Promise<void>((resolve) => {
+    const image = new window.Image();
+    image.onload = () => resolve();
+    image.onerror = () => resolve();
+    image.src = source;
+  });
+}
 
 const phoneApps: PhoneAppDefinition[] = [
   { id: 'messages', label: '메시지', icon: 'messages', purpose: '대화형 연락, 공식 안내문과 링크 연락을 확인합니다.', useWhen: '새 연락의 발신 경로와 전체 문맥을 읽고 필요한 질문을 할 때 사용합니다.', caution: '답장이 가능한 대화형 연락에만 입력창이 나타납니다.' },
@@ -148,7 +175,7 @@ NPC의 현재 목표: ${gameCase.npcGoal}
 export default function GameClient() {
   const dialogReturnFocus = useRef<HTMLElement | null>(null);
   const [started, setStarted] = useState(false);
-  const [booting, setBooting] = useState(false);
+  const [loadingTask, setLoadingTask] = useState<LoadingTask | null>(null);
   const [view, setView] = useState<GameView>('world');
   const [phoneApp, setPhoneApp] = useState<PhoneApp>('home');
   const [phoneLocked, setPhoneLocked] = useState(true);
@@ -166,6 +193,7 @@ export default function GameClient() {
   const [results, setResults] = useState<Result[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [aiWaitMs, setAiWaitMs] = useState(0);
   const [picked, setPicked] = useState<Verdict | null>(null);
   const [confidence, setConfidence] = useState(70);
   const [selectedAction, setSelectedAction] = useState<ResponseAction | null>(null);
@@ -207,6 +235,12 @@ export default function GameClient() {
     { title: '근거와 안전 행동을 선택하세요', detail: '화면 아래 판정하기를 눌러 근거와 실제로 취할 대응을 함께 제출하세요.' },
     { title: '판정을 완료했습니다', detail: '해설을 확인한 뒤 시간을 진행하면 다음 연락이 도착합니다.' },
   ][objectiveStage];
+  const aiWaitProgress = Math.min(92, Math.max(8, Math.round((aiWaitMs / 8000) * 100)));
+  const aiWaitLabel = aiWaitMs >= 6000
+    ? '응답이 늦어 검수된 후보 대사도 함께 준비 중입니다.'
+    : llmMode === 'browser' && modelState === 'checking'
+      ? modelProgress !== null && modelProgress < 100 ? `기기 내 Qwen 모델 준비 ${modelProgress}%` : '기기 내 Qwen을 준비하고 질문을 분석 중입니다.'
+      : `${activeCase.sender}가 답변을 작성 중입니다.`;
 
   useEffect(() => {
     const stored = Number(window.localStorage.getItem('profit-24-best-score') ?? 0);
@@ -219,6 +253,13 @@ export default function GameClient() {
       window.setTimeout(() => setBestScore(score), 0);
     }
   }, [bestScore, complete, score]);
+
+  useEffect(() => {
+    if (!sending) return;
+    const startedAt = performance.now();
+    const timer = window.setInterval(() => setAiWaitMs(performance.now() - startedAt), 200);
+    return () => window.clearInterval(timer);
+  }, [sending]);
 
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
@@ -342,6 +383,7 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
     const nextMessages = [...activeChat, { role: 'user' as const, content }];
     setChats((current) => ({ ...current, [activeCase.id]: nextMessages }));
     setDraft('');
+    setAiWaitMs(0);
     setSending(true);
     const responseStartedAt = performance.now();
     try {
@@ -369,6 +411,7 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
       }));
     } finally {
       setSending(false);
+      setAiWaitMs(0);
     }
   }
 
@@ -421,7 +464,8 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
     setShowVerdictPanel(true);
   }
 
-  function nextCase() {
+  async function nextCase() {
+    if (loadingTask) return;
     setShowDebrief(false);
     const progress = advanceCaseProgress({ activeIndex, availableCount, resultCount: results.length, totalCases: cases.length });
     if (!progress.unlocked) {
@@ -430,6 +474,10 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
       return;
     }
     const nextIndex = progress.activeIndex;
+    setLoadingTask({ kind: 'case', progress: 12, title: '하루의 시간이 흐릅니다', detail: '방금 내린 판단을 기록하고 다음 연락을 기다리는 중입니다.' });
+    await wait(180);
+    setLoadingTask({ kind: 'case', progress: 48, title: '판정 기록을 정리했습니다', detail: `${formatGameClock(ARRIVAL_MINUTES[nextIndex])} 시점으로 게임 시간을 이동합니다.` });
+    await wait(180);
     setAvailableCount(progress.availableCount);
     setActiveIndex(nextIndex);
     setPicked(null);
@@ -441,10 +489,14 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
     setPhoneLocked(true);
     setView('phone');
     setNotice(`${formatGameClock(ARRIVAL_MINUTES[nextIndex])}, 새로운 연락이 도착했다.`);
+    setLoadingTask({ kind: 'case', progress: 82, title: '새 연락을 수신 중입니다', detail: `오늘의 ${nextIndex + 1}번째 연락을 휴대폰 알림에 추가합니다.` });
+    await wait(220);
+    setLoadingTask({ kind: 'case', progress: 100, title: '새 연락이 도착했습니다', detail: '휴대폰 알림에서 발신자와 연락 내용을 확인하세요.' });
+    await wait(180);
+    setLoadingTask(null);
   }
 
-  function startSimulation(forceGuide = false) {
-    setBooting(true);
+  function prepareDefaultQwen() {
     if (llmMode === 'browser' && browserQwenSupported()) {
       setModelState('checking');
       setFallbackReason(null);
@@ -460,13 +512,36 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
       setFallbackReason('이 브라우저는 WebGPU를 지원하지 않아 내장 대사를 사용합니다.');
       setModelState('fallback');
     }
-    window.setTimeout(() => {
-      const guideComplete = window.localStorage.getItem('profit-24-guide-complete') === '1';
-      setStarted(true);
-      setBooting(false);
-      setView(forceGuide || !guideComplete ? 'world' : 'phone');
-      setTutorialStep(forceGuide || !guideComplete ? 0 : null);
-    }, 650);
+  }
+
+  async function startSimulation(forceGuide = false) {
+    if (loadingTask) return;
+    setLoadingTask({ kind: 'startup', progress: 8, title: '시뮬레이션을 준비합니다', detail: `오늘의 판별 사건 ${cases.length}건을 안전하게 불러오는 중입니다.` });
+    const minimumDisplay = wait(900);
+    await wait(120);
+    setLoadingTask({ kind: 'startup', progress: 18, title: '사건 데이터를 확인했습니다', detail: '정상·주의·사기 연락의 순서와 판정 규칙을 준비합니다.' });
+    let loadedAssets = 0;
+    await Promise.all(startupAssets.map(async (source) => {
+      await preloadAsset(source);
+      loadedAssets += 1;
+      const progress = 18 + Math.round((loadedAssets / startupAssets.length) * 58);
+      setLoadingTask({ kind: 'startup', progress, title: '마을과 휴대폰을 준비합니다', detail: `화면 자산 ${loadedAssets}/${startupAssets.length}개를 불러왔습니다.` });
+    }));
+    let guideComplete = false;
+    try {
+      guideComplete = window.localStorage.getItem('profit-24-guide-complete') === '1';
+    } catch {
+      guideComplete = false;
+    }
+    setLoadingTask({ kind: 'startup', progress: 90, title: '플레이 환경을 설정합니다', detail: '저장된 안내 설정과 기기 내 AI 사용 가능 여부를 확인합니다.' });
+    await minimumDisplay;
+    setLoadingTask({ kind: 'startup', progress: 100, title: '준비가 완료되었습니다', detail: forceGuide || !guideComplete ? '조작 안내부터 차근차근 시작합니다.' : '첫 번째 휴대폰 알림으로 이동합니다.' });
+    await wait(220);
+    setStarted(true);
+    setView(forceGuide || !guideComplete ? 'world' : 'phone');
+    setTutorialStep(forceGuide || !guideComplete ? 0 : null);
+    setLoadingTask(null);
+    window.setTimeout(prepareDefaultQwen, 0);
   }
 
   function closeTutorial() {
@@ -518,6 +593,10 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
     setChats(Object.fromEntries(cases.map((item) => [item.id, initialChat(item)])));
   }
 
+  if (loadingTask) {
+    return <GameLoadingScreen variant={loadingTask.kind} progress={loadingTask.progress} eyebrow={loadingTask.kind === 'startup' ? 'SIMULATION BOOT' : `CASE ${String(Math.min(results.length + 1, cases.length)).padStart(2, '0')} TRANSITION`} title={loadingTask.title} detail={loadingTask.detail} steps={loadingSteps[loadingTask.kind]} />;
+  }
+
   if (!started) {
     return (
       <main className="simulation-intro">
@@ -527,10 +606,10 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
           <span className="intro-kicker">디지털 안전 시뮬레이션</span>
           <h1 id="game-title"><small>투자·도박 사기 판별 게임</small>수익률 24시</h1>
           <p>하루 동안 연락이 하나씩 도착합니다.<br />내용을 확인하고 근거와 안전한 대응을 찾아 판별하세요.</p>
-          <button className={`start-simulation ${booting ? 'booting' : ''}`} onClick={() => startSimulation(false)} disabled={booting}>
-            <b>{booting ? '시뮬레이션 불러오는 중' : '시뮬레이션 시작'}</b><i>{booting ? '•••' : '▶'}</i>
+          <button className="start-simulation" onClick={() => startSimulation(false)}>
+            <b>시뮬레이션 시작</b><i>▶</i>
           </button>
-          <button className="intro-guide-button" onClick={() => startSimulation(true)} disabled={booting}>조작·게임 안내부터 보기</button>
+          <button className="intro-guide-button" onClick={() => startSimulation(true)}>조작·게임 안내부터 보기</button>
           <small className="intro-disclaimer">교육용 가상 시뮬레이션 · 실제 금융기관과 무관합니다</small>
         </section>
       </main>
@@ -631,9 +710,9 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
                       return <button key={item.id} className={`contact-card ${index === activeIndex ? 'selected' : ''}`} onClick={() => openCase(index)}><i>{item.sender.slice(0, 1)}</i><span><b>{item.sender}</b><small>{item.preview}</small></span>{result ? <em>{result.correct ? 'OK' : '!'}</em> : <em className="unread">●</em>}</button>;
                     })}
                   </aside>
-                  <section className={`messenger-panel mode-${activeCase.mode}`}>
+                  <section className={`messenger-panel mode-${activeCase.mode}`} aria-busy={sending}>
                     <header className="chat-header"><button onClick={() => setPhoneApp('home')} aria-label="홈 화면으로">◀</button><div><b>{activeCase.sender}</b><small>{activeCase.handle} · {activeCase.channel}</small></div>{activeCase.mode === 'chat' && <span className={`model-dot ${modelState}`}>{modelLabel}</span>}</header>
-                    {activeCase.mode === 'chat' && <><div className="chat-area" aria-live="polite"><span className="date-pill">오늘</span>{activeChat.map((message, index) => <div key={`${message.role}-${index}`} className={`message ${message.role}`}><p>{message.content}</p><time>{formatGameClock(9 * 60 + 3 + index * 2)}</time></div>)}{!activeResult && activeCase.dialogue && <div className="quick-questions" aria-label="추천 질문"><span>어떤 점을 물어볼까요?</span><div>{activeCase.dialogue.quickQuestions.map((question) => <button key={question} type="button" onClick={() => setDraft(question)}>{question}</button>)}</div></div>}{sending && <div className="typing" aria-label="상대방이 입력 중"><i/><i/><i/></div>}</div><form className="reply-row" onSubmit={sendMessage}><input aria-label="메시지" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={activeResult ? '판정이 완료된 연락입니다' : '상대에게 질문하거나 직접 입력하기'} disabled={Boolean(activeResult)} /><button type="submit" disabled={!draft.trim() || sending || Boolean(activeResult)}>전송</button></form></>}
+                    {activeCase.mode === 'chat' && <><div className="chat-area" aria-live="polite"><span className="date-pill">오늘</span>{activeChat.map((message, index) => <div key={`${message.role}-${index}`} className={`message ${message.role}`}><p>{message.content}</p><time>{formatGameClock(9 * 60 + 3 + index * 2)}</time></div>)}{!activeResult && activeCase.dialogue && <div className="quick-questions" aria-label="추천 질문"><span>어떤 점을 물어볼까요?</span><div>{activeCase.dialogue.quickQuestions.map((question) => <button key={question} type="button" onClick={() => setDraft(question)} disabled={sending}>{question}</button>)}</div></div>}{sending && <div className="ai-wait-card" role="status"><div><i className="model-pulse" aria-hidden="true"/><span><b>실시간 응답 준비</b><small>{aiWaitLabel}</small></span><em>{Math.ceil(aiWaitMs / 1000)}초</em></div><div className="ai-wait-progress" role="progressbar" aria-label="Qwen 응답 준비 진행" aria-valuemin={0} aria-valuemax={100} aria-valuenow={aiWaitProgress}><i style={{ width: `${aiWaitProgress}%` }}/></div><p>8초 안에 완료되지 않으면 게임이 멈추지 않도록 자연스러운 내장 대사로 이어집니다.</p></div>}</div><form className="reply-row" onSubmit={sendMessage}><input aria-label="메시지" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={activeResult ? '판정이 완료된 연락입니다' : sending ? '상대의 답변을 준비하고 있습니다' : '상대에게 질문하거나 직접 입력하기'} disabled={Boolean(activeResult) || sending} /><button type="submit" disabled={!draft.trim() || sending || Boolean(activeResult)}>전송</button></form></>}
                     {activeCase.mode === 'notice' && <div className="read-only-surface notice-surface"><span className="date-pill">오늘</span><article><header><span>{activeCase.channel}</span><time>{formatGameClock(9 * 60 + 8)}</time></header><div className="notice-brand"><i>{activeCase.sender.slice(0,1)}</i><div><b>{activeCase.sender}</b><small>{activeCase.handle}</small></div></div><h2>{activeCase.initialMessages[0]}</h2>{activeCase.initialMessages.slice(1).map((text) => <p key={text}>{text}</p>)}<button className="official-app-button" onClick={() => setPhoneApp(activeCase.id === 'bank-fraud-check' ? 'bank' : activeCase.id === 'official-etf-fill' ? 'stocks' : 'browser')}>메시지를 닫고 관련 앱 직접 열기</button></article></div>}
                     {activeCase.mode === 'link' && <div className="read-only-surface link-surface"><span className="date-pill">오늘</span><article className="one-way-message"><header><b>{activeCase.handle}</b><time>{formatGameClock(10 * 60 + 17)}</time></header>{activeCase.initialMessages.map((text) => <p key={text}>{text}</p>)}<button className="embedded-link" onClick={() => setOpenedLinks((current) => ({ ...current, [activeCase.id]: true }))}><span>외부 페이지</span><b>{activeCase.linkLabel}</b><small>{activeCase.displayUrl}</small></button></article>{openedLinks[activeCase.id] && <section className="simulated-landing"><div className="landing-address"><span>교육용 가상 주소</span><b>{activeCase.displayUrl}</b></div><div className="landing-copy"><small>SPONSORED INFORMATION</small><h2>{activeCase.landingTitle}</h2><p>{activeCase.landingCopy}</p><button disabled>{activeCase.landingCta}</button><span>시뮬레이션에서는 정보 제출과 결제가 실행되지 않습니다.</span></div></section>}</div>}
                   </section>

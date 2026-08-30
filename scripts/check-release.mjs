@@ -4,6 +4,7 @@ import path from 'node:path';
 const root = process.cwd();
 const generatedFile = path.join(root, 'content', 'generated', 'cases.json');
 const clientFile = path.join(root, 'app', 'game-client.tsx');
+const loadingFile = path.join(root, 'app', 'game-loading.tsx');
 const cssFile = path.join(root, 'app', 'globals.css');
 
 function assert(condition, message, errors) {
@@ -11,10 +12,11 @@ function assert(condition, message, errors) {
 }
 
 async function main() {
-  const [{ ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore }, cases, client, css] = await Promise.all([
+  const [{ ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore }, cases, client, loading, css] = await Promise.all([
     import('../app/game-rules.js'),
     readFile(generatedFile, 'utf8').then(JSON.parse),
     readFile(clientFile, 'utf8'),
+    readFile(loadingFile, 'utf8'),
     readFile(cssFile, 'utf8'),
   ]);
   const errors = [];
@@ -55,16 +57,23 @@ async function main() {
 
   assert(client.includes("if (gameCase.mode !== 'chat'"), '읽기 전용 연락의 Qwen 호출 차단이 없습니다.', errors);
   assert(client.includes('aria-live="polite"'), '대화와 조사 결과의 화면 읽기 알림이 없습니다.', errors);
+  assert(client.includes('aria-busy={sending}'), 'Qwen 응답 대기 상태가 보조 기술에 전달되지 않습니다.', errors);
+  assert(client.includes("kind: 'startup'") && client.includes("kind: 'case'"), '시작·사건 전환 로딩 상태가 모두 구현되지 않았습니다.', errors);
+  assert(client.includes('await Promise.all(startupAssets.map'), '시작 화면이 실제 시각 자산 준비와 연결되지 않았습니다.', errors);
+  assert(client.includes('aiWaitMs >= 6000'), 'Qwen 지연 시 후보 대사 준비 안내가 없습니다.', errors);
+  assert(loading.includes('role="progressbar"') && loading.includes('aria-valuenow={safeProgress}'), '전체 화면 로딩 진행률의 접근성 정보가 없습니다.', errors);
+  assert(loading.includes('aria-busy="true"') && loading.includes('role="status"'), '전체 화면 로딩 상태가 화면 읽기 도구에 전달되지 않습니다.', errors);
   assert(client.includes('aria-labelledby="debrief-title"'), '판정 결과 대화상자에 접근 가능한 제목이 없습니다.', errors);
   assert(client.includes('aria-labelledby="summary-title"'), '최종 결과 대화상자에 접근 가능한 제목이 없습니다.', errors);
   assert(!client.includes('role="button" tabIndex={0}'), '키보드 실행 처리가 없는 가상 버튼이 남아 있습니다.', errors);
   assert(css.includes(':focus-visible'), '키보드 초점 표시 규칙이 없습니다.', errors);
   assert(css.includes('prefers-reduced-motion'), '동작 감소 접근성 규칙이 없습니다.', errors);
+  assert(css.includes('.game-loading-screen') && css.includes('.ai-wait-card'), '전체 화면과 Qwen 부분 로딩 스타일이 없습니다.', errors);
   assert(css.includes('@media (max-width: 680px)') && css.includes('@media (max-width: 430px)'), '모바일 대응 구간이 부족합니다.', errors);
   assert(css.includes('overflow-wrap: anywhere'), '긴 한글 문구와 가상 주소의 화면 이탈 방어가 없습니다.', errors);
 
   if (errors.length) throw new Error(`출시 전 자동 점검 실패:\n- ${errors.join('\n- ')}`);
-  console.log(`출시 전 자동 점검 완료: 8개 사건 순차 진행 · 점수 · Qwen 격리 · 키보드 · 모바일 · 콘텐츠 안전`);
+  console.log(`출시 전 자동 점검 완료: 8개 사건 순차 진행 · 로딩 전환 · 점수 · Qwen 격리 · 키보드 · 모바일 · 콘텐츠 안전`);
 }
 
 main().catch((error) => {
