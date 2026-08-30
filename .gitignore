@@ -42,5 +42,7 @@ next-env.d.ts
 # local Qwen weights and fine-tuning artifacts
 /models/
 /training/output/
+/training/.venv/
+/training/__pycache__/
 *.gguf
 *.safetensors

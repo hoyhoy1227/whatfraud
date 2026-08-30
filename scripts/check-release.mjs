@@ -5,28 +5,39 @@ const root = process.cwd();
 const generatedFile = path.join(root, 'content', 'generated', 'cases.json');
 const clientFile = path.join(root, 'app', 'game-client.tsx');
 const loadingFile = path.join(root, 'app', 'game-loading.tsx');
+const browserQwenFile = path.join(root, 'app', 'browser-qwen.ts');
 const cssFile = path.join(root, 'app', 'globals.css');
+const trainingBuilderFile = path.join(root, 'training', 'build_dataset.py');
+const trainingTrainerFile = path.join(root, 'training', 'train_lora.py');
+const trainingReadmeFile = path.join(root, 'training', 'README.md');
+const gitignoreFile = path.join(root, '.gitignore');
 
 function assert(condition, message, errors) {
   if (!condition) errors.push(message);
 }
 
 async function main() {
-  const [{ ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore }, cases, client, loading, css] = await Promise.all([
+  const [{ ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore }, cases, client, loading, browserQwen, css, trainingBuilder, trainingTrainer, trainingReadme, gitignore] = await Promise.all([
     import('../app/game-rules.js'),
     readFile(generatedFile, 'utf8').then(JSON.parse),
     readFile(clientFile, 'utf8'),
     readFile(loadingFile, 'utf8'),
+    readFile(browserQwenFile, 'utf8'),
     readFile(cssFile, 'utf8'),
+    readFile(trainingBuilderFile, 'utf8'),
+    readFile(trainingTrainerFile, 'utf8'),
+    readFile(trainingReadmeFile, 'utf8'),
+    readFile(gitignoreFile, 'utf8'),
   ]);
   const errors = [];
   const expectedOrder = [
     'official-etf-fill', 'friend-hot-tip', 'vip-research-room', 'bank-fraud-check',
     'paid-market-class', 'fixed-match-ai', 'recovery-team', 'official-maintenance',
+    'official-ipo-calendar', 'ai-celebrity-room', 'overseas-preipo-agent', 'worldcup-betting-bonus',
   ];
 
-  assert(cases.length === 8, '출시판에는 정확히 8개 사건이 필요합니다.', errors);
-  assert(JSON.stringify(cases.map((item) => item.id)) === JSON.stringify(expectedOrder), '사건 도착 순서가 승인된 8단계 순서와 다릅니다.', errors);
+  assert(cases.length === 12, '출시판에는 정확히 12개 사건이 필요합니다.', errors);
+  assert(JSON.stringify(cases.map((item) => item.id)) === JSON.stringify(expectedOrder), '사건 도착 순서가 승인된 12단계 순서와 다릅니다.', errors);
   assert(ARRIVAL_MINUTES.length === cases.length, '사건별 도착 시간이 부족합니다.', errors);
   assert(ARRIVAL_MINUTES.every((value, index) => index === 0 || value > ARRIVAL_MINUTES[index - 1]), '사건 도착 시간은 계속 증가해야 합니다.', errors);
 
@@ -55,6 +66,10 @@ async function main() {
     if (item.mode === 'link') assert(item.displayUrl.includes('.invalid'), `${item.id}: 링크가 가상 도메인이 아닙니다.`, errors);
   }
 
+  const verdictCounts = Object.groupBy(cases, (item) => item.verdict);
+  assert((verdictCounts.normal?.length ?? 0) >= 3 && (verdictCounts.caution?.length ?? 0) >= 2 && (verdictCounts.scam?.length ?? 0) >= 4, '정상·주의·사기 사건의 혼합 비율이 부족합니다.', errors);
+  assert(cases.some((item) => item.id === 'overseas-preipo-agent') && cases.some((item) => item.id === 'worldcup-betting-bonus'), '최신 투자·도박 피해 유형 사건이 누락됐습니다.', errors);
+
   assert(client.includes("if (gameCase.mode !== 'chat'"), '읽기 전용 연락의 Qwen 호출 차단이 없습니다.', errors);
   assert(client.includes('aria-live="polite"'), '대화와 조사 결과의 화면 읽기 알림이 없습니다.', errors);
   assert(client.includes('aria-busy={sending}'), 'Qwen 응답 대기 상태가 보조 기술에 전달되지 않습니다.', errors);
@@ -67,6 +82,11 @@ async function main() {
   assert(Boolean(saveSnapshot) && !saveSnapshot?.[1].includes('chats') && !saveSnapshot?.[1].includes('draft'), '자유 입력 대화가 진행 저장에 포함될 수 있습니다.', errors);
   assert(client.includes('저장한 게임 이어하기') && client.includes('처음부터 새로 시작'), '타이틀 화면에 이어하기와 새 게임 선택이 모두 없습니다.', errors);
   assert(client.includes('window.localStorage.removeItem(PROGRESS_SAVE_KEY)'), '새로운 하루를 시작할 때 진행 기록을 지우지 않습니다.', errors);
+  assert(browserQwen.includes('NEXT_PUBLIC_QWEN_MODEL_ID') && browserQwen.includes('DEFAULT_MODEL_ID'), '튜닝한 브라우저 모델을 안전하게 교체할 설정이 없습니다.', errors);
+  assert(trainingBuilder.includes('contains_player_messages') && trainingBuilder.includes('case.get("mode") == "chat"'), '튜닝 데이터의 대화형 사건 제한 또는 개인정보 비저장 표기가 없습니다.', errors);
+  assert(trainingTrainer.includes('LoraConfig') && trainingTrainer.includes('DataCollatorForSeq2Seq'), '로컬 LoRA 학습 파이프라인이 없습니다.', errors);
+  assert(trainingReadme.includes('training/output/') && trainingReadme.includes('dialogue:qwen:evaluate'), '튜닝 산출물 격리와 배포 전 평가 안내가 부족합니다.', errors);
+  assert(gitignore.includes('/training/output/') && gitignore.includes('*.gguf') && gitignore.includes('*.safetensors'), '모델 가중치와 튜닝 산출물의 Git 제외 규칙이 부족합니다.', errors);
   assert(loading.includes('role="progressbar"') && loading.includes('aria-valuenow={safeProgress}'), '전체 화면 로딩 진행률의 접근성 정보가 없습니다.', errors);
   assert(loading.includes('aria-busy="true"') && loading.includes('role="status"'), '전체 화면 로딩 상태가 화면 읽기 도구에 전달되지 않습니다.', errors);
   assert(client.includes('aria-labelledby="debrief-title"'), '판정 결과 대화상자에 접근 가능한 제목이 없습니다.', errors);
@@ -79,7 +99,7 @@ async function main() {
   assert(css.includes('overflow-wrap: anywhere'), '긴 한글 문구와 가상 주소의 화면 이탈 방어가 없습니다.', errors);
 
   if (errors.length) throw new Error(`출시 전 자동 점검 실패:\n- ${errors.join('\n- ')}`);
-  console.log(`출시 전 자동 점검 완료: 8개 사건 순차 진행 · 자동 저장 · 로딩 전환 · 점수 · Qwen 격리 · 키보드 · 모바일 · 콘텐츠 안전`);
+  console.log(`출시 전 자동 점검 완료: ${cases.length}개 사건 순차 진행 · 자동 저장 · 로딩 전환 · 점수 · Qwen 격리 · 키보드 · 모바일 · 콘텐츠 안전`);
 }
 
 main().catch((error) => {

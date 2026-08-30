@@ -1,4 +1,4 @@
-export const ARRIVAL_MINUTES = [500, 575, 670, 760, 855, 950, 1040, 1130];
+export const ARRIVAL_MINUTES = [500, 575, 670, 760, 855, 950, 1040, 1130, 1195, 1260, 1325, 1390];
 
 export const IDEAL_ACTION = Object.freeze({
   normal: 'verify',

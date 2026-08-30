@@ -6,7 +6,8 @@ type TransformersModule = {
   pipeline: (task: 'text-generation', model: string, options?: Record<string, unknown>) => Promise<TextGenerationPipeline>;
 };
 
-const MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
+const DEFAULT_MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
+const MODEL_ID = process.env.NEXT_PUBLIC_QWEN_MODEL_ID?.trim() || DEFAULT_MODEL_ID;
 const TRANSFORMERS_MODULE_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/+esm';
 
 let pipelinePromise: Promise<TextGenerationPipeline> | null = null;

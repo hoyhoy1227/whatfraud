@@ -7,7 +7,10 @@
 | 구성 요소 | 저장소 포함 여부 | 라이선스 | 공식 정보 |
 | --- | --- | --- | --- |
 | Qwen3.5-4B | 모델 가중치 미포함 | Apache License 2.0 (현재 공식 모델 페이지 기준) | [모델 페이지](https://huggingface.co/Qwen/Qwen3.5-4B), [라이선스 원문](https://www.apache.org/licenses/LICENSE-2.0) |
+| Qwen2.5-0.5B-Instruct | 모델 가중치 미포함, 로컬 LoRA 기본 모델 | Apache License 2.0 (공식 모델 페이지 기준) | [모델 페이지](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct) |
 | llama.cpp | 실행 파일 및 소스 미포함 | MIT License | [공식 저장소 라이선스](https://github.com/ggml-org/llama.cpp/blob/master/LICENSE) |
+
+로컬 튜닝 스크립트는 실행 시 PyTorch(BSD-3-Clause), Transformers·PEFT·Accelerate(Apache-2.0), Safetensors(Apache-2.0)를 사용합니다. 이 패키지와 모델은 저장소에 포함하지 않으며 설치된 버전의 라이선스 파일이 최종 기준입니다.
 
 다른 Qwen 체크포인트, GGUF 변환본, LoRA 어댑터 또는 파생 모델을 사용할 경우에는 해당 배포 페이지의 라이선스를 별도로 확인해야 합니다. 모델 파일을 재배포할 때에는 적용되는 라이선스의 고지·저작권 표시·변경 사항 표시 등 의무를 직접 준수해야 합니다.
 
