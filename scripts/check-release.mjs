@@ -61,6 +61,12 @@ async function main() {
   assert(client.includes("kind: 'startup'") && client.includes("kind: 'case'"), '시작·사건 전환 로딩 상태가 모두 구현되지 않았습니다.', errors);
   assert(client.includes('await Promise.all(startupAssets.map'), '시작 화면이 실제 시각 자산 준비와 연결되지 않았습니다.', errors);
   assert(client.includes('aiWaitMs >= 6000'), 'Qwen 지연 시 후보 대사 준비 안내가 없습니다.', errors);
+  const saveSnapshot = client.match(/const snapshot: SavedProgress = \{([\s\S]*?)\n    \};/);
+  assert(client.includes("const PROGRESS_SAVE_KEY = 'profit-24-progress-v1'"), '버전이 있는 진행 저장 키가 없습니다.', errors);
+  assert(client.includes('readSavedProgress') && client.includes('calculateCaseScore({ correct, actionCorrect, confidence'), '저장된 판정과 점수를 다시 검증하는 복원 절차가 없습니다.', errors);
+  assert(Boolean(saveSnapshot) && !saveSnapshot?.[1].includes('chats') && !saveSnapshot?.[1].includes('draft'), '자유 입력 대화가 진행 저장에 포함될 수 있습니다.', errors);
+  assert(client.includes('저장한 게임 이어하기') && client.includes('처음부터 새로 시작'), '타이틀 화면에 이어하기와 새 게임 선택이 모두 없습니다.', errors);
+  assert(client.includes('window.localStorage.removeItem(PROGRESS_SAVE_KEY)'), '새로운 하루를 시작할 때 진행 기록을 지우지 않습니다.', errors);
   assert(loading.includes('role="progressbar"') && loading.includes('aria-valuenow={safeProgress}'), '전체 화면 로딩 진행률의 접근성 정보가 없습니다.', errors);
   assert(loading.includes('aria-busy="true"') && loading.includes('role="status"'), '전체 화면 로딩 상태가 화면 읽기 도구에 전달되지 않습니다.', errors);
   assert(client.includes('aria-labelledby="debrief-title"'), '판정 결과 대화상자에 접근 가능한 제목이 없습니다.', errors);
@@ -73,7 +79,7 @@ async function main() {
   assert(css.includes('overflow-wrap: anywhere'), '긴 한글 문구와 가상 주소의 화면 이탈 방어가 없습니다.', errors);
 
   if (errors.length) throw new Error(`출시 전 자동 점검 실패:\n- ${errors.join('\n- ')}`);
-  console.log(`출시 전 자동 점검 완료: 8개 사건 순차 진행 · 로딩 전환 · 점수 · Qwen 격리 · 키보드 · 모바일 · 콘텐츠 안전`);
+  console.log(`출시 전 자동 점검 완료: 8개 사건 순차 진행 · 자동 저장 · 로딩 전환 · 점수 · Qwen 격리 · 키보드 · 모바일 · 콘텐츠 안전`);
 }
 
 main().catch((error) => {

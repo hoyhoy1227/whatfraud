@@ -26,6 +26,26 @@ type AppId = Exclude<PhoneApp, 'home'>;
 type TutorialKind = 'controls' | 'interface' | 'mission' | 'places' | 'apps' | 'verdict' | 'score';
 type PhoneAppDefinition = { id: AppId; label: string; icon: string; purpose: string; useWhen: string; caution: string };
 type LoadingTask = { kind: 'startup' | 'case'; progress: number; title: string; detail: string };
+type SavedProgress = {
+  version: 1;
+  savedAt: number;
+  availableCount: number;
+  activeIndex: number;
+  location: LocationId;
+  view: GameView;
+  phoneApp: PhoneApp;
+  phoneLocked: boolean;
+  results: Result[];
+  evidence: Record<string, string[]>;
+  openedLinks: Record<string, boolean>;
+  openedCases: Record<string, boolean>;
+};
+
+const PROGRESS_SAVE_KEY = 'profit-24-progress-v1';
+const verdictValues: Verdict[] = ['normal', 'caution', 'scam'];
+const responseActionValues: ResponseAction[] = ['verify', 'pause', 'block'];
+const gameViewValues: GameView[] = ['world', 'phone'];
+const phoneAppValues: PhoneApp[] = ['home', 'messages', 'calls', 'bank', 'stocks', 'browser', 'social', 'calendar', 'notes', 'contacts', 'safety', 'settings', 'photos'];
 
 const startupAssets = [
   '/assets/pixel/start-screen.png',
@@ -50,6 +70,79 @@ function preloadAsset(source: string) {
     image.onerror = () => resolve();
     image.src = source;
   });
+}
+
+function readSavedProgress(serialized: string | null): SavedProgress | null {
+  if (!serialized) return null;
+  try {
+    const raw = JSON.parse(serialized) as Partial<SavedProgress>;
+    if (raw.version !== 1 || !Array.isArray(raw.results) || !Number.isFinite(raw.savedAt)) return null;
+
+    const results: Result[] = [];
+    for (let index = 0; index < raw.results.length && index < cases.length; index += 1) {
+      const candidate = raw.results[index] as Partial<Result>;
+      const gameCase = cases[index];
+      if (candidate.caseId !== gameCase.id || !verdictValues.includes(candidate.picked as Verdict) || !responseActionValues.includes(candidate.action as ResponseAction) || !confidenceOptions.includes(candidate.confidence ?? -1)) return null;
+      const picked = candidate.picked as Verdict;
+      const action = candidate.action as ResponseAction;
+      const confidence = candidate.confidence as number;
+      const knownEvidence = new Set(Object.values(gameCase.checks));
+      const selectedEvidence = Array.isArray(candidate.selectedEvidence)
+        ? candidate.selectedEvidence.filter((item): item is string => typeof item === 'string' && knownEvidence.has(item))
+        : [];
+      const correct = picked === gameCase.verdict;
+      const actionCorrect = action === IDEAL_ACTION[gameCase.verdict];
+      results.push({
+        caseId: gameCase.id,
+        picked,
+        action,
+        confidence,
+        selectedEvidence,
+        correct,
+        actionCorrect,
+        score: calculateCaseScore({ correct, actionCorrect, confidence, evidenceCount: selectedEvidence.length }),
+      });
+    }
+    if (results.length !== raw.results.length) return null;
+
+    const availableCount = Math.min(cases.length, results.length === cases.length ? cases.length : results.length + 1);
+    const activeIndex = typeof raw.activeIndex === 'number' && Number.isInteger(raw.activeIndex)
+      ? Math.max(0, Math.min(raw.activeIndex, availableCount - 1))
+      : Math.max(0, availableCount - 1);
+    const visibleCaseIds = new Set(cases.slice(0, availableCount).map((item) => item.id));
+    const evidence = Object.fromEntries(cases.slice(0, availableCount).map((gameCase) => {
+      const knownEvidence = new Set(Object.values(gameCase.checks));
+      const items = raw.evidence?.[gameCase.id];
+      return [gameCase.id, Array.isArray(items) ? items.filter((item): item is string => typeof item === 'string' && knownEvidence.has(item)) : []];
+    }).filter(([, items]) => (items as string[]).length > 0));
+    const booleanRecord = (source: Record<string, boolean> | undefined) => Object.fromEntries(
+      Object.entries(source ?? {}).filter(([caseId, value]) => visibleCaseIds.has(caseId) && value === true),
+    );
+    const location = locations.some((item) => item.id === raw.location) ? raw.location as LocationId : 'home';
+    const view = gameViewValues.includes(raw.view as GameView) ? raw.view as GameView : 'phone';
+    const phoneApp = phoneAppValues.includes(raw.phoneApp as PhoneApp) ? raw.phoneApp as PhoneApp : 'home';
+
+    return {
+      version: 1,
+      savedAt: raw.savedAt as number,
+      availableCount,
+      activeIndex,
+      location,
+      view,
+      phoneApp,
+      phoneLocked: Boolean(raw.phoneLocked),
+      results,
+      evidence,
+      openedLinks: booleanRecord(raw.openedLinks),
+      openedCases: booleanRecord(raw.openedCases),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function formatSavedTime(timestamp: number) {
+  return new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(timestamp);
 }
 
 const phoneApps: PhoneAppDefinition[] = [
@@ -210,6 +303,7 @@ export default function GameClient() {
   const [llmUrl, setLlmUrl] = useState('http://127.0.0.1:8080/v1/chat/completions');
   const [modelName, setModelName] = useState('qwen-local');
   const [bestScore, setBestScore] = useState(0);
+  const [savedProgress, setSavedProgress] = useState<SavedProgress | null>(null);
 
   const activeCase = cases[activeIndex];
   const activeChat = chats[activeCase.id] ?? initialChat(activeCase);
@@ -243,8 +337,19 @@ export default function GameClient() {
       : `${activeCase.sender}가 답변을 작성 중입니다.`;
 
   useEffect(() => {
-    const stored = Number(window.localStorage.getItem('profit-24-best-score') ?? 0);
-    window.setTimeout(() => setBestScore(Number.isFinite(stored) ? stored : 0), 0);
+    let storedBest = 0;
+    let storedProgress: SavedProgress | null = null;
+    try {
+      storedBest = Number(window.localStorage.getItem('profit-24-best-score') ?? 0);
+      storedProgress = readSavedProgress(window.localStorage.getItem(PROGRESS_SAVE_KEY));
+    } catch {
+      storedBest = 0;
+      storedProgress = null;
+    }
+    window.setTimeout(() => {
+      setBestScore(Number.isFinite(storedBest) ? storedBest : 0);
+      setSavedProgress(storedProgress);
+    }, 0);
   }, []);
 
   useEffect(() => {
@@ -253,6 +358,33 @@ export default function GameClient() {
       window.setTimeout(() => setBestScore(score), 0);
     }
   }, [bestScore, complete, score]);
+
+  useEffect(() => {
+    if (!started || loadingTask) return;
+    const snapshot: SavedProgress = {
+      version: 1,
+      savedAt: Date.now(),
+      availableCount,
+      activeIndex,
+      location,
+      view,
+      phoneApp,
+      phoneLocked,
+      results,
+      evidence,
+      openedLinks,
+      openedCases,
+    };
+    const timer = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(PROGRESS_SAVE_KEY, JSON.stringify(snapshot));
+        setSavedProgress(snapshot);
+      } catch {
+        // 저장 공간을 사용할 수 없어도 게임 진행은 계속한다.
+      }
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [activeIndex, availableCount, evidence, loadingTask, location, openedCases, openedLinks, phoneApp, phoneLocked, results, started, view]);
 
   useEffect(() => {
     if (!sending) return;
@@ -514,12 +646,22 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
     }
   }
 
-  async function startSimulation(forceGuide = false) {
+  function clearSavedProgress() {
+    try {
+      window.localStorage.removeItem(PROGRESS_SAVE_KEY);
+    } catch {
+      // 브라우저 저장소를 사용할 수 없어도 새 게임은 시작할 수 있다.
+    }
+    setSavedProgress(null);
+  }
+
+  async function startSimulation(forceGuide = false, resume = false) {
     if (loadingTask) return;
-    setLoadingTask({ kind: 'startup', progress: 8, title: '시뮬레이션을 준비합니다', detail: `오늘의 판별 사건 ${cases.length}건을 안전하게 불러오는 중입니다.` });
+    const progressToRestore = resume ? savedProgress : null;
+    setLoadingTask({ kind: 'startup', progress: 8, title: progressToRestore ? '저장한 하루를 불러옵니다' : '시뮬레이션을 준비합니다', detail: progressToRestore ? '기기에 저장된 판정과 조사 기록을 확인하는 중입니다.' : `오늘의 판별 사건 ${cases.length}건을 안전하게 불러오는 중입니다.` });
     const minimumDisplay = wait(900);
     await wait(120);
-    setLoadingTask({ kind: 'startup', progress: 18, title: '사건 데이터를 확인했습니다', detail: '정상·주의·사기 연락의 순서와 판정 규칙을 준비합니다.' });
+    setLoadingTask({ kind: 'startup', progress: 18, title: progressToRestore ? '저장 기록을 확인했습니다' : '사건 데이터를 확인했습니다', detail: progressToRestore ? `완료한 사건 ${progressToRestore.results.length}/${cases.length} · 현재 사건 ${progressToRestore.activeIndex + 1}번` : '정상·주의·사기 연락의 순서와 판정 규칙을 준비합니다.' });
     let loadedAssets = 0;
     await Promise.all(startupAssets.map(async (source) => {
       await preloadAsset(source);
@@ -533,12 +675,32 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
     } catch {
       guideComplete = false;
     }
-    setLoadingTask({ kind: 'startup', progress: 90, title: '플레이 환경을 설정합니다', detail: '저장된 안내 설정과 기기 내 AI 사용 가능 여부를 확인합니다.' });
+    setLoadingTask({ kind: 'startup', progress: 90, title: '플레이 환경을 설정합니다', detail: progressToRestore ? '개인 대화 입력은 복원하지 않고 사건 진행 상태만 적용합니다.' : '저장된 안내 설정과 기기 내 AI 사용 가능 여부를 확인합니다.' });
     await minimumDisplay;
-    setLoadingTask({ kind: 'startup', progress: 100, title: '준비가 완료되었습니다', detail: forceGuide || !guideComplete ? '조작 안내부터 차근차근 시작합니다.' : '첫 번째 휴대폰 알림으로 이동합니다.' });
+    setLoadingTask({ kind: 'startup', progress: 100, title: '준비가 완료되었습니다', detail: forceGuide || !guideComplete ? '조작 안내부터 차근차근 시작합니다.' : progressToRestore ? '저장했던 사건 화면으로 돌아갑니다.' : '첫 번째 휴대폰 알림으로 이동합니다.' });
     await wait(220);
+    if (progressToRestore) {
+      setAvailableCount(progressToRestore.availableCount);
+      setActiveIndex(progressToRestore.activeIndex);
+      setLocation(progressToRestore.location);
+      setResults(progressToRestore.results);
+      setEvidence(progressToRestore.evidence);
+      setOpenedLinks(progressToRestore.openedLinks);
+      setOpenedCases(progressToRestore.openedCases);
+      setPhoneApp(progressToRestore.phoneApp);
+      setPhoneLocked(progressToRestore.phoneLocked);
+      setNotice(`저장한 진행을 불러왔습니다. ${cases[progressToRestore.activeIndex].sender} 연락부터 이어서 확인하세요.`);
+      setChats(Object.fromEntries(cases.map((item) => [item.id, initialChat(item)])));
+      setPicked(null);
+      setConfidence(70);
+      setSelectedAction(null);
+      setSelectedEvidence([]);
+      setShowDebrief(false);
+      setShowVerdictPanel(false);
+      setInfoApp(null);
+    }
     setStarted(true);
-    setView(forceGuide || !guideComplete ? 'world' : 'phone');
+    setView(forceGuide || !guideComplete ? 'world' : progressToRestore?.view ?? 'phone');
     setTutorialStep(forceGuide || !guideComplete ? 0 : null);
     setLoadingTask(null);
     window.setTimeout(prepareDefaultQwen, 0);
@@ -548,8 +710,13 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
     window.localStorage.setItem('profit-24-guide-complete', '1');
     setTutorialStep(null);
     setView('phone');
-    setPhoneLocked(true);
-    setNotice('첫 연락이 도착했다. 휴대폰 알림부터 확인해 보자.');
+    if (results.length === 0 && Object.keys(evidence).length === 0) {
+      setPhoneLocked(true);
+      setNotice('첫 연락이 도착했다. 휴대폰 알림부터 확인해 보자.');
+    } else {
+      setPhoneLocked(false);
+      setNotice(`게임 안내를 마쳤습니다. ${activeCase.sender} 연락부터 계속 확인하세요.`);
+    }
   }
 
   function toggleEvidence(item: string) {
@@ -571,6 +738,7 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
   }
 
   function restart() {
+    clearSavedProgress();
     setView('world');
     setPhoneApp('home');
     setPhoneLocked(true);
@@ -606,10 +774,12 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
           <span className="intro-kicker">디지털 안전 시뮬레이션</span>
           <h1 id="game-title"><small>투자·도박 사기 판별 게임</small>수익률 24시</h1>
           <p>하루 동안 연락이 하나씩 도착합니다.<br />내용을 확인하고 근거와 안전한 대응을 찾아 판별하세요.</p>
-          <button className="start-simulation" onClick={() => startSimulation(false)}>
-            <b>시뮬레이션 시작</b><i>▶</i>
+          {savedProgress && <div className="resume-summary" aria-label="저장된 게임 진행"><span>이어할 기록</span><b>사건 {Math.min(savedProgress.results.length + 1, cases.length)}/{cases.length} · 판정 {savedProgress.results.length}건 완료</b><small>{formatSavedTime(savedProgress.savedAt)} 자동 저장 · 대화 입력은 저장하지 않음</small></div>}
+          <button className="start-simulation" onClick={() => startSimulation(false, Boolean(savedProgress))}>
+            <b>{savedProgress ? '저장한 게임 이어하기' : '시뮬레이션 시작'}</b><i>▶</i>
           </button>
-          <button className="intro-guide-button" onClick={() => startSimulation(true)}>조작·게임 안내부터 보기</button>
+          {savedProgress && <button className="intro-new-game" onClick={() => { clearSavedProgress(); void startSimulation(false, false); }}>처음부터 새로 시작</button>}
+          <button className="intro-guide-button" onClick={() => startSimulation(true, Boolean(savedProgress))}>조작·게임 안내부터 보기</button>
           <small className="intro-disclaimer">교육용 가상 시뮬레이션 · 실제 금융기관과 무관합니다</small>
         </section>
       </main>
@@ -743,7 +913,7 @@ async function requestLocalQwen(gameCase: CaseData, messages: ChatMessage[]) {
                 </div>
               )}
 
-              {phoneApp === 'settings' && <div className="settings-screen phone-app-body"><span className="pixel-label">GAME GUIDE</span><h2>게임 방법</h2><p>연락 확인 → 공식 조사 → 근거·판정·대응 선택의 순서로 진행합니다. 사건은 판정을 마칠 때마다 하나씩 도착합니다.</p><button className="guide-replay" onClick={() => setTutorialStep(0)}>게임 방법 다시 보기</button><span className="pixel-label settings-section-label">FAST ON-DEVICE AI</span><h2>Qwen 대화 설정</h2><p>Qwen은 1~2문장으로 짧게 답합니다. 8초 안에 답하지 못하거나 WebGPU를 지원하지 않으면 상황에 맞는 후보 대사로 즉시 전환합니다.</p><div className="ai-mode-buttons" role="group" aria-label="AI 실행 방식"><button className={llmMode === 'browser' ? 'active' : ''} onClick={() => { setLlmMode('browser'); setModelState('unchecked'); setFallbackReason(null); }}>브라우저 Qwen <small>기본</small></button><button className={llmMode === 'local' ? 'active' : ''} onClick={() => { setLlmMode('local'); setModelState('unchecked'); setFallbackReason(null); }}>내 로컬 서버</button></div>{llmMode === 'local' && <><label>서버 주소<input value={llmUrl} onChange={(event) => setLlmUrl(event.target.value)} /></label><label>모델 이름<input value={modelName} onChange={(event) => setModelName(event.target.value)} /></label></>}<button className={`model-test ${modelState}`} onClick={checkModel} disabled={modelState === 'checking'}>{modelLabel} · 연결 시험</button><div className="ai-runtime-summary" aria-live="polite"><span><b>실행 범위</b><small>대화형 사건 3건만 Qwen 사용</small></span><span><b>준비 상태</b><small>{modelState === 'checking' && modelProgress !== null ? `${modelProgress}% 준비 중` : modelLabel}</small></span><span><b>측정값</b><small>{lastResponseMs !== null ? `최근 답변 ${lastResponseMs}ms` : modelLoadMs !== null ? `모델 준비 ${modelLoadMs}ms` : '아직 측정 전'}</small></span>{fallbackReason && <p>{fallbackReason}</p>}</div><div className="privacy-note"><b>기기 안에서 처리</b><span>{llmMode === 'browser' ? '브라우저 Qwen을 선택하면 대화가 외부 서버로 전송되지 않습니다. 시작 안내를 보는 동안 모델을 미리 준비합니다.' : '로컬 서버 주소로 대화가 전송됩니다. 실제 계좌번호·비밀번호·개인정보를 입력하지 마세요.'}</span></div></div>}
+              {phoneApp === 'settings' && <div className="settings-screen phone-app-body"><span className="pixel-label">GAME GUIDE</span><h2>게임 방법</h2><p>연락 확인 → 공식 조사 → 근거·판정·대응 선택의 순서로 진행합니다. 사건은 판정을 마칠 때마다 하나씩 도착합니다.</p><button className="guide-replay" onClick={() => setTutorialStep(0)}>게임 방법 다시 보기</button><span className="pixel-label settings-section-label">LOCAL AUTO SAVE</span><h2>기기 내 자동 저장</h2><p>사건 진행, 조사 근거와 판정 결과만 이 브라우저에 저장해 다음 방문에 이어갈 수 있습니다. 직접 입력한 대화와 Qwen 답변은 저장하지 않습니다.</p><div className="save-status-card" aria-live="polite"><i>✓</i><span><b>현재 진행 자동 저장 중</b><small>{savedProgress ? `${formatSavedTime(savedProgress.savedAt)} 저장 · 판정 ${savedProgress.results.length}/${cases.length}` : '첫 진행 상태를 준비 중입니다.'}</small></span></div><span className="pixel-label settings-section-label">FAST ON-DEVICE AI</span><h2>Qwen 대화 설정</h2><p>Qwen은 1~2문장으로 짧게 답합니다. 8초 안에 답하지 못하거나 WebGPU를 지원하지 않으면 상황에 맞는 후보 대사로 즉시 전환합니다.</p><div className="ai-mode-buttons" role="group" aria-label="AI 실행 방식"><button className={llmMode === 'browser' ? 'active' : ''} onClick={() => { setLlmMode('browser'); setModelState('unchecked'); setFallbackReason(null); }}>브라우저 Qwen <small>기본</small></button><button className={llmMode === 'local' ? 'active' : ''} onClick={() => { setLlmMode('local'); setModelState('unchecked'); setFallbackReason(null); }}>내 로컬 서버</button></div>{llmMode === 'local' && <><label>서버 주소<input value={llmUrl} onChange={(event) => setLlmUrl(event.target.value)} /></label><label>모델 이름<input value={modelName} onChange={(event) => setModelName(event.target.value)} /></label></>}<button className={`model-test ${modelState}`} onClick={checkModel} disabled={modelState === 'checking'}>{modelLabel} · 연결 시험</button><div className="ai-runtime-summary" aria-live="polite"><span><b>실행 범위</b><small>대화형 사건 3건만 Qwen 사용</small></span><span><b>준비 상태</b><small>{modelState === 'checking' && modelProgress !== null ? `${modelProgress}% 준비 중` : modelLabel}</small></span><span><b>측정값</b><small>{lastResponseMs !== null ? `최근 답변 ${lastResponseMs}ms` : modelLoadMs !== null ? `모델 준비 ${modelLoadMs}ms` : '아직 측정 전'}</small></span>{fallbackReason && <p>{fallbackReason}</p>}</div><div className="privacy-note"><b>기기 안에서 처리</b><span>{llmMode === 'browser' ? '브라우저 Qwen을 선택하면 대화가 외부 서버로 전송되지 않습니다. 시작 안내를 보는 동안 모델을 미리 준비합니다.' : '로컬 서버 주소로 대화가 전송됩니다. 실제 계좌번호·비밀번호·개인정보를 입력하지 마세요.'}</span></div></div>}
 
               {phoneApp === 'photos' && <div className="native-app phone-app-body photos-app"><h2>사진</h2><p className="app-lead">시뮬레이션 기록은 실제 개인정보를 포함하지 않습니다.</p><div className="photo-grid"><figure><img src="/assets/pixel/town-map.png" alt="마을 지도 기록"/><figcaption>오늘의 마을</figcaption></figure><figure><img src="/assets/pixel/phone-wallpaper.png" alt="휴대폰 배경화면"/><figcaption>기본 배경</figcaption></figure><div className="empty-photo">+<span>증거 화면은 원본 링크와 함께 공식기관에 보관하세요.</span></div></div></div>}
 
