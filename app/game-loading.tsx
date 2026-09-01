@@ -44,7 +44,7 @@ export default function GameLoadingScreen({ variant, progress, eyebrow, title, d
             </li>
           ))}
         </ol>
-        <small>{variant === 'startup' ? 'Qwen 준비는 게임 화면을 먼저 연 뒤 백그라운드에서 이어집니다.' : '연락은 판정을 마칠 때마다 한 건씩 도착합니다.'}</small>
+        <small>{variant === 'startup' ? 'Gemini 연결 확인은 게임 화면을 먼저 연 뒤 백그라운드에서 이어집니다.' : '연락은 판정을 마칠 때마다 한 건씩 도착합니다.'}</small>
       </section>
     </main>
   );
