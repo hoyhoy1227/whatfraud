@@ -3,7 +3,7 @@ import { cases } from '../../game-data';
 
 const GEMINI_MODEL = 'gemini-3.6-flash';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const PROVIDER_TIMEOUT_MS = 7_000;
+const PROVIDER_TIMEOUT_MS = 14_000;
 const SESSION_MINUTE_LIMIT = 5;
 const SESSION_DAY_LIMIT = 30;
 const IP_MINUTE_LIMIT = 10;

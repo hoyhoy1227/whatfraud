@@ -84,7 +84,7 @@ async function main() {
   assert(client.includes('aria-busy={sending}'), '보조 AI 응답 대기 상태가 보조 기술에 전달되지 않습니다.', errors);
   assert(client.includes("kind: 'startup'") && client.includes("kind: 'case'"), '시작·사건 전환 로딩 상태가 모두 구현되지 않았습니다.', errors);
   assert(client.includes('await Promise.all(startupAssets.map'), '시작 화면이 실제 시각 자산 준비와 연결되지 않았습니다.', errors);
-  assert(client.includes('aiWaitMs >= 6000'), '보조 AI 지연 시 후보 대사 준비 안내가 없습니다.', errors);
+  assert(client.includes('AI_REQUEST_TIMEOUT_MS = 16_000') && client.includes('AI_SLOW_NOTICE_MS = 10_000'), '보조 AI의 전체 대기 시간 또는 지연 안내 기준이 올바르지 않습니다.', errors);
   const saveSnapshot = client.match(/const snapshot: SavedProgress = \{([\s\S]*?)\n    \};/);
   assert(client.includes("const PROGRESS_SAVE_KEY = 'profit-24-progress-v1'"), '버전이 있는 진행 저장 키가 없습니다.', errors);
   assert(client.includes('readSavedProgress') && client.includes('calculateCaseScore({ correct, actionCorrect, confidence'), '저장된 판정과 점수를 다시 검증하는 복원 절차가 없습니다.', errors);
@@ -95,6 +95,7 @@ async function main() {
   assert(aiRoute.includes('process.env.GEMINI_API_KEY') && !aiRoute.includes('process.env.NEXT_PUBLIC_GEMINI_API_KEY'), 'Gemini 키가 서버 전용 환경 변수로 격리되지 않았습니다.', errors);
   assert(aiRoute.includes("gameCase.mode !== 'chat'") && aiRoute.includes('value.length > 6'), '서버의 대화형 사건 또는 최근 메시지 제한이 없습니다.', errors);
   assert(aiRoute.includes("GEMINI_MODEL = 'gemini-3.6-flash'") && aiRoute.includes('maxOutputTokens: 120') && aiRoute.includes("thinkingLevel: 'minimal'"), 'Gemini 3.6 Flash의 짧은 응답 설정이 고정되지 않았습니다.', errors);
+  assert(aiRoute.includes('PROVIDER_TIMEOUT_MS = 14_000'), 'Gemini 공급자 대기 시간이 14초로 설정되지 않았습니다.', errors);
   assert(!aiRoute.includes('temperature:') && !aiRoute.includes('topP:') && !aiRoute.includes('thinkingBudget:'), 'Gemini 3.6 Flash에서 폐기된 생성 옵션이 남아 있습니다.', errors);
   assert(aiRoute.includes('SESSION_MINUTE_LIMIT = 5') && aiRoute.includes('IP_DAY_LIMIT = 120'), '서버의 기본 호출 제한이 없습니다.', errors);
   assert(aiRoute.includes("'Cache-Control': 'no-store'") && aiRoute.includes('sanitizePlayerText'), '보조 AI 응답 캐시 차단 또는 입력 정제가 없습니다.', errors);
