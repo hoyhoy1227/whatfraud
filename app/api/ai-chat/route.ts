@@ -1,7 +1,7 @@
 import { buildSystemPrompt, sanitizePlayerText, validateAiReply, type AiChatMessage } from '../../ai-dialogue';
 import { cases } from '../../game-data';
 
-const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+const GEMINI_MODEL = 'gemini-3.6-flash';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const PROVIDER_TIMEOUT_MS = 7_000;
 const SESSION_MINUTE_LIMIT = 5;
@@ -67,9 +67,9 @@ function parseMessages(value: unknown): AiChatMessage[] | null {
 }
 
 function extractGeminiText(payload: unknown) {
-  const data = payload as { candidates?: Array<{ content?: { parts?: Array<{ text?: unknown }> } }> };
+  const data = payload as { candidates?: Array<{ content?: { parts?: Array<{ text?: unknown; thought?: unknown }> } }> };
   return data.candidates?.[0]?.content?.parts
-    ?.map((part) => typeof part.text === 'string' ? part.text : '')
+    ?.map((part) => part.thought === true ? '' : typeof part.text === 'string' ? part.text : '')
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim() ?? '';
@@ -129,9 +129,7 @@ export async function POST(request: Request) {
         })),
         generationConfig: {
           maxOutputTokens: 120,
-          temperature: 0.65,
-          topP: 0.9,
-          thinkingConfig: { thinkingBudget: 0 },
+          thinkingConfig: { thinkingLevel: 'minimal' },
         },
       }),
     });

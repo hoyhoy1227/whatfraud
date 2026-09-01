@@ -4,7 +4,7 @@
 
 ## 외부 AI 서비스
 
-공개 게임의 선택적 보조 대화는 Google Gemini API의 `gemini-2.5-flash-lite` 모델을 사용합니다. Gemini 모델 가중치나 Google SDK는 이 저장소에 포함하지 않으며, 서버가 HTTPS REST API를 호출합니다. 이용에는 [Gemini API 추가 서비스 약관](https://ai.google.dev/gemini-api/terms)과 [요금·무료 등급 조건](https://ai.google.dev/gemini-api/docs/pricing)이 적용됩니다. 무료 등급의 입력·출력 데이터 취급 조건은 유료 서비스와 다를 수 있으므로 실제 개인정보를 입력하지 않아야 합니다.
+공개 게임의 선택적 보조 대화는 Google Gemini API의 안정 모델 `gemini-3.6-flash`를 사용합니다. Gemini 모델 가중치나 Google SDK는 이 저장소에 포함하지 않으며, 서버가 HTTPS REST API를 호출합니다. 이용에는 [Gemini API 추가 서비스 약관](https://ai.google.dev/gemini-api/terms)과 [요금·무료 등급 조건](https://ai.google.dev/gemini-api/docs/pricing)이 적용됩니다. 무료 등급의 입력·출력 데이터 취급 조건은 유료 서비스와 다를 수 있으므로 실제 개인정보를 입력하지 않아야 합니다.
 
 ## 선택적 로컬 AI 구성 요소
 

@@ -94,7 +94,8 @@ async function main() {
   assert(browserQwen.includes('NEXT_PUBLIC_QWEN_MODEL_ID') && browserQwen.includes('DEFAULT_MODEL_ID'), '튜닝한 브라우저 모델을 안전하게 교체할 설정이 없습니다.', errors);
   assert(aiRoute.includes('process.env.GEMINI_API_KEY') && !aiRoute.includes('process.env.NEXT_PUBLIC_GEMINI_API_KEY'), 'Gemini 키가 서버 전용 환경 변수로 격리되지 않았습니다.', errors);
   assert(aiRoute.includes("gameCase.mode !== 'chat'") && aiRoute.includes('value.length > 6'), '서버의 대화형 사건 또는 최근 메시지 제한이 없습니다.', errors);
-  assert(aiRoute.includes('maxOutputTokens: 120') && aiRoute.includes('thinkingBudget: 0'), 'Gemini의 짧은 응답 설정이 고정되지 않았습니다.', errors);
+  assert(aiRoute.includes("GEMINI_MODEL = 'gemini-3.6-flash'") && aiRoute.includes('maxOutputTokens: 120') && aiRoute.includes("thinkingLevel: 'minimal'"), 'Gemini 3.6 Flash의 짧은 응답 설정이 고정되지 않았습니다.', errors);
+  assert(!aiRoute.includes('temperature:') && !aiRoute.includes('topP:') && !aiRoute.includes('thinkingBudget:'), 'Gemini 3.6 Flash에서 폐기된 생성 옵션이 남아 있습니다.', errors);
   assert(aiRoute.includes('SESSION_MINUTE_LIMIT = 5') && aiRoute.includes('IP_DAY_LIMIT = 120'), '서버의 기본 호출 제한이 없습니다.', errors);
   assert(aiRoute.includes("'Cache-Control': 'no-store'") && aiRoute.includes('sanitizePlayerText'), '보조 AI 응답 캐시 차단 또는 입력 정제가 없습니다.', errors);
   assert(aiDialogue.includes('[링크 제거]') && aiDialogue.includes('[전화번호 제거]') && aiDialogue.includes('validateAiReply'), '입력 개인정보 제거 또는 AI 답변 검사가 없습니다.', errors);
