@@ -280,6 +280,7 @@ function fallbackReply(gameCase: CaseData, userText: string, messages: ChatMessa
 
 export default function GameClient() {
   const dialogReturnFocus = useRef<HTMLElement | null>(null);
+  const objectiveCueTimer = useRef<number | null>(null);
   const [started, setStarted] = useState(false);
   const [loadingTask, setLoadingTask] = useState<LoadingTask | null>(null);
   const [phoneApp, setPhoneApp] = useState<PhoneApp>('home');
@@ -306,6 +307,8 @@ export default function GameClient() {
   const [showVerdictPanel, setShowVerdictPanel] = useState(false);
   const [infoApp, setInfoApp] = useState<AppId | null>(null);
   const [showDebrief, setShowDebrief] = useState(false);
+  const [showObjectiveCue, setShowObjectiveCue] = useState(false);
+  const [objectiveCueKey, setObjectiveCueKey] = useState(0);
   const [modelState, setModelState] = useState<ModelState>('unchecked');
   const [modelLoadMs, setModelLoadMs] = useState<number | null>(null);
   const [lastResponseMs, setLastResponseMs] = useState<number | null>(null);
@@ -428,6 +431,10 @@ export default function GameClient() {
     return () => window.clearInterval(timer);
   }, [sending]);
 
+  useEffect(() => () => {
+    if (objectiveCueTimer.current !== null) window.clearTimeout(objectiveCueTimer.current);
+  }, []);
+
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
       const dialog = document.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]');
@@ -472,6 +479,13 @@ export default function GameClient() {
   const modelLabel = useMemo(() => ({
     unchecked: 'Gemini 확인 전', checking: 'AI 확인 중', connected: 'Gemini 연결', fallback: '대체 대사'
   })[modelState], [modelState]);
+
+  function revealObjectiveCue() {
+    if (objectiveCueTimer.current !== null) window.clearTimeout(objectiveCueTimer.current);
+    setObjectiveCueKey((current) => current + 1);
+    setShowObjectiveCue(true);
+    objectiveCueTimer.current = window.setTimeout(() => setShowObjectiveCue(false), 4200);
+  }
 
   function explainFallback(error: unknown) {
     const message = error instanceof Error ? error.message : '';
@@ -576,6 +590,7 @@ export default function GameClient() {
     } else {
       setNotice(`${source?.app ?? '공식 앱'}을 확인했지만, 현재 연락과 직접 연결되는 기록은 없습니다.`);
     }
+    revealObjectiveCue();
   }
 
   function openCase(index: number) {
@@ -590,6 +605,7 @@ export default function GameClient() {
     setPhoneApp('messages');
     setOpenedCases((current) => ({ ...current, [cases[index].id]: true }));
     setDraft('');
+    if (!result) revealObjectiveCue();
   }
 
   function submitVerdict() {
@@ -607,6 +623,7 @@ export default function GameClient() {
       setShowDebrief(true);
       return;
     }
+    setShowObjectiveCue(false);
     setInfoApp(null);
     setShowVerdictPanel(true);
   }
@@ -636,6 +653,7 @@ export default function GameClient() {
     setDraft('');
     setPhoneApp('home');
     setPhoneLocked(true);
+    setShowObjectiveCue(false);
     setNotice(`${formatGameClock(ARRIVAL_MINUTES[nextIndex])}, ${actChanged ? `${dayActs[nextAct].eyebrow}이 시작되고 ` : ''}새로운 연락이 도착했다.`);
     setLoadingTask({ kind: 'case', progress: 82, title: '새 연락을 수신 중입니다', detail: `오늘의 ${nextIndex + 1}번째 연락을 휴대폰 알림에 추가합니다.` });
     await wait(220);
@@ -734,12 +752,16 @@ export default function GameClient() {
 
   function selectPhoneApp(target: PhoneApp) {
     setPhoneApp(target);
-    if (target === 'messages') setOpenedCases((current) => ({ ...current, [activeCase.id]: true }));
+    if (target === 'messages') {
+      setOpenedCases((current) => ({ ...current, [activeCase.id]: true }));
+      revealObjectiveCue();
+    }
   }
 
   function unlockPhone(target: PhoneApp = 'home') {
     setPhoneLocked(false);
     selectPhoneApp(target);
+    if (target !== 'messages') revealObjectiveCue();
   }
 
   function renderCinematicTrace(app: AppId) {
@@ -785,16 +807,13 @@ export default function GameClient() {
         </div>
         <div className="intro-shade" />
         <section className="intro-panel" aria-labelledby="game-title">
-          <span className="intro-kicker">8월 29일 · 토요일</span>
-          <h1 id="game-title"><small>휴대폰에 새 알림이 도착했습니다</small>수익률 24시</h1>
-          <p>평소처럼 휴대폰을 확인해 보세요.</p>
+          <h1 id="game-title">휴대폰을 확인해 보세요</h1>
           {savedProgress && <div className="resume-summary" aria-label="저장된 게임 진행"><span>이어할 기록</span><b>사건 {Math.min(savedProgress.results.length + 1, cases.length)}/{cases.length} · 판정 {savedProgress.results.length}건 완료</b><small>{formatSavedTime(savedProgress.savedAt)} 자동 저장 · 대화 입력은 저장하지 않음</small></div>}
           <button className="start-simulation" onClick={() => startSimulation(false, Boolean(savedProgress))}>
-            <b>{savedProgress ? '휴대폰 이어서 보기' : '휴대폰 확인하기'}</b><i>›</i>
+            <b>{savedProgress ? '이어서 열기' : '열기'}</b><i>›</i>
           </button>
           {savedProgress && <button className="intro-new-game" onClick={() => { clearSavedProgress(); void startSimulation(false, false); }}>처음부터 새로 시작</button>}
-          <button className="intro-guide-button" onClick={() => startSimulation(true, Boolean(savedProgress))}>처음이라면 게임 방법 보기</button>
-          <small className="intro-disclaimer">교육용 가상 휴대폰 · 실제 금융기관과 무관합니다</small>
+          <button className="intro-guide-button intro-guide-icon" onClick={() => startSimulation(true, Boolean(savedProgress))} aria-label="게임 방법 보기">?</button>
         </section>
       </main>
     );
@@ -814,15 +833,8 @@ export default function GameClient() {
         </div>
       </header>}
 
-      {!isAmbientEntry && <section className="mission-strip" aria-label="현재 목표">
+      {!isAmbientEntry && !phoneLocked && !showDebrief && showObjectiveCue && <section key={objectiveCueKey} className="mission-strip objective-toast" aria-label="현재 목표" aria-live="polite">
         <div className="mission-copy"><span>{actInfo.eyebrow} · 현재 목표</span><b>{objective.title}</b><small>{objective.detail}</small></div>
-        <ol aria-label="사건 진행 단계">
-          {['연락 확인', '공식 조사', '판정·대응'].map((label, index) => (
-            <li key={label} className={objectiveStage > index ? 'done' : objectiveStage === index ? 'current' : ''}>
-              <i>{objectiveStage > index ? '✓' : index + 1}</i><span>{label}</span>
-            </li>
-          ))}
-        </ol>
       </section>}
 
       <section className={`phone-screen phone-os-shell act-${activeAct} ${phoneLocked ? 'is-locked' : ''}`} aria-label="휴대폰 화면">
@@ -853,7 +865,7 @@ export default function GameClient() {
                   <button className={`ambient-notification cue-${cinematicCue.tone}`} onClick={() => selectPhoneApp(cinematicCue.app)}><i className={`mini-icon icon-${cinematicCue.icon}`}/><span><b>{cinematicCue.sender}</b><small>{cinematicCue.title} · {cinematicCue.detail}</small></span><em>열기</em></button>
                   <div className="home-widgets">
                     <div><span>오늘의 판별 훈련</span><strong>{results.length}/{cases.length}</strong><small>정확도 {accuracy}% · 점수 {score}</small></div>
-                    <div><span>현재 조사</span><strong>{activeEvidence.length}개 확인</strong><small>{objective.title}</small></div>
+                    <div><span>현재 연락</span><strong>{activeCase.sender}</strong><small>{activeCase.category} · 확인 {activeEvidence.length}건</small></div>
                   </div>
                   <button className="home-verify-card" onClick={() => verifySource('home')}><i>▤</i><span><b>내 알림·앱 기록 비교</b><small>현재 연락이 공식 앱 안에도 남아 있는지 확인</small></span><em>확인</em></button>
                   <div className="app-grid" aria-label="앱 목록">

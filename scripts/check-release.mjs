@@ -88,8 +88,10 @@ async function main() {
   assert(client.includes('function verifySource') && client.includes("verifySource('bank')") && client.includes("verifySource('library')") && client.includes("verifySource('police')"), '휴대폰 앱을 통한 독립 확인 경로가 부족합니다.', errors);
   assert(client.includes('phone-system-nav') && client.includes('앱에서 더 확인하기'), '전역 홈·판정 메뉴 또는 앱 복귀 흐름이 없습니다.', errors);
   assert(client.includes('actForIndex') && client.includes('1막 · 평범한 오전') && client.includes('3막 · 압박의 밤'), '오전·오후·밤의 3막 진행 연출이 없습니다.', errors);
-  assert(client.includes('setTutorialStep(forceGuide ? 0 : null)') && client.includes('처음이라면 게임 방법 보기'), '기본 진입에서 긴 안내를 건너뛰거나 선택형 안내를 여는 흐름이 없습니다.', errors);
+  assert(client.includes('setTutorialStep(forceGuide ? 0 : null)') && client.includes('aria-label="게임 방법 보기"'), '기본 진입에서 긴 안내를 건너뛰거나 선택형 안내를 여는 흐름이 없습니다.', errors);
   assert(client.includes('isAmbientEntry') && css.includes('.phone-only-game.ambient-entry'), '첫 잠금 화면의 조용한 휴대폰 진입 연출이 없습니다.', errors);
+  assert(client.includes('<h1 id="game-title">휴대폰을 확인해 보세요</h1>') && !client.includes('className="intro-disclaimer"'), '시작 화면에 핵심 문장 외의 불필요한 설명이 남아 있습니다.', errors);
+  assert(client.includes('showObjectiveCue') && client.includes('setShowObjectiveCue(false), 4200') && css.includes('.mission-strip.objective-toast'), '상황 변화에 따라 나타났다 사라지는 목표 안내가 없습니다.', errors);
   assert(client.includes('cinematicCues') && client.includes('ambient-notification') && client.includes('이전 선택의 여파'), '사건별 주변 알림 또는 이전 선택의 후속 연출이 없습니다.', errors);
   assert(client.includes('verificationHistory') && client.includes('case-rewind') && client.includes('사건 되감기'), '조사 순서 저장 또는 판정 후 되감기 복습이 없습니다.', errors);
   assert(client.includes('AI_REQUEST_TIMEOUT_MS = 16_000') && client.includes('AI_SLOW_NOTICE_MS = 10_000'), '보조 AI의 전체 대기 시간 또는 지연 안내 기준이 올바르지 않습니다.', errors);
@@ -97,7 +99,7 @@ async function main() {
   assert(client.includes("const PROGRESS_SAVE_KEY = 'profit-24-progress-v1'"), '버전이 있는 진행 저장 키가 없습니다.', errors);
   assert(client.includes('readSavedProgress') && client.includes('calculateCaseScore({ correct, actionCorrect, confidence'), '저장된 판정과 점수를 다시 검증하는 복원 절차가 없습니다.', errors);
   assert(Boolean(saveSnapshot) && !saveSnapshot?.[1].includes('chats') && !saveSnapshot?.[1].includes('draft'), '자유 입력 대화가 진행 저장에 포함될 수 있습니다.', errors);
-  assert(client.includes('휴대폰 이어서 보기') && client.includes('처음부터 새로 시작'), '타이틀 화면에 이어하기와 새 게임 선택이 모두 없습니다.', errors);
+  assert(client.includes('이어서 열기') && client.includes('처음부터 새로 시작'), '타이틀 화면에 이어하기와 새 게임 선택이 모두 없습니다.', errors);
   assert(client.includes('window.localStorage.removeItem(PROGRESS_SAVE_KEY)'), '새로운 하루를 시작할 때 진행 기록을 지우지 않습니다.', errors);
   assert(browserQwen.includes('NEXT_PUBLIC_QWEN_MODEL_ID') && browserQwen.includes('DEFAULT_MODEL_ID'), '튜닝한 브라우저 모델을 안전하게 교체할 설정이 없습니다.', errors);
   assert(aiRoute.includes('process.env.GEMINI_API_KEY') && !aiRoute.includes('process.env.NEXT_PUBLIC_GEMINI_API_KEY'), 'Gemini 키가 서버 전용 환경 변수로 격리되지 않았습니다.', errors);
