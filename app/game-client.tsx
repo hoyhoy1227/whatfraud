@@ -348,6 +348,7 @@ export default function GameClient() {
   const activeAppInfo = infoApp ? phoneApps.find((app) => app.id === infoApp) : undefined;
   const playerTitle = accuracy >= 80 && actionAccuracy >= 80 ? '근거 중심 안전 탐정' : actionAccuracy >= accuracy ? '신중한 안전 행동가' : groundedCount >= Math.ceil(Math.max(results.length, 1) / 2) ? '공식 확인 습관가' : '성장 중인 디지털 시민';
   const contactReviewed = Boolean(openedCases[activeCase.id]);
+  const isAmbientEntry = results.length === 0 && activeIndex === 0 && phoneLocked && !contactReviewed;
   const objectiveStage = activeResult ? 3 : activeEvidence.length ? 2 : contactReviewed ? 1 : 0;
   const objective = [
     { title: '새 연락을 확인하세요', detail: `${activeCase.sender}의 연락을 열어 내용과 발신 경로를 살펴보세요.` },
@@ -685,15 +686,9 @@ export default function GameClient() {
       const progress = 18 + Math.round((loadedAssets / startupAssets.length) * 58);
       setLoadingTask({ kind: 'startup', progress, title: '휴대폰 환경을 준비합니다', detail: `화면 자산 ${loadedAssets}/${startupAssets.length}개를 불러왔습니다.` });
     }));
-    let guideComplete = false;
-    try {
-      guideComplete = window.localStorage.getItem('profit-24-guide-complete') === '1';
-    } catch {
-      guideComplete = false;
-    }
     setLoadingTask({ kind: 'startup', progress: 90, title: '플레이 환경을 설정합니다', detail: progressToRestore ? '개인 대화 입력은 복원하지 않고 사건 진행 상태만 적용합니다.' : '저장된 안내 설정과 Gemini 보조 AI 사용 가능 여부를 확인합니다.' });
     await minimumDisplay;
-    setLoadingTask({ kind: 'startup', progress: 100, title: '준비가 완료되었습니다', detail: forceGuide || !guideComplete ? '조작 안내부터 차근차근 시작합니다.' : progressToRestore ? '저장했던 사건 화면으로 돌아갑니다.' : '첫 번째 휴대폰 알림으로 이동합니다.' });
+    setLoadingTask({ kind: 'startup', progress: 100, title: '휴대폰을 열 수 있습니다', detail: forceGuide ? '선택한 게임 안내부터 시작합니다.' : progressToRestore ? '저장했던 휴대폰 화면으로 돌아갑니다.' : '평소처럼 잠금 화면의 새 알림을 확인하세요.' });
     await wait(220);
     if (progressToRestore) {
       setAvailableCount(progressToRestore.availableCount);
@@ -716,7 +711,7 @@ export default function GameClient() {
       setInfoApp(null);
     }
     setStarted(true);
-    setTutorialStep(forceGuide || !guideComplete ? 0 : null);
+    setTutorialStep(forceGuide ? 0 : null);
     setLoadingTask(null);
     window.setTimeout(prepareDefaultAi, 0);
   }
@@ -786,29 +781,28 @@ export default function GameClient() {
           <div className="intro-phone-speaker" />
           <time>08:20</time>
           <span>8월 29일 토요일</span>
-          <div className="intro-preview-notice"><i className="mini-icon icon-messages"/><b>새 메시지</b><small>확인되지 않은 투자 제안이 도착했습니다.</small></div>
-          <div className="intro-preview-notice secondary"><i className="mini-icon icon-bank"/><b>은행 알림</b><small>공식 앱에서 거래 내역을 확인하세요.</small></div>
+          <div className="intro-preview-notice"><i className="mini-icon icon-messages"/><b>채움증권 · 지금</b><small>주문 체결 알림이 도착했습니다.</small></div>
         </div>
         <div className="intro-shade" />
         <section className="intro-panel" aria-labelledby="game-title">
-          <span className="intro-kicker">디지털 안전 시뮬레이션</span>
-          <h1 id="game-title"><small>투자·도박 사기 판별 게임</small>수익률 24시</h1>
-          <p>하루 동안 연락이 하나씩 도착합니다.<br />내용을 확인하고 근거와 안전한 대응을 찾아 판별하세요.</p>
+          <span className="intro-kicker">8월 29일 · 토요일</span>
+          <h1 id="game-title"><small>휴대폰에 새 알림이 도착했습니다</small>수익률 24시</h1>
+          <p>평소처럼 휴대폰을 확인해 보세요.</p>
           {savedProgress && <div className="resume-summary" aria-label="저장된 게임 진행"><span>이어할 기록</span><b>사건 {Math.min(savedProgress.results.length + 1, cases.length)}/{cases.length} · 판정 {savedProgress.results.length}건 완료</b><small>{formatSavedTime(savedProgress.savedAt)} 자동 저장 · 대화 입력은 저장하지 않음</small></div>}
           <button className="start-simulation" onClick={() => startSimulation(false, Boolean(savedProgress))}>
-            <b>{savedProgress ? '저장한 게임 이어하기' : '시뮬레이션 시작'}</b><i>▶</i>
+            <b>{savedProgress ? '휴대폰 이어서 보기' : '휴대폰 확인하기'}</b><i>›</i>
           </button>
           {savedProgress && <button className="intro-new-game" onClick={() => { clearSavedProgress(); void startSimulation(false, false); }}>처음부터 새로 시작</button>}
-          <button className="intro-guide-button" onClick={() => startSimulation(true, Boolean(savedProgress))}>조작·게임 안내부터 보기</button>
-          <small className="intro-disclaimer">교육용 가상 시뮬레이션 · 실제 금융기관과 무관합니다</small>
+          <button className="intro-guide-button" onClick={() => startSimulation(true, Boolean(savedProgress))}>처음이라면 게임 방법 보기</button>
+          <small className="intro-disclaimer">교육용 가상 휴대폰 · 실제 금융기관과 무관합니다</small>
         </section>
       </main>
     );
   }
 
   return (
-    <main className={`game-shell phone-only-game act-${activeAct}`}>
-      <header className="game-hud">
+    <main className={`game-shell phone-only-game act-${activeAct} ${isAmbientEntry ? 'ambient-entry' : ''}`}>
+      {!isAmbientEntry && <header className="game-hud">
         <div className="brand-block"><span className="brand-kicker">투자·도박 사기 판별</span><h1>수익률 24시</h1></div>
         <div className="hud-right">
           <div className="hud-stats" aria-label="게임 상태">
@@ -818,9 +812,9 @@ export default function GameClient() {
           </div>
           <button className="game-help-button" onClick={() => setTutorialStep(0)} aria-label="조작법과 게임 안내 다시 보기">?</button>
         </div>
-      </header>
+      </header>}
 
-      <section className="mission-strip" aria-label="현재 목표">
+      {!isAmbientEntry && <section className="mission-strip" aria-label="현재 목표">
         <div className="mission-copy"><span>{actInfo.eyebrow} · 현재 목표</span><b>{objective.title}</b><small>{objective.detail}</small></div>
         <ol aria-label="사건 진행 단계">
           {['연락 확인', '공식 조사', '판정·대응'].map((label, index) => (
@@ -829,7 +823,7 @@ export default function GameClient() {
             </li>
           ))}
         </ol>
-      </section>
+      </section>}
 
       <section className={`phone-screen phone-os-shell act-${activeAct} ${phoneLocked ? 'is-locked' : ''}`} aria-label="휴대폰 화면">
           <div className="phone-statusbar"><b>{gameTime}</b><span>SIM · Wi-Fi ▮▮▮</span></div>
@@ -924,11 +918,11 @@ export default function GameClient() {
           )}
       </section>
 
-      <nav className="view-switcher phone-system-nav" aria-label="휴대폰 주요 메뉴">
+      {!isAmbientEntry && <nav className="view-switcher phone-system-nav" aria-label="휴대폰 주요 메뉴">
         <button onClick={() => phoneApp === 'home' ? setPhoneLocked(true) : setPhoneApp('home')}><i>‹</i><span>뒤로</span></button>
         <button className={phoneApp === 'home' && !phoneLocked ? 'active' : ''} onClick={() => { setPhoneLocked(false); setPhoneApp('home'); }}><i>●</i><span>홈</span>{unreadCount > 0 && <em>{unreadCount}</em>}</button>
         <button className={`verdict-action ${showVerdictPanel ? 'active' : ''} ${objectiveStage === 2 ? 'ready' : ''}`} onClick={openVerdictPanel} aria-haspopup="dialog" aria-expanded={showVerdictPanel}><i>{activeResult ? '✓' : '!'}</i><span>{activeResult ? '결과 보기' : '판정하기'}</span>{activeEvidence.length > 0 && <em>{activeEvidence.length}</em>}</button>
-      </nav>
+      </nav>}
 
       {showVerdictPanel && !activeResult && <div className="verdict-overlay-backdrop" role="dialog" aria-modal="true" aria-labelledby="global-verdict-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowVerdictPanel(false); }}><section className="verdict-overlay"><header><div><span className="pixel-label">CASE {String(activeIndex + 1).padStart(2,'0')} · 어디서든 판정</span><h2 id="global-verdict-title">{activeCase.sender} 판단 등록</h2></div><button onClick={() => setShowVerdictPanel(false)} aria-label="판정창 닫기">×</button></header><div className="verdict-screen verdict-overlay-content"><div className="verdict-file"><p className="case-preview">“{activeCase.preview}”</p><div className="case-meta"><span>{activeCase.channel}</span><span>{activeCase.category}</span></div><h3>판정에 사용할 근거</h3><p className="selection-help">직접 확인한 근거를 선택하세요. 선택한 근거만 점수에 반영됩니다.</p>{activeEvidence.length ? <div className="evidence-picker">{activeEvidence.map((item) => <button key={item} className={selectedEvidence.includes(item) ? 'active' : ''} onClick={() => toggleEvidence(item)}><i>{selectedEvidence.includes(item) ? '✓' : '+'}</i><span>{item}</span></button>)}</div> : <p className="empty-note">아직 확인한 근거가 없습니다. 바로 판정할 수 있지만 공식 조사 점수는 받을 수 없습니다.</p>}<button className="back-to-world" onClick={() => { setShowVerdictPanel(false); setPhoneLocked(false); setPhoneApp('home'); }}>앱에서 더 확인하기</button></div><div className="verdict-card"><span className="pixel-label">판정과 대응</span><h2>이 연락은 무엇일까요?</h2><div className="verdict-buttons">{(['normal','caution','scam'] as Verdict[]).map((value) => <button key={value} className={picked === value ? 'active' : ''} onClick={() => setPicked(value)}>{verdictLabels[value]}</button>)}</div><h3>실제로 어떻게 행동할까요?</h3><div className="response-actions">{responseActions.map((action) => <button key={action.id} className={selectedAction === action.id ? 'active' : ''} onClick={() => setSelectedAction(action.id)}><b>{action.label}</b><small>{action.description}</small></button>)}</div><p className="confidence-label">판정 확신도 <strong>{confidence}%</strong></p><div className="confidence-buttons">{confidenceOptions.map((value) => <button key={value} className={confidence === value ? 'active' : ''} onClick={() => setConfidence(value)}>{value}%</button>)}</div><button className="submit-verdict" onClick={submitVerdict} disabled={!picked || !selectedAction}>{!picked ? '판정을 선택하세요' : !selectedAction ? '대응 행동을 선택하세요' : '판정 제출'}</button></div></div></section></div>}
 
