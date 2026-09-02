@@ -5,6 +5,7 @@ const root = process.cwd();
 const generatedFile = path.join(root, 'content', 'generated', 'cases.json');
 const clientFile = path.join(root, 'app', 'game-client.tsx');
 const loadingFile = path.join(root, 'app', 'game-loading.tsx');
+const appIconFile = path.join(root, 'app', 'app-icon.tsx');
 const browserQwenFile = path.join(root, 'app', 'browser-qwen.ts');
 const aiRouteFile = path.join(root, 'app', 'api', 'ai-chat', 'route.ts');
 const aiDialogueFile = path.join(root, 'app', 'ai-dialogue.ts');
@@ -21,11 +22,12 @@ function assert(condition, message, errors) {
 }
 
 async function main() {
-  const [{ ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore }, cases, client, loading, browserQwen, aiRoute, aiDialogue, css, trainingBuilder, trainingTrainer, trainingReadme, gitignore, envExample, apiKeyGuide] = await Promise.all([
+  const [{ ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore }, cases, client, loading, appIcon, browserQwen, aiRoute, aiDialogue, css, trainingBuilder, trainingTrainer, trainingReadme, gitignore, envExample, apiKeyGuide] = await Promise.all([
     import('../app/game-rules.js'),
     readFile(generatedFile, 'utf8').then(JSON.parse),
     readFile(clientFile, 'utf8'),
     readFile(loadingFile, 'utf8'),
+    readFile(appIconFile, 'utf8'),
     readFile(browserQwenFile, 'utf8'),
     readFile(aiRouteFile, 'utf8'),
     readFile(aiDialogueFile, 'utf8'),
@@ -94,6 +96,8 @@ async function main() {
   assert(client.includes('showObjectiveCue') && client.includes('setShowObjectiveCue(false), 4200') && css.includes('.mission-strip.objective-toast'), '상황 변화에 따라 나타났다 사라지는 목표 안내가 없습니다.', errors);
   assert(client.includes('cinematicCues') && client.includes('ambient-notification') && client.includes('이전 선택의 여파'), '사건별 주변 알림 또는 이전 선택의 후속 연출이 없습니다.', errors);
   assert(client.includes('verificationHistory') && client.includes('case-rewind') && client.includes('사건 되감기'), '조사 순서 저장 또는 판정 후 되감기 복습이 없습니다.', errors);
+  assert(client.includes('openedCues') && client.includes('safetySeenCount') && client.includes('!openedCases[item.id]'), '메시지·앱 알림의 읽음 상태가 저장되거나 표시에서 제거되지 않습니다.', errors);
+  assert(client.includes('!contactReviewed && <button className="home-notification"') && client.includes('!openedCues[activeCase.id]'), '확인한 홈·잠금 알림을 숨기는 흐름이 없습니다.', errors);
   assert(client.includes('AI_REQUEST_TIMEOUT_MS = 16_000') && client.includes('AI_SLOW_NOTICE_MS = 10_000'), '보조 AI의 전체 대기 시간 또는 지연 안내 기준이 올바르지 않습니다.', errors);
   const saveSnapshot = client.match(/const snapshot: SavedProgress = \{([\s\S]*?)\n    \};/);
   assert(client.includes("const PROGRESS_SAVE_KEY = 'profit-24-progress-v1'"), '버전이 있는 진행 저장 키가 없습니다.', errors);
@@ -120,6 +124,9 @@ async function main() {
   assert(loading.includes('role="progressbar"') && loading.includes('aria-valuenow={safeProgress}'), '전체 화면 로딩 진행률의 접근성 정보가 없습니다.', errors);
   assert(loading.includes('aria-busy="true"') && loading.includes('role="status"'), '전체 화면 로딩 상태가 화면 읽기 도구에 전달되지 않습니다.', errors);
   assert(loading.includes('loading-device-status') && loading.includes('loading-message-preview') && loading.includes('loading-device-gesture'), '전체 화면 로딩이 휴대폰 앱 실행·알림 수신 화면으로 구성되지 않았습니다.', errors);
+  assert(client.includes("import AppIcon from './app-icon'") && loading.includes("import AppIcon from './app-icon'"), '홈 화면과 로딩 화면이 공통 앱 아이콘을 사용하지 않습니다.', errors);
+  assert(['messages', 'calls', 'bank', 'stocks', 'browser', 'social', 'calendar', 'notes', 'contacts', 'safety', 'settings', 'photos'].every((name) => appIcon.includes(`case '${name}'`)), '앱 기능별 벡터 아이콘이 모두 구현되지 않았습니다.', errors);
+  assert(appIcon.includes('<svg') && appIcon.includes('strokeLinecap="round"') && css.includes('.app-icon svg, .mini-icon svg'), '확대 가능한 벡터 아이콘 또는 크기별 표시 규칙이 없습니다.', errors);
   assert(css.includes('@keyframes phoneTyping') && css.includes('.ai-wait-card .model-pulse::before'), '메신저 입력 중 말풍선 애니메이션이 없습니다.', errors);
   assert(client.includes('aria-labelledby="debrief-title"'), '판정 결과 대화상자에 접근 가능한 제목이 없습니다.', errors);
   assert(client.includes('aria-labelledby="summary-title"'), '최종 결과 대화상자에 접근 가능한 제목이 없습니다.', errors);
@@ -132,7 +139,7 @@ async function main() {
   assert(css.includes('overflow-wrap: anywhere'), '긴 한글 문구와 가상 주소의 화면 이탈 방어가 없습니다.', errors);
 
   if (errors.length) throw new Error(`출시 전 자동 점검 실패:\n- ${errors.join('\n- ')}`);
-  console.log(`출시 전 자동 점검 완료: ${cases.length}개 사건 순차 진행 · 자동 저장 · 로딩 전환 · 점수 · Gemini 서버 격리 · 키보드 · 모바일 · 콘텐츠 안전`);
+  console.log(`출시 전 자동 점검 완료: ${cases.length}개 사건 순차 진행 · 읽음 처리 · 자동 저장 · 로딩 전환 · 점수 · Gemini 서버 격리 · 키보드 · 모바일 · 콘텐츠 안전`);
 }
 
 main().catch((error) => {

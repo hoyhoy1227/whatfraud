@@ -5,6 +5,7 @@ import { CaseData, cases, DialogueTopic, LocationId, Verdict, verdictLabels } fr
 import { validateAiReply } from './ai-dialogue';
 import { ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore, formatGameClock } from './game-rules';
 import GameLoadingScreen from './game-loading';
+import AppIcon from './app-icon';
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 type ResponseAction = 'verify' | 'pause' | 'block';
@@ -42,6 +43,8 @@ type SavedProgress = {
   verificationHistory: Record<string, InvestigationEvent[]>;
   openedLinks: Record<string, boolean>;
   openedCases: Record<string, boolean>;
+  openedCues: Record<string, boolean>;
+  safetySeenCount: number;
 };
 
 const PROGRESS_SAVE_KEY = 'profit-24-progress-v1';
@@ -178,6 +181,10 @@ function readSavedProgress(serialized: string | null): SavedProgress | null {
       verificationHistory,
       openedLinks: booleanRecord(raw.openedLinks),
       openedCases: booleanRecord(raw.openedCases),
+      openedCues: booleanRecord(raw.openedCues),
+      safetySeenCount: typeof raw.safetySeenCount === 'number' && Number.isFinite(raw.safetySeenCount)
+        ? Math.max(0, Math.min(results.length, Math.floor(raw.safetySeenCount)))
+        : 0,
     };
   } catch {
     return null;
@@ -296,6 +303,8 @@ export default function GameClient() {
   const [verificationHistory, setVerificationHistory] = useState<Record<string, InvestigationEvent[]>>({});
   const [openedLinks, setOpenedLinks] = useState<Record<string, boolean>>({});
   const [openedCases, setOpenedCases] = useState<Record<string, boolean>>({});
+  const [openedCues, setOpenedCues] = useState<Record<string, boolean>>({});
+  const [safetySeenCount, setSafetySeenCount] = useState(0);
   const [results, setResults] = useState<Result[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -328,7 +337,7 @@ export default function GameClient() {
   const actionAccuracy = results.length ? Math.round((results.filter((result) => result.actionCorrect).length / results.length) * 100) : 0;
   const groundedCount = results.filter((result) => result.selectedEvidence.length > 0).length;
   const availableCases = cases.slice(0, availableCount);
-  const unreadCount = availableCases.filter((item) => !results.some((result) => result.caseId === item.id)).length;
+  const unreadCount = availableCases.filter((item) => !openedCases[item.id]).length;
   const gameTime = formatGameClock(ARRIVAL_MINUTES[Math.min(availableCount - 1, ARRIVAL_MINUTES.length - 1)] + activeEvidence.length * 6);
   const activeAct = actForIndex(activeIndex);
   const actInfo = dayActs[activeAct];
@@ -412,6 +421,8 @@ export default function GameClient() {
       verificationHistory,
       openedLinks,
       openedCases,
+      openedCues,
+      safetySeenCount,
     };
     const timer = window.setTimeout(() => {
       try {
@@ -422,7 +433,7 @@ export default function GameClient() {
       }
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [activeIndex, availableCount, evidence, loadingTask, openedCases, openedLinks, phoneApp, phoneLocked, results, started, verificationHistory]);
+  }, [activeIndex, availableCount, evidence, loadingTask, openedCases, openedCues, openedLinks, phoneApp, phoneLocked, results, safetySeenCount, started, verificationHistory]);
 
   useEffect(() => {
     if (!sending) return;
@@ -716,6 +727,8 @@ export default function GameClient() {
       setVerificationHistory(progressToRestore.verificationHistory);
       setOpenedLinks(progressToRestore.openedLinks);
       setOpenedCases(progressToRestore.openedCases);
+      setOpenedCues(progressToRestore.openedCues);
+      setSafetySeenCount(progressToRestore.safetySeenCount);
       setPhoneApp(progressToRestore.phoneApp);
       setPhoneLocked(progressToRestore.phoneLocked);
       setNotice(`저장한 진행을 불러왔습니다. ${cases[progressToRestore.activeIndex].sender} 연락부터 이어서 확인하세요.`);
@@ -752,6 +765,8 @@ export default function GameClient() {
 
   function selectPhoneApp(target: PhoneApp) {
     setPhoneApp(target);
+    if (target === cinematicCue.app) setOpenedCues((current) => ({ ...current, [activeCase.id]: true }));
+    if (target === 'safety') setSafetySeenCount(results.length);
     if (target === 'messages') {
       setOpenedCases((current) => ({ ...current, [activeCase.id]: true }));
       revealObjectiveCue();
@@ -766,7 +781,7 @@ export default function GameClient() {
 
   function renderCinematicTrace(app: AppId) {
     if (cinematicCue.app !== app) return null;
-    return <div className={`app-scene-trace cue-${cinematicCue.tone}`}><i className={`mini-icon icon-${cinematicCue.icon}`}/><span><b>{cinematicCue.title}</b><small>{cinematicCue.detail}</small></span><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + 1)}</time></div>;
+    return <div className={`app-scene-trace cue-${cinematicCue.tone}`}><AppIcon name={cinematicCue.icon} size="mini"/><span><b>{cinematicCue.title}</b><small>{cinematicCue.detail}</small></span><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + 1)}</time></div>;
   }
 
   function restart() {
@@ -782,6 +797,8 @@ export default function GameClient() {
     setVerificationHistory({});
     setOpenedLinks({});
     setOpenedCases({});
+    setOpenedCues({});
+    setSafetySeenCount(0);
     setShowDebrief(false);
     setShowVerdictPanel(false);
     setInfoApp(null);
@@ -803,7 +820,7 @@ export default function GameClient() {
           <div className="intro-phone-speaker" />
           <time>08:20</time>
           <span>8월 29일 토요일</span>
-          <div className="intro-preview-notice"><i className="mini-icon icon-messages"/><b>채움증권 · 지금</b><small>주문 체결 알림이 도착했습니다.</small></div>
+          <div className="intro-preview-notice"><AppIcon name="messages" size="mini"/><b>채움증권 · 지금</b><small>주문 체결 알림이 도착했습니다.</small></div>
         </div>
         <div className="intro-shade" />
         <section className="intro-panel" aria-labelledby="game-title">
@@ -847,9 +864,9 @@ export default function GameClient() {
                 <div className="lock-padlock">●</div>
                 <time>{gameTime}</time><span>8월 29일 토요일</span>
                 <div className="lock-notifications" aria-label="새 알림">
-                  <button onClick={() => unlockPhone('messages')}><i className="mini-icon icon-messages"/><span><b>메시지 · 지금</b><strong>{activeCase.sender}</strong><small>{activeCase.preview}</small></span></button>
-                  <button className={`cue-${cinematicCue.tone}`} onClick={() => unlockPhone(cinematicCue.app)}><i className={`mini-icon icon-${cinematicCue.icon}`}/><span><b>{cinematicCue.sender} · {activeIndex % 2 ? '3분 전' : '12분 전'}</b><strong>{cinematicCue.title}</strong><small>{cinematicCue.detail}</small></span></button>
-                  <button onClick={() => unlockPhone('safety')}><i className="mini-icon icon-safety"/><span><b>안전센터 · 오늘</b><strong>판정 기록 {results.length}건</strong><small>완료한 사건의 판단과 안전 행동을 복습할 수 있습니다.</small></span></button>
+                  {!contactReviewed && <button onClick={() => unlockPhone('messages')}><AppIcon name="messages" size="mini"/><span><b>메시지 · 지금</b><strong>{activeCase.sender}</strong><small>{activeCase.preview}</small></span></button>}
+                  {!openedCues[activeCase.id] && <button className={`cue-${cinematicCue.tone}`} onClick={() => unlockPhone(cinematicCue.app)}><AppIcon name={cinematicCue.icon} size="mini"/><span><b>{cinematicCue.sender} · {activeIndex % 2 ? '3분 전' : '12분 전'}</b><strong>{cinematicCue.title}</strong><small>{cinematicCue.detail}</small></span></button>}
+                  {results.length > safetySeenCount && <button onClick={() => unlockPhone('safety')}><AppIcon name="safety" size="mini"/><span><b>안전센터 · 오늘</b><strong>새 판정 기록 {results.length - safetySeenCount}건</strong><small>완료한 사건의 판단과 안전 행동을 복습할 수 있습니다.</small></span></button>}
                 </div>
               </div>
               <button className="unlock-button" onClick={() => unlockPhone()}><span>위로 밀어 열기</span><b>⌃</b></button>
@@ -861,18 +878,18 @@ export default function GameClient() {
                 <div className="phone-home-screen">
                   <div className="chapter-card"><span>{actInfo.eyebrow}</span><b>{actInfo.title}</b><small>{actInfo.detail}</small></div>
                   {previousConsequence && <div className={`previous-choice-card ${previousResult?.actionCorrect ? 'resolved' : 'unresolved'}`}><i>{previousResult?.actionCorrect ? '✓' : '!'}</i><span><b>이전 선택의 여파</b><small>{previousConsequence}</small></span></div>}
-                  <button className="home-notification" onClick={() => selectPhoneApp('messages')}><i className="mini-icon icon-messages"/><span><b>{activeCase.sender}</b><small>{activeCase.preview}</small></span><em>{formatGameClock(ARRIVAL_MINUTES[activeIndex])}</em></button>
-                  <button className={`ambient-notification cue-${cinematicCue.tone}`} onClick={() => selectPhoneApp(cinematicCue.app)}><i className={`mini-icon icon-${cinematicCue.icon}`}/><span><b>{cinematicCue.sender}</b><small>{cinematicCue.title} · {cinematicCue.detail}</small></span><em>열기</em></button>
+                  {!contactReviewed && <button className="home-notification" onClick={() => selectPhoneApp('messages')}><AppIcon name="messages" size="mini"/><span><b>{activeCase.sender}</b><small>{activeCase.preview}</small></span><em>{formatGameClock(ARRIVAL_MINUTES[activeIndex])}</em></button>}
+                  {!openedCues[activeCase.id] && <button className={`ambient-notification cue-${cinematicCue.tone}`} onClick={() => selectPhoneApp(cinematicCue.app)}><AppIcon name={cinematicCue.icon} size="mini"/><span><b>{cinematicCue.sender}</b><small>{cinematicCue.title} · {cinematicCue.detail}</small></span><em>열기</em></button>}
                   <div className="home-widgets">
                     <div><span>오늘의 판별 훈련</span><strong>{results.length}/{cases.length}</strong><small>정확도 {accuracy}% · 점수 {score}</small></div>
                     <div><span>현재 연락</span><strong>{activeCase.sender}</strong><small>{activeCase.category} · 확인 {activeEvidence.length}건</small></div>
                   </div>
                   <button className="home-verify-card" onClick={() => verifySource('home')}><i>▤</i><span><b>내 알림·앱 기록 비교</b><small>현재 연락이 공식 앱 안에도 남아 있는지 확인</small></span><em>확인</em></button>
                   <div className="app-grid" aria-label="앱 목록">
-                    {phoneApps.map((app) => <button key={app.id} onClick={() => selectPhoneApp(app.id)}><i className={`app-icon icon-${app.icon}`}/><span>{app.label}</span>{app.id === 'messages' && unreadCount > 0 && <em>{unreadCount}</em>}</button>)}
+                    {phoneApps.map((app) => <button key={app.id} onClick={() => selectPhoneApp(app.id)}><AppIcon name={app.icon}/><span>{app.label}</span>{app.id === 'messages' && unreadCount > 0 && <em>{unreadCount}</em>}</button>)}
                   </div>
                   <div className="phone-dock">
-                    {phoneApps.filter((app) => ['calls','messages','browser','safety'].includes(app.id)).map((app) => <button key={app.id} onClick={() => selectPhoneApp(app.id)} aria-label={`${app.label} 열기`}><i className={`app-icon icon-${app.icon}`}/></button>)}
+                    {phoneApps.filter((app) => ['calls','messages','browser','safety'].includes(app.id)).map((app) => <button key={app.id} onClick={() => selectPhoneApp(app.id)} aria-label={`${app.label} 열기`}><AppIcon name={app.icon}/></button>)}
                   </div>
                 </div>
               )}
@@ -885,7 +902,7 @@ export default function GameClient() {
                     <div className="contact-title"><span>도착한 연락</span><b>{availableCases.length}</b></div>
                     {availableCases.map((item, index) => {
                       const result = results.find((entry) => entry.caseId === item.id);
-                      return <button key={item.id} className={`contact-card ${index === activeIndex ? 'selected' : ''}`} onClick={() => openCase(index)}><i>{item.sender.slice(0, 1)}</i><span><b>{item.sender}</b><small>{item.preview}</small></span>{result ? <em>{result.correct ? 'OK' : '!'}</em> : <em className="unread">●</em>}</button>;
+                      return <button key={item.id} className={`contact-card ${index === activeIndex ? 'selected' : ''}`} onClick={() => openCase(index)}><i>{item.sender.slice(0, 1)}</i><span><b>{item.sender}</b><small>{item.preview}</small></span>{result ? <em>{result.correct ? 'OK' : '!'}</em> : !openedCases[item.id] ? <em className="unread">●</em> : null}</button>;
                     })}
                   </aside>
                   <section className={`messenger-panel mode-${activeCase.mode}`} aria-busy={sending}>
@@ -938,9 +955,9 @@ export default function GameClient() {
 
       {showVerdictPanel && !activeResult && <div className="verdict-overlay-backdrop" role="dialog" aria-modal="true" aria-labelledby="global-verdict-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowVerdictPanel(false); }}><section className="verdict-overlay"><header><div><span className="pixel-label">CASE {String(activeIndex + 1).padStart(2,'0')} · 어디서든 판정</span><h2 id="global-verdict-title">{activeCase.sender} 판단 등록</h2></div><button onClick={() => setShowVerdictPanel(false)} aria-label="판정창 닫기">×</button></header><div className="verdict-screen verdict-overlay-content"><div className="verdict-file"><p className="case-preview">“{activeCase.preview}”</p><div className="case-meta"><span>{activeCase.channel}</span><span>{activeCase.category}</span></div><h3>판정에 사용할 근거</h3><p className="selection-help">직접 확인한 근거를 선택하세요. 선택한 근거만 점수에 반영됩니다.</p>{activeEvidence.length ? <div className="evidence-picker">{activeEvidence.map((item) => <button key={item} className={selectedEvidence.includes(item) ? 'active' : ''} onClick={() => toggleEvidence(item)}><i>{selectedEvidence.includes(item) ? '✓' : '+'}</i><span>{item}</span></button>)}</div> : <p className="empty-note">아직 확인한 근거가 없습니다. 바로 판정할 수 있지만 공식 조사 점수는 받을 수 없습니다.</p>}<button className="back-to-world" onClick={() => { setShowVerdictPanel(false); setPhoneLocked(false); setPhoneApp('home'); }}>앱에서 더 확인하기</button></div><div className="verdict-card"><span className="pixel-label">판정과 대응</span><h2>이 연락은 무엇일까요?</h2><div className="verdict-buttons">{(['normal','caution','scam'] as Verdict[]).map((value) => <button key={value} className={picked === value ? 'active' : ''} onClick={() => setPicked(value)}>{verdictLabels[value]}</button>)}</div><h3>실제로 어떻게 행동할까요?</h3><div className="response-actions">{responseActions.map((action) => <button key={action.id} className={selectedAction === action.id ? 'active' : ''} onClick={() => setSelectedAction(action.id)}><b>{action.label}</b><small>{action.description}</small></button>)}</div><p className="confidence-label">판정 확신도 <strong>{confidence}%</strong></p><div className="confidence-buttons">{confidenceOptions.map((value) => <button key={value} className={confidence === value ? 'active' : ''} onClick={() => setConfidence(value)}>{value}%</button>)}</div><button className="submit-verdict" onClick={submitVerdict} disabled={!picked || !selectedAction}>{!picked ? '판정을 선택하세요' : !selectedAction ? '대응 행동을 선택하세요' : '판정 제출'}</button></div></div></section></div>}
 
-      {activeAppInfo && <div className="app-info-backdrop" role="dialog" aria-modal="true" aria-labelledby="app-info-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setInfoApp(null); }}><section className="app-info-sheet"><header><i className={`app-icon icon-${activeAppInfo.icon}`}/><div><span className="pixel-label">APP INFORMATION</span><h2 id="app-info-title">{activeAppInfo.label}</h2></div><button onClick={() => setInfoApp(null)} aria-label="앱 정보 닫기">×</button></header><dl><div><dt>이 앱의 역할</dt><dd>{activeAppInfo.purpose}</dd></div><div><dt>언제 사용하나요?</dt><dd>{activeAppInfo.useWhen}</dd></div><div><dt>확인할 점</dt><dd>{activeAppInfo.caution}</dd></div></dl><button className="app-info-close" onClick={() => setInfoApp(null)}>확인</button></section></div>}
+      {activeAppInfo && <div className="app-info-backdrop" role="dialog" aria-modal="true" aria-labelledby="app-info-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setInfoApp(null); }}><section className="app-info-sheet"><header><AppIcon name={activeAppInfo.icon}/><div><span className="pixel-label">APP INFORMATION</span><h2 id="app-info-title">{activeAppInfo.label}</h2></div><button onClick={() => setInfoApp(null)} aria-label="앱 정보 닫기">×</button></header><dl><div><dt>이 앱의 역할</dt><dd>{activeAppInfo.purpose}</dd></div><div><dt>언제 사용하나요?</dt><dd>{activeAppInfo.useWhen}</dd></div><div><dt>확인할 점</dt><dd>{activeAppInfo.caution}</dd></div></dl><button className="app-info-close" onClick={() => setInfoApp(null)}>확인</button></section></div>}
 
-      {tutorialStep !== null && <div className="tutorial-backdrop" role="dialog" aria-modal="true" aria-labelledby="tutorial-title"><section className={`tutorial-card guide-${tutorialSteps[tutorialStep].kind}`}><div className="tutorial-progress" aria-label={`${tutorialStep + 1}단계 / ${tutorialSteps.length}단계`}>{tutorialSteps.map((_, index) => <i key={index} className={index <= tutorialStep ? 'active' : ''}/>)}</div><div className="tutorial-icon">{tutorialSteps[tutorialStep].icon}</div><span className="pixel-label">{tutorialSteps[tutorialStep].eyebrow}</span><h2 id="tutorial-title">{tutorialSteps[tutorialStep].title}</h2><p>{tutorialSteps[tutorialStep].body}</p>{tutorialSteps[tutorialStep].kind === 'controls' && <div className="control-guide-grid"><article><b>PC</b><span>클릭 · Tab 이동 · Enter 실행</span><small>ESC로 열린 창 닫기</small></article><article><b>모바일</b><span>터치로 선택 · 위아래 스크롤</span><small>하단의 뒤로·홈으로 이동</small></article></div>}{tutorialSteps[tutorialStep].kind === 'interface' && <ol className="interface-guide"><li><i>1</i><span><b>상단 상태와 ? 도움말</b><small>시간·사건·점수와 전체 안내</small></span></li><li><i>2</i><span><b>현재 목표</b><small>지금 필요한 다음 행동</small></span></li><li><i>3</i><span><b>하단 고정 메뉴</b><small>뒤로 · 홈 · 판정하기</small></span></li><li><i>4</i><span><b>설정과 앱 i</b><small>게임 설정 및 앱별 도움말</small></span></li></ol>}{tutorialSteps[tutorialStep].kind === 'mission' && <div className="tutorial-loop"><span>연락 확인</span><i>→</i><span>공식 조사</span><i>→</i><span>판정·대응</span></div>}{tutorialSteps[tutorialStep].kind === 'verify' && <div className="place-guide-grid">{verificationActions.map((action) => <article key={action.id}><i>{action.icon}</i><span><b>{action.label}</b><small>{action.app} · {action.description}</small></span></article>)}</div>}{tutorialSteps[tutorialStep].kind === 'apps' && <div className="app-guide-grid">{phoneApps.map((app) => <article key={app.id}><i className={`app-icon icon-${app.icon}`}/><span><b>{app.label}</b><small>{app.purpose}</small></span></article>)}</div>}{tutorialSteps[tutorialStep].kind === 'verdict' && <div className="tutorial-nav-demo"><span>‹<small>뒤로</small></span><span>●<small>홈</small></span><span className="highlight">!<small>판정하기</small></span></div>}{tutorialSteps[tutorialStep].kind === 'score' && <div className="score-guide-grid"><span>판정<strong>45%</strong></span><span>근거<strong>25%</strong></span><span>대응<strong>20%</strong></span><span>확신도<strong>10%</strong></span></div>}<div className="tutorial-actions"><button className="tutorial-skip" onClick={closeTutorial}>건너뛰기</button><button className="tutorial-next" onClick={() => tutorialStep === tutorialSteps.length - 1 ? closeTutorial() : setTutorialStep(tutorialStep + 1)}>{tutorialStep === tutorialSteps.length - 1 ? '첫 연락 확인하기' : '다음'}</button></div></section></div>}
+      {tutorialStep !== null && <div className="tutorial-backdrop" role="dialog" aria-modal="true" aria-labelledby="tutorial-title"><section className={`tutorial-card guide-${tutorialSteps[tutorialStep].kind}`}><div className="tutorial-progress" aria-label={`${tutorialStep + 1}단계 / ${tutorialSteps.length}단계`}>{tutorialSteps.map((_, index) => <i key={index} className={index <= tutorialStep ? 'active' : ''}/>)}</div><div className="tutorial-icon">{tutorialSteps[tutorialStep].icon}</div><span className="pixel-label">{tutorialSteps[tutorialStep].eyebrow}</span><h2 id="tutorial-title">{tutorialSteps[tutorialStep].title}</h2><p>{tutorialSteps[tutorialStep].body}</p>{tutorialSteps[tutorialStep].kind === 'controls' && <div className="control-guide-grid"><article><b>PC</b><span>클릭 · Tab 이동 · Enter 실행</span><small>ESC로 열린 창 닫기</small></article><article><b>모바일</b><span>터치로 선택 · 위아래 스크롤</span><small>하단의 뒤로·홈으로 이동</small></article></div>}{tutorialSteps[tutorialStep].kind === 'interface' && <ol className="interface-guide"><li><i>1</i><span><b>상단 상태와 ? 도움말</b><small>시간·사건·점수와 전체 안내</small></span></li><li><i>2</i><span><b>현재 목표</b><small>지금 필요한 다음 행동</small></span></li><li><i>3</i><span><b>하단 고정 메뉴</b><small>뒤로 · 홈 · 판정하기</small></span></li><li><i>4</i><span><b>설정과 앱 i</b><small>게임 설정 및 앱별 도움말</small></span></li></ol>}{tutorialSteps[tutorialStep].kind === 'mission' && <div className="tutorial-loop"><span>연락 확인</span><i>→</i><span>공식 조사</span><i>→</i><span>판정·대응</span></div>}{tutorialSteps[tutorialStep].kind === 'verify' && <div className="place-guide-grid">{verificationActions.map((action) => <article key={action.id}><i>{action.icon}</i><span><b>{action.label}</b><small>{action.app} · {action.description}</small></span></article>)}</div>}{tutorialSteps[tutorialStep].kind === 'apps' && <div className="app-guide-grid">{phoneApps.map((app) => <article key={app.id}><AppIcon name={app.icon}/><span><b>{app.label}</b><small>{app.purpose}</small></span></article>)}</div>}{tutorialSteps[tutorialStep].kind === 'verdict' && <div className="tutorial-nav-demo"><span>‹<small>뒤로</small></span><span>●<small>홈</small></span><span className="highlight">!<small>판정하기</small></span></div>}{tutorialSteps[tutorialStep].kind === 'score' && <div className="score-guide-grid"><span>판정<strong>45%</strong></span><span>근거<strong>25%</strong></span><span>대응<strong>20%</strong></span><span>확신도<strong>10%</strong></span></div>}<div className="tutorial-actions"><button className="tutorial-skip" onClick={closeTutorial}>건너뛰기</button><button className="tutorial-next" onClick={() => tutorialStep === tutorialSteps.length - 1 ? closeTutorial() : setTutorialStep(tutorialStep + 1)}>{tutorialStep === tutorialSteps.length - 1 ? '첫 연락 확인하기' : '다음'}</button></div></section></div>}
 
       {showDebrief && activeResult && (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="debrief-title" tabIndex={-1}>

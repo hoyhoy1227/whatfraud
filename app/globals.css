@@ -405,22 +405,24 @@ button { -webkit-tap-highlight-color: transparent; }
 .app-grid { width: min(720px,100%); display: grid; grid-template-columns: repeat(4,minmax(70px,1fr)); gap: 18px 12px; margin: 0 auto; }
 .app-grid button { position: relative; display: grid; justify-items: center; gap: 7px; border: 0; background: transparent; color: white; font: 700 9px Arial,sans-serif; text-shadow: 0 2px 4px #000; cursor: pointer; }
 .app-grid button > em { position: absolute; top: -5px; left: calc(50% + 17px); min-width: 19px; height: 19px; display: grid; place-items: center; border: 2px solid white; border-radius: 50%; background: #d9483f; color: white; font-size: 8px; font-style: normal; text-shadow: none; }
-.app-icon, .mini-icon { display: grid; place-items: center; flex: 0 0 auto; border: 1px solid rgba(255,255,255,.2); color: white; font-family: Arial, sans-serif; font-style: normal; font-weight: 700; line-height: 1; box-shadow: 0 6px 16px rgba(7,17,32,.22); }
+.app-icon, .mini-icon { position: relative; display: grid; place-items: center; flex: 0 0 auto; overflow: hidden; border: 1px solid rgba(255,255,255,.38); color: white; font-style: normal; line-height: 1; box-shadow: 0 7px 18px rgba(7,17,32,.24), inset 0 1px 0 rgba(255,255,255,.28); }
 .app-icon { width: 58px; height: 58px; border-radius: 16px; }.mini-icon { width: 38px; height: 38px; border-radius: 11px; }
-.app-icon::before, .mini-icon::before { display: block; font-size: 23px; letter-spacing: -.08em; }
-.mini-icon::before { font-size: 16px; }
-.icon-messages { background: linear-gradient(145deg,#45c77a,#27a960); }.icon-messages::before { content: "✉"; }
-.icon-calls { background: linear-gradient(145deg,#53d568,#22af48); }.icon-calls::before { content: "☎"; }
-.icon-bank { background: linear-gradient(145deg,#3478e8,#1858bf); }.icon-bank::before { content: "₩"; }
-.icon-stocks { background: linear-gradient(145deg,#314764,#18283d); }.icon-stocks::before { content: "↗"; }
-.icon-browser { background: linear-gradient(145deg,#68a2ff,#3473df); }.icon-browser::before { content: "◎"; }
-.icon-social { background: linear-gradient(145deg,#9e70ee,#7548ca); }.icon-social::before { content: "●●"; font-size: 13px; }
-.icon-calendar { background: linear-gradient(180deg,#f35d67 0 28%,#fff 28%); color: #222b38; }.icon-calendar::before { content: "29"; font-size: 18px; }
-.icon-notes { background: linear-gradient(145deg,#ffd963,#efb930); color: #4b3908; }.icon-notes::before { content: "≡"; }
-.icon-contacts { background: linear-gradient(145deg,#f2a34a,#de7925); }.icon-contacts::before { content: "人"; }
-.icon-safety { background: linear-gradient(145deg,#4d78ae,#2d507b); }.icon-safety::before { content: "✓"; }
-.icon-settings { background: linear-gradient(145deg,#8e9bab,#667485); }.icon-settings::before { content: "⚙"; }
-.icon-photos { background: linear-gradient(145deg,#e35a87,#bd315e); }.icon-photos::before { content: "▧"; }
+.app-icon::after, .mini-icon::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(145deg,rgba(255,255,255,.23),transparent 42%,rgba(0,0,0,.08)); }
+.app-icon svg, .mini-icon svg { position: relative; z-index: 1; width: 56%; height: 56%; filter: drop-shadow(0 1px 1px rgba(0,0,0,.16)); }
+.mini-icon svg { width: 58%; height: 58%; stroke-width: 2; }
+.icon-messages { background: linear-gradient(145deg,#53d986,#19a95a); }
+.icon-calls { background: linear-gradient(145deg,#63db73,#20a944); }
+.icon-bank { background: linear-gradient(145deg,#4388ef,#1758bd); }
+.icon-stocks { background: linear-gradient(145deg,#344968,#15243a); }
+.icon-browser { background: radial-gradient(circle at 34% 28%,#8cc9ff,#3e80e7 58%,#245ab7); }
+.icon-social { background: linear-gradient(145deg,#ad7bf3,#7545c8); }
+.icon-calendar { background: linear-gradient(180deg,#f35d67 0 25%,#fff 25%); color: #273246; }
+.icon-calendar svg { margin-top: 4%; }
+.icon-notes { background: linear-gradient(145deg,#ffe075,#efb72d); color: #4b3908; }
+.icon-contacts { background: linear-gradient(145deg,#f4ad59,#dd7724); }
+.icon-safety { background: linear-gradient(145deg,#3f8ea0,#285c79); }
+.icon-settings { background: linear-gradient(145deg,#a5afbd,#657283); }
+.icon-photos { background: radial-gradient(circle at 25% 24%,#ffcf69 0 17%,transparent 18%),linear-gradient(145deg,#ef739f,#9d4ed2 58%,#3b78d4); }
 .phone-dock { position: absolute; z-index: 2; left: 50%; bottom: 13px; width: min(390px,calc(100% - 28px)); display: flex; justify-content: space-around; padding: 9px 12px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.38); border-radius: 21px; background: rgba(235,242,225,.3); backdrop-filter: blur(15px); }
 .phone-dock button { border: 0; background: transparent; cursor: pointer; }.phone-dock .app-icon { width: 48px; height: 48px; }
 

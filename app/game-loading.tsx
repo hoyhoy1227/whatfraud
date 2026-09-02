@@ -1,3 +1,5 @@
+import AppIcon from './app-icon';
+
 type LoadingVariant = 'startup' | 'case';
 
 type GameLoadingScreenProps = {
@@ -19,14 +21,14 @@ export default function GameLoadingScreen({ variant, progress, eyebrow, title, d
         <div className="loading-device-status" aria-hidden="true"><b>08:20</b><span>SIM · Wi-Fi ▮▮▮</span></div>
         <div className="loading-device-content">
           <div className={`loading-app-mark ${variant === 'case' ? 'is-message' : ''}`} aria-hidden="true">
-            {variant === 'startup' ? <span>24</span> : <i className="mini-icon icon-messages" />}
+            {variant === 'startup' ? <span>24</span> : <AppIcon name="messages" size="mini" />}
           </div>
           <span className="pixel-label">{eyebrow}</span>
           <h1>{title}</h1>
           <p>{detail}</p>
           {variant === 'case' && (
             <div className="loading-message-preview" aria-hidden="true">
-              <i className="mini-icon icon-messages" />
+              <AppIcon name="messages" size="mini" />
               <span><b>메시지</b><small>{safeProgress === 100 ? '새 연락이 도착했습니다.' : '새로운 연락을 수신하고 있습니다.'}</small></span>
               <em>지금</em>
             </div>
