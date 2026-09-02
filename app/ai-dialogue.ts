@@ -6,12 +6,18 @@ export function buildSystemPrompt(gameCase: CaseData, userTurns: number) {
   if (gameCase.mode !== 'chat' || !gameCase.dialogue) throw new Error('read-only contact');
   const dialogue = gameCase.dialogue;
   const stage = dialogue.progression[Math.min(userTurns, dialogue.progression.length - 1)];
+  const emotionalBeat = userTurns >= 3
+    ? '플레이어가 계속 의심하고 있다. 허용된 주장 안에서 약간 더 조급하게 반응하되 위협하거나 노골적인 송금을 요구하지 않는다.'
+    : userTurns >= 1
+      ? '플레이어의 반응을 살피며 차분하게 신뢰를 얻으려 한다.'
+      : '첫 대화이므로 자연스럽고 부담 없는 말투로 접근한다.';
   return `당신은 투자·도박 사기 예방 교육 게임 "수익률 24시" 속 가상 NPC다.
 역할: ${gameCase.role}
 NPC의 현재 목표: ${gameCase.npcGoal}
 말할 수 있는 사실과 주장: ${gameCase.allowedClaims.join(' / ')}
 말투: ${dialogue.voice}
 현재 대화 단계: ${stage}
+현재 정서적 흐름: ${emotionalBeat}
 대화 진행 원칙: ${dialogue.progression.join(' / ')}
 반드시 지킬 선: ${dialogue.boundaries.join(' / ')}
 

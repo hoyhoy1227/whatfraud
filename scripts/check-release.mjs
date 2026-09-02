@@ -87,6 +87,9 @@ async function main() {
   assert(!client.includes('world-screen') && !client.includes('town-map') && !client.includes('player-sprite'), '스마트폰 전용 화면에 마을 또는 캐릭터 요소가 남아 있습니다.', errors);
   assert(client.includes('function verifySource') && client.includes("verifySource('bank')") && client.includes("verifySource('library')") && client.includes("verifySource('police')"), '휴대폰 앱을 통한 독립 확인 경로가 부족합니다.', errors);
   assert(client.includes('phone-system-nav') && client.includes('앱에서 더 확인하기'), '전역 홈·판정 메뉴 또는 앱 복귀 흐름이 없습니다.', errors);
+  assert(client.includes('actForIndex') && client.includes('1막 · 평범한 오전') && client.includes('3막 · 압박의 밤'), '오전·오후·밤의 3막 진행 연출이 없습니다.', errors);
+  assert(client.includes('cinematicCues') && client.includes('ambient-notification') && client.includes('이전 선택의 여파'), '사건별 주변 알림 또는 이전 선택의 후속 연출이 없습니다.', errors);
+  assert(client.includes('verificationHistory') && client.includes('case-rewind') && client.includes('사건 되감기'), '조사 순서 저장 또는 판정 후 되감기 복습이 없습니다.', errors);
   assert(client.includes('AI_REQUEST_TIMEOUT_MS = 16_000') && client.includes('AI_SLOW_NOTICE_MS = 10_000'), '보조 AI의 전체 대기 시간 또는 지연 안내 기준이 올바르지 않습니다.', errors);
   const saveSnapshot = client.match(/const snapshot: SavedProgress = \{([\s\S]*?)\n    \};/);
   assert(client.includes("const PROGRESS_SAVE_KEY = 'profit-24-progress-v1'"), '버전이 있는 진행 저장 키가 없습니다.', errors);
@@ -103,6 +106,7 @@ async function main() {
   assert(aiRoute.includes('SESSION_MINUTE_LIMIT = 5') && aiRoute.includes('IP_DAY_LIMIT = 120'), '서버의 기본 호출 제한이 없습니다.', errors);
   assert(aiRoute.includes("'Cache-Control': 'no-store'") && aiRoute.includes('sanitizePlayerText'), '보조 AI 응답 캐시 차단 또는 입력 정제가 없습니다.', errors);
   assert(aiDialogue.includes('[링크 제거]') && aiDialogue.includes('[전화번호 제거]') && aiDialogue.includes('validateAiReply'), '입력 개인정보 제거 또는 AI 답변 검사가 없습니다.', errors);
+  assert(aiDialogue.includes('현재 정서적 흐름') && aiDialogue.includes('플레이어가 계속 의심하고 있다'), '대화 진행에 따른 NPC 정서 변화가 없습니다.', errors);
   assert(envExample.includes('GEMINI_API_KEY=') && !envExample.includes('NEXT_PUBLIC_GEMINI_API_KEY='), '서버 전용 Gemini 환경 변수 예제가 올바르지 않습니다.', errors);
   assert(apiKeyGuide.includes('Sites Secret') && apiKeyGuide.includes('NEXT_PUBLIC_GEMINI_API_KEY') && apiKeyGuide.includes('키가 유출됐을 때'), 'API 키 등록·노출 방지·교체 안내가 부족합니다.', errors);
   assert(trainingBuilder.includes('contains_player_messages') && trainingBuilder.includes('case.get("mode") == "chat"'), '튜닝 데이터의 대화형 사건 제한 또는 개인정보 비저장 표기가 없습니다.', errors);
@@ -119,6 +123,7 @@ async function main() {
   assert(css.includes(':focus-visible'), '키보드 초점 표시 규칙이 없습니다.', errors);
   assert(css.includes('prefers-reduced-motion'), '동작 감소 접근성 규칙이 없습니다.', errors);
   assert(css.includes('.game-loading-screen') && css.includes('.ai-wait-card'), '전체 화면과 보조 AI 부분 로딩 스타일이 없습니다.', errors);
+  assert(css.includes('.chapter-card') && css.includes('.ambient-notification') && css.includes('.case-rewind'), '3막·주변 알림·사건 되감기 스타일이 없습니다.', errors);
   assert(css.includes('@media (max-width: 680px)') && css.includes('@media (max-width: 430px)'), '모바일 대응 구간이 부족합니다.', errors);
   assert(css.includes('overflow-wrap: anywhere'), '긴 한글 문구와 가상 주소의 화면 이탈 방어가 없습니다.', errors);
 
