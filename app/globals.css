@@ -405,11 +405,22 @@ button { -webkit-tap-highlight-color: transparent; }
 .app-grid { width: min(720px,100%); display: grid; grid-template-columns: repeat(4,minmax(70px,1fr)); gap: 18px 12px; margin: 0 auto; }
 .app-grid button { position: relative; display: grid; justify-items: center; gap: 7px; border: 0; background: transparent; color: white; font: 700 9px Arial,sans-serif; text-shadow: 0 2px 4px #000; cursor: pointer; }
 .app-grid button > em { position: absolute; top: -5px; left: calc(50% + 17px); min-width: 19px; height: 19px; display: grid; place-items: center; border: 2px solid white; border-radius: 50%; background: #d9483f; color: white; font-size: 8px; font-style: normal; text-shadow: none; }
-.app-icon, .mini-icon { display: block; flex: 0 0 auto; background-image: url('/assets/pixel/phone-app-icons.png'); background-repeat: no-repeat; background-size: 400% 300%; image-rendering: pixelated; }
-.app-icon { width: 58px; height: 58px; border-radius: 13px; box-shadow: 0 5px 12px rgba(0,0,0,.3); }.mini-icon { width: 38px; height: 38px; border-radius: 9px; }
-.icon-messages { background-position: 0 0; }.icon-calls { background-position: 33.333% 0; }.icon-bank { background-position: 66.667% 0; }.icon-stocks { background-position: 100% 0; }
-.icon-browser { background-position: 0 50%; }.icon-social { background-position: 33.333% 50%; }.icon-calendar { background-position: 66.667% 50%; }.icon-notes { background-position: 100% 50%; }
-.icon-contacts { background-position: 0 100%; }.icon-safety { background-position: 33.333% 100%; }.icon-settings { background-position: 66.667% 100%; }.icon-photos { background-position: 100% 100%; }
+.app-icon, .mini-icon { display: grid; place-items: center; flex: 0 0 auto; border: 1px solid rgba(255,255,255,.2); color: white; font-family: Arial, sans-serif; font-style: normal; font-weight: 700; line-height: 1; box-shadow: 0 6px 16px rgba(7,17,32,.22); }
+.app-icon { width: 58px; height: 58px; border-radius: 16px; }.mini-icon { width: 38px; height: 38px; border-radius: 11px; }
+.app-icon::before, .mini-icon::before { display: block; font-size: 23px; letter-spacing: -.08em; }
+.mini-icon::before { font-size: 16px; }
+.icon-messages { background: linear-gradient(145deg,#45c77a,#27a960); }.icon-messages::before { content: "✉"; }
+.icon-calls { background: linear-gradient(145deg,#53d568,#22af48); }.icon-calls::before { content: "☎"; }
+.icon-bank { background: linear-gradient(145deg,#3478e8,#1858bf); }.icon-bank::before { content: "₩"; }
+.icon-stocks { background: linear-gradient(145deg,#314764,#18283d); }.icon-stocks::before { content: "↗"; }
+.icon-browser { background: linear-gradient(145deg,#68a2ff,#3473df); }.icon-browser::before { content: "◎"; }
+.icon-social { background: linear-gradient(145deg,#9e70ee,#7548ca); }.icon-social::before { content: "●●"; font-size: 13px; }
+.icon-calendar { background: linear-gradient(180deg,#f35d67 0 28%,#fff 28%); color: #222b38; }.icon-calendar::before { content: "29"; font-size: 18px; }
+.icon-notes { background: linear-gradient(145deg,#ffd963,#efb930); color: #4b3908; }.icon-notes::before { content: "≡"; }
+.icon-contacts { background: linear-gradient(145deg,#f2a34a,#de7925); }.icon-contacts::before { content: "人"; }
+.icon-safety { background: linear-gradient(145deg,#4d78ae,#2d507b); }.icon-safety::before { content: "✓"; }
+.icon-settings { background: linear-gradient(145deg,#8e9bab,#667485); }.icon-settings::before { content: "⚙"; }
+.icon-photos { background: linear-gradient(145deg,#e35a87,#bd315e); }.icon-photos::before { content: "▧"; }
 .phone-dock { position: absolute; z-index: 2; left: 50%; bottom: 13px; width: min(390px,calc(100% - 28px)); display: flex; justify-content: space-around; padding: 9px 12px; transform: translateX(-50%); border: 1px solid rgba(255,255,255,.38); border-radius: 21px; background: rgba(235,242,225,.3); backdrop-filter: blur(15px); }
 .phone-dock button { border: 0; background: transparent; cursor: pointer; }.phone-dock .app-icon { width: 48px; height: 48px; }
 
@@ -994,4 +1005,218 @@ p, li, small, span { overflow-wrap: break-word; }
   .phone-context-banner b { display: none; }
   .phone-home-screen { padding-inline: 11px; }
   .home-verify-card small { display: none; }
+}
+
+/* Realistic consumer-finance visual language */
+:root {
+  --ink: #172033;
+  --deep: #172b4d;
+  --mid: #53657f;
+  --lime: #e8eef7;
+  --paper: #f7f9fc;
+  --cream: #ffffff;
+  --gold: #f4b740;
+  --red: #d84b5d;
+  --blue: #2f6fde;
+}
+body { background: #e9edf3; color: #172033; font-weight: 400; }
+.pixel-label { color: #64748b !important; font-family: var(--font-ui) !important; font-size: 9px; font-weight: 700; letter-spacing: .06em !important; text-transform: none; }
+.phone-only-game {
+  background: linear-gradient(180deg, #dfe5ed 0%, #eef1f5 58%, #e2e7ed 100%);
+}
+.phone-only-game .game-hud {
+  border: 1px solid #d7dee8;
+  background: rgba(255,255,255,.97);
+  box-shadow: 0 8px 24px rgba(26,39,61,.09);
+}
+.phone-only-game .brand-kicker { color: #66758b; font-weight: 600; letter-spacing: .04em; }
+.phone-only-game .brand-block h1 { color: #172033; font-weight: 750; }
+.phone-only-game .hud-stats span { border: 1px solid #e1e6ed; background: #f4f6f9; }
+.phone-only-game .hud-stats small { color: #7a8799; font-weight: 600; }
+.phone-only-game .game-help-button { background: #eef2f7; color: #2d466b; box-shadow: inset 0 0 0 1px #d9e1ec; }
+.phone-only-game .mission-strip {
+  border: 1px solid #d5dde8;
+  background: rgba(255,255,255,.96);
+  color: #172033;
+  box-shadow: 0 8px 24px rgba(26,39,61,.08);
+}
+.phone-only-game .mission-copy > span { color: #2f6fde; }
+.phone-only-game .mission-copy > small { color: #68778d; }
+.phone-only-game .mission-strip li { color: #98a4b4; }
+.phone-only-game .mission-strip li::after { background: #d7dee7; }
+.phone-only-game .mission-strip li i { background: #edf1f5; color: #8290a3; }
+.phone-only-game .mission-strip li.current { color: #2c4f83; }
+.phone-only-game .mission-strip li.current i { background: #2f6fde; color: white; box-shadow: none; }
+.phone-only-game .mission-strip li.done { color: #308465; }
+.phone-only-game .mission-strip li.done i { background: #d9f0e7; color: #27775b; }
+
+.phone-only-game .phone-screen {
+  border-color: #151922;
+  background: #f6f7f9;
+  box-shadow: 0 24px 64px rgba(23,32,51,.25), inset 0 0 0 1px #343a46;
+}
+.phone-os-shell .phone-statusbar { background: #0f141d; font-weight: 600; }
+.phone-context-banner { background: rgba(249,250,252,.98); border-color: #e0e5ec; color: #536177; }
+.phone-context-banner b { background: #e8effc; color: #285eaf; }
+.phone-lock-screen::before, .phone-home-screen::before {
+  background:
+    radial-gradient(circle at 78% 15%, rgba(255,255,255,.52), transparent 22%),
+    radial-gradient(circle at 14% 72%, rgba(126,171,197,.45), transparent 36%),
+    linear-gradient(150deg, #5e7696 0%, #55758a 38%, #34495f 69%, #263444 100%);
+}
+.phone-lock-screen::after, .phone-home-screen::after { background: linear-gradient(180deg, rgba(15,24,37,.04), rgba(10,18,29,.38)); }
+.lock-padlock { background: rgba(255,255,255,.22); box-shadow: inset 0 0 0 1px rgba(255,255,255,.26); }
+.lock-notifications button, .home-notification, .home-widgets > div, .home-verify-card {
+  border: 1px solid rgba(255,255,255,.48) !important;
+  background: rgba(251,253,255,.9) !important;
+  color: #172033 !important;
+  box-shadow: 0 8px 24px rgba(11,23,39,.15) !important;
+}
+.lock-notifications button { border-radius: 17px; }
+.lock-notifications small, .home-notification small, .home-widgets small { color: #64748a !important; }
+.home-widgets span { color: #6a788b; }
+.home-verify-card > i { background: #e5eefc; color: #2763bd; }
+.home-verify-card em { background: #2f6fde; }
+.app-grid button { color: white; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,.7); }
+.app-grid button > em { border-width: 1px; background: #e34455; }
+.phone-dock { border-color: rgba(255,255,255,.4) !important; background: rgba(245,248,252,.42) !important; box-shadow: 0 10px 30px rgba(11,23,39,.12); }
+.gesture-area { background: rgba(12,17,25,.96); }
+
+.native-app-header { border-color: #e0e5ec; background: #fff; }
+.native-app-header b { color: #172033; font-size: 13px; }
+.native-app-header small { color: #7b8798; }
+.native-app-header > button, .native-header-actions > button { background: #f0f3f7; color: #35516f; }
+.native-header-actions .app-info-button { background: #e8effa; color: #2b5ea7; }
+.phone-app-body, .native-app, .settings-screen { background: #f4f6f9; }
+.native-app h2, .settings-screen h2 { color: #172033; font-weight: 720; letter-spacing: -.035em; }
+.app-lead { color: #69778a; font-size: 10px; }
+
+.phone-workspace { background: #fff; }
+.contact-list { border-color: #e1e6ec; background: #f7f8fa; }
+.contact-title { border-color: #e1e6ec; background: #fff; color: #4a596e; }
+.contact-card { border-color: #e4e8ee; color: #1d293b; }
+.contact-card:hover { background: #eef3fb; }
+.contact-card.selected { background: #e8f0fc; box-shadow: inset 3px 0 0 #2f6fde; }
+.contact-card > i { background: #dfe7f2; color: #365475; }
+.contact-card small { color: #738095; }
+.messenger-panel { background: #fff; }
+.chat-header { border-color: #e1e6ec; background: #fff; }
+.chat-header > button { background: #eef2f6; color: #37516e; }
+.model-dot { background: #eef1f5; color: #536177; }
+.model-dot.connected { background: #dcf1e6; color: #267459; }.model-dot.fallback { background: #fff0cf; color: #8b6416; }
+.chat-area { background: #edf2f6; background-image: none; }
+.date-pill { border: 0; border-radius: 999px; background: rgba(255,255,255,.78); color: #738095; box-shadow: 0 2px 8px rgba(25,39,60,.08); }
+.message { border: 0; border-radius: 18px 18px 18px 6px; background: #fff; box-shadow: 0 3px 12px rgba(25,39,60,.1); font-size: 12px; }
+.message.user { border-radius: 18px 18px 6px 18px; background: #dce9ff; }
+.reply-row { border-color: #e0e5ec; background: #fff; }
+.reply-row input { border: 1px solid #dce2ea; border-radius: 20px; background: #f2f4f7; }
+.reply-row button { border-radius: 18px; background: #2f6fde; color: white; }
+.quick-questions { background: rgba(255,255,255,.72); box-shadow: 0 4px 15px rgba(25,39,60,.08); }
+.quick-questions > span { color: #627087; }.quick-questions button { background: #fff; color: #34557f; box-shadow: inset 0 0 0 1px #d8e0eb; }
+.quick-questions button:hover, .quick-questions button:focus-visible { background: #e8f0fc; outline-color: #2f6fde; }
+.ai-wait-card { background: #fff; box-shadow: 0 8px 24px rgba(25,39,60,.1); }
+.ai-wait-card .model-pulse { background: #2f6fde; }.ai-wait-progress { background: #e6eaf0; }.ai-wait-progress i { background: linear-gradient(90deg,#2f6fde,#70a1ef); }
+
+.call-list, .contact-directory { border: 1px solid #dfe4eb; border-radius: 14px; background: #fff; box-shadow: 0 4px 16px rgba(25,39,60,.06); }
+.call-list button, .contact-directory button { border-color: #e7ebf0; }
+.call-list button:hover, .contact-directory button:hover { background: #f5f8fc; }
+.call-list i, .contact-directory i { background: #e1e9f4; color: #365475; }
+.app-account { background: linear-gradient(135deg,#174b91,#2f75cb); box-shadow: 0 10px 24px rgba(25,79,151,.2); }
+.app-account small { color: #d7e8ff; }.transaction-list { border-color: #dfe4ea; }.transaction-list p { border-color: #e4e8ed; }
+.official-banner, .search-warning { border-left: 4px solid #e0aa36; border-radius: 8px; background: #fff5dc; color: #5b4a25; }
+.app-primary { border: 0; border-radius: 10px; background: #2f6fde; color: white; font-size: 11px; font-weight: 700; }
+.stock-index { border: 0; border-radius: 14px; background: #172b4d; box-shadow: 0 8px 22px rgba(23,43,77,.18); }
+.holding, .watch-list button { border: 1px solid #dfe4ea; border-radius: 10px; background: #fff; }
+.fake-address { border: 1px solid #dce2ea; background: #fff; }
+.browser-links button { border: 1px solid #dde3ea; border-radius: 11px; background: #fff; }
+.feed-card { border: 1px solid #dfe4ea; border-radius: 13px; background: #fff; box-shadow: 0 4px 14px rgba(25,39,60,.05); }
+.calendar-date { border: 0; border-radius: 14px; background: #fff; color: #172033; box-shadow: 0 4px 16px rgba(25,39,60,.07); }
+.calendar-date strong { color: #d84b5d; }.calendar-app ol { border-color: #cfd7e1; }
+.note-paper, .note-tip { border: 1px solid #dfe4ea; border-radius: 13px; background: #fff; box-shadow: 0 4px 16px rgba(25,39,60,.06); }
+.note-tip { background: #edf4ff; }
+.verification-shortcuts button, .capture-guide article { border-color: #dfe4ea; box-shadow: 0 3px 12px rgba(25,39,60,.05); }
+.empty-photo { border: 1px dashed #b8c2d0; border-radius: 13px; color: #69788c; }
+
+.notice-surface, .link-surface { background: #eef2f6; }
+.notice-surface > article, .one-way-message, .simulated-landing { border-radius: 16px; background: #fff; box-shadow: 0 8px 28px rgba(25,39,60,.11); }
+.notice-brand > i { background: #2f6fde; }.official-app-button { background: #2f6fde; color: white; }
+.embedded-link { background: #f1f5fa; box-shadow: inset 0 0 0 1px #dce3ec; }
+.landing-copy button { background: #e7ebf1; color: #536177; }
+
+.safety-history { background: #f4f6f9; }
+.safety-overview { background: linear-gradient(135deg,#1b355c,#315783); box-shadow: 0 10px 28px rgba(27,53,92,.18); }
+.safety-overview .pixel-label { color: #c9d7eb !important; }
+.safety-records button { border: 1px solid #e0e5eb; background: #fff; box-shadow: 0 3px 12px rgba(25,39,60,.05); }
+.safety-records button > i { background: #e1e9f4; color: #365475; }
+.safety-records button em.safe { background: #d9efe6; color: #27745a; }.safety-records button em.review { background: #fff0cf; color: #8b6416; }
+.save-status-card { background: #eaf1fb; }.save-status-card > i { background: #2f6fde; }
+.privacy-note { border: 1px solid #ead7a8; border-radius: 11px; background: #fff7e4; }
+.guide-replay, .model-test { background: #e7eef9; color: #2c5ea6; }
+
+.verdict-overlay-backdrop, .app-info-backdrop, .tutorial-backdrop, .modal-backdrop { background: rgba(20,29,43,.62); backdrop-filter: blur(10px); }
+.verdict-overlay { border: 1px solid #d7dee8; background: #f4f6f9; box-shadow: 0 24px 70px rgba(18,28,43,.28); }
+.verdict-overlay > header { background: #fff; color: #172033; border-bottom: 1px solid #e0e5ec; }
+.verdict-overlay > header .pixel-label { color: #66758b !important; }
+.verdict-overlay > header > button { background: #eef2f6; color: #42556f; }
+.verdict-overlay-content { background: #f4f6f9; }
+.verdict-file, .verdict-card { background: #fff; border: 1px solid #e0e5ec; box-shadow: 0 5px 18px rgba(25,39,60,.06); }
+.case-preview { border: 1px solid #e1e6ed; border-radius: 11px; background: #f7f9fb; }
+.case-meta span { border: 0; border-radius: 999px; background: #e8eff9; color: #315b96; }
+.evidence-picker button, .response-actions button { background: #f7f8fa; box-shadow: inset 0 0 0 1px #dfe4eb; }
+.evidence-picker button.active, .response-actions button.active { background: #e7effc; box-shadow: inset 0 0 0 2px #2f6fde; }
+.evidence-picker button.active i { background: #2f6fde; }
+.verdict-buttons button, .confidence-buttons button { border: 1px solid #dce2ea; border-radius: 9px; background: #fff; }
+.verdict-buttons button.active, .confidence-buttons button.active { transform: none; background: #e7effc; color: #2459a8; box-shadow: inset 0 0 0 2px #2f6fde; }
+.verdict-buttons button:nth-child(3).active { background: #fee9ec; color: #a83041; box-shadow: inset 0 0 0 2px #d84b5d; }
+.submit-verdict { background: #2f6fde; color: white; }
+.back-to-world { background: #eef2f7; color: #3b526f; }
+.app-info-sheet, .tutorial-card, .debrief, .summary-card { border: 1px solid #dce2ea; background: #fff; box-shadow: 0 24px 70px rgba(18,28,43,.25); }
+.app-info-sheet dl div, .control-guide-grid article, .interface-guide li, .place-guide-grid article, .app-guide-grid article, .score-guide-grid span, .simulated-outcome { background: #f4f6f9; }
+.app-info-close, .tutorial-next, .debrief > button, .summary-card > button { background: #2f6fde; color: white; }
+.tutorial-icon { background: #e7effc; color: #2f6fde; box-shadow: none; }
+.tutorial-progress i { background: #dfe4eb; }.tutorial-progress i.active { background: #2f6fde; }
+.tutorial-loop span { background: #edf2f8; }.tutorial-loop i { color: #7b8798; }
+.tutorial-nav-demo { background: #edf1f5; }.tutorial-nav-demo .highlight { background: #dbe8fc; box-shadow: inset 0 0 0 2px #2f6fde; }
+.debrief.correct, .debrief.wrong { outline: 0; }.debrief.correct { border-top: 4px solid #3a9a78; }.debrief.wrong { border-top: 4px solid #d84b5d; }
+.debrief ul, .summary-grid div { border: 1px solid #e0e5ec; border-radius: 10px; background: #f7f9fb; }
+.safe-action { border-left-color: #2f6fde; background: #eaf1fb; }
+.action-result.correct { background: #e0f2e9; }.action-result.needs-review { background: #fff0d5; }
+
+.phone-system-nav { border-color: rgba(255,255,255,.2); background: #171d27; box-shadow: 0 14px 38px rgba(18,28,43,.3); }
+.phone-system-nav button { background: #1e2632; color: #d9e0e9; }
+.phone-system-nav button.active { background: #2a3443; }
+.phone-system-nav .verdict-action { background: #2f6fde; color: #fff; }
+.phone-system-nav .verdict-action.active { background: #427fe7; }
+
+.simulation-intro {
+  background: linear-gradient(145deg,#e2e7ee 0%,#f0f3f6 58%,#dce2e9 100%);
+  color: #172033;
+}
+.intro-shade { background: radial-gradient(circle at 68% 28%, rgba(255,255,255,.7), transparent 40%); }
+.intro-phone-preview { border-color: #171b22; background: linear-gradient(150deg,#6c829d,#55758a 42%,#34495f 72%,#263444); box-shadow: 0 30px 70px rgba(23,32,51,.22), inset 0 0 0 1px #343b47; }
+.simulation-intro .intro-kicker { color: #416da9; }
+.simulation-intro .intro-panel h1 { color: #172033; font-size: clamp(54px,6vw,82px); font-weight: 760; text-shadow: none; }
+.simulation-intro .intro-panel h1 small { color: #536b8e; font-weight: 650; }
+.simulation-intro .intro-panel > p { color: #536177; text-shadow: none; }
+.start-simulation { border-radius: 12px; background: #2f6fde; color: white; box-shadow: 0 12px 28px rgba(47,111,222,.2); }
+.start-simulation:hover { background: #245fca; box-shadow: 0 15px 32px rgba(47,111,222,.25); }
+.intro-guide-button { color: #526b8f; }.intro-disclaimer { color: #778396; }
+.resume-summary { border-left-color: #2f6fde; background: rgba(255,255,255,.76); color: #172033; box-shadow: 0 5px 18px rgba(25,39,60,.07); }
+.resume-summary > span { color: #2f6fde; }.resume-summary small { color: #69778a; }
+.intro-new-game { border-color: #c8d1dd; background: rgba(255,255,255,.72); color: #42546d; }
+.intro-new-game:hover, .intro-new-game:focus-visible { border-color: #2f6fde; background: #fff; outline-color: #2f6fde; }
+
+.game-loading-screen { background: linear-gradient(145deg,#e2e7ee,#f0f3f6 58%,#dce2e9); color: #172033; }
+.game-loading-shade { background: radial-gradient(circle at 60% 35%,rgba(255,255,255,.72),transparent 55%); }
+.loading-phone-silhouette { border-color: rgba(23,32,51,.12); background: linear-gradient(145deg,rgba(89,116,150,.12),rgba(255,255,255,.16)); box-shadow: 0 26px 60px rgba(23,32,51,.12); }
+.loading-phone-silhouette i { background: rgba(60,83,113,.08); }
+.game-loading-card { border-color: #d9e0e8; background: rgba(255,255,255,.94); color: #172033; box-shadow: 0 20px 60px rgba(23,32,51,.16); }
+.game-loading-card .pixel-label { color: #64748b !important; }.game-loading-card > p { color: #64748b; }.game-loading-card > small { color: #7b8798; }
+.loading-mark { background: #2f6fde; color: white; box-shadow: 0 10px 24px rgba(47,111,222,.2); }
+.loading-mark i { background: #8cb4f4; }.game-loading-progress { background: #e3e8ef; }.game-loading-progress > i { background: linear-gradient(90deg,#2f6fde,#70a1ef); }
+.loading-steps li { color: #8a96a7; }.loading-steps li i { background: #e8ecf1; color: #7b8798; }.loading-steps li.active { color: #315b96; }.loading-steps li.active i, .loading-steps li.done i { background: #2f6fde; color: white; }
+
+@media (max-width: 760px) {
+  .simulation-intro .intro-panel { background: rgba(244,247,250,.84); border-radius: 22px; padding: 22px 18px 18px; backdrop-filter: blur(14px); box-shadow: 0 18px 50px rgba(23,32,51,.13); }
+  .simulation-intro .intro-phone-preview { opacity: .28; }
 }

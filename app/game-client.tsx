@@ -48,8 +48,7 @@ const responseActionValues: ResponseAction[] = ['verify', 'pause', 'block'];
 const phoneAppValues: PhoneApp[] = ['home', 'messages', 'calls', 'bank', 'stocks', 'browser', 'social', 'calendar', 'notes', 'contacts', 'safety', 'settings', 'photos'];
 
 const startupAssets = [
-  '/assets/pixel/phone-wallpaper.png',
-  '/assets/pixel/phone-app-icons.png',
+  '/og.png',
 ];
 const loadingSteps = {
   startup: ['사건 데이터 확인', '휴대폰 환경 준비', '플레이 기록과 AI 경로 설정'],
@@ -684,7 +683,7 @@ export default function GameClient() {
   }
 
   if (loadingTask) {
-    return <GameLoadingScreen variant={loadingTask.kind} progress={loadingTask.progress} eyebrow={loadingTask.kind === 'startup' ? 'SIMULATION BOOT' : `CASE ${String(Math.min(results.length + 1, cases.length)).padStart(2, '0')} TRANSITION`} title={loadingTask.title} detail={loadingTask.detail} steps={loadingSteps[loadingTask.kind]} />;
+    return <GameLoadingScreen variant={loadingTask.kind} progress={loadingTask.progress} eyebrow={loadingTask.kind === 'startup' ? '안전 시뮬레이션 준비' : `다음 연락 준비 · ${Math.min(results.length + 1, cases.length)}/${cases.length}`} title={loadingTask.title} detail={loadingTask.detail} steps={loadingSteps[loadingTask.kind]} />;
   }
 
   if (!started) {
@@ -814,7 +813,7 @@ export default function GameClient() {
 
               {phoneApp === 'safety' && (
                 <div className="native-app phone-app-body safety-history">
-                  <div className="safety-overview"><span className="pixel-label">TODAY&apos;S SAFETY LOG</span><h2>오늘의 판정 기록</h2><div><span><b>{results.length}</b><small>완료 사건</small></span><span><b>{accuracy}%</b><small>판정 정확도</small></span><span><b>{actionAccuracy}%</b><small>안전 대응</small></span></div></div>
+                  <div className="safety-overview"><span className="pixel-label">안전 활동 요약</span><h2>오늘의 판정 기록</h2><div><span><b>{results.length}</b><small>완료 사건</small></span><span><b>{accuracy}%</b><small>판정 정확도</small></span><span><b>{actionAccuracy}%</b><small>안전 대응</small></span></div></div>
                   {results.length ? <div className="safety-records">{results.map((result) => { const index = cases.findIndex((item) => item.id === result.caseId); const item = cases[index]; return <button key={result.caseId} onClick={() => openCase(index)}><i>{item.sender.slice(0,1)}</i><span><b>{item.sender}</b><small>나의 판정 {verdictLabels[result.picked]} · 대응 {responseActions.find((action) => action.id === result.action)?.label}</small></span><em className={result.correct && result.actionCorrect ? 'safe' : 'review'}>{result.correct && result.actionCorrect ? '안전' : '복습'}</em></button>; })}</div> : <div className="safety-empty"><b>아직 완료한 판정이 없습니다</b><p>현재 사건을 조사한 뒤 화면 아래의 판정하기를 누르세요.</p></div>}
                   <button className="app-primary safety-current-action" onClick={openVerdictPanel}>{activeResult ? '현재 사건 결과 보기' : '현재 사건 판정하기'}</button>
                 </div>
