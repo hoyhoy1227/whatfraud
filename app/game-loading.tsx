@@ -15,11 +15,7 @@ export default function GameLoadingScreen({ variant, progress, eyebrow, title, d
 
   return (
     <main className={`game-loading-screen loading-${variant}`} aria-busy="true" aria-live="polite">
-      <img
-        src={variant === 'startup' ? '/assets/pixel/start-screen.png' : '/assets/pixel/town-map.png'}
-        alt=""
-        aria-hidden="true"
-      />
+      <div className="loading-phone-silhouette" aria-hidden="true"><i /><i /><i /></div>
       <div className="game-loading-shade" />
       <section className="game-loading-card" role="status" aria-label={`${title} ${safeProgress}%`}>
         <div className="loading-mark" aria-hidden="true"><span>24</span><i /><i /><i /></div>

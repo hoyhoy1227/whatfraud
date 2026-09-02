@@ -84,6 +84,9 @@ async function main() {
   assert(client.includes('aria-busy={sending}'), '보조 AI 응답 대기 상태가 보조 기술에 전달되지 않습니다.', errors);
   assert(client.includes("kind: 'startup'") && client.includes("kind: 'case'"), '시작·사건 전환 로딩 상태가 모두 구현되지 않았습니다.', errors);
   assert(client.includes('await Promise.all(startupAssets.map'), '시작 화면이 실제 시각 자산 준비와 연결되지 않았습니다.', errors);
+  assert(!client.includes('world-screen') && !client.includes('town-map') && !client.includes('player-sprite'), '스마트폰 전용 화면에 마을 또는 캐릭터 요소가 남아 있습니다.', errors);
+  assert(client.includes('function verifySource') && client.includes("verifySource('bank')") && client.includes("verifySource('library')") && client.includes("verifySource('police')"), '휴대폰 앱을 통한 독립 확인 경로가 부족합니다.', errors);
+  assert(client.includes('phone-system-nav') && client.includes('앱에서 더 확인하기'), '전역 홈·판정 메뉴 또는 앱 복귀 흐름이 없습니다.', errors);
   assert(client.includes('AI_REQUEST_TIMEOUT_MS = 16_000') && client.includes('AI_SLOW_NOTICE_MS = 10_000'), '보조 AI의 전체 대기 시간 또는 지연 안내 기준이 올바르지 않습니다.', errors);
   const saveSnapshot = client.match(/const snapshot: SavedProgress = \{([\s\S]*?)\n    \};/);
   assert(client.includes("const PROGRESS_SAVE_KEY = 'profit-24-progress-v1'"), '버전이 있는 진행 저장 키가 없습니다.', errors);
