@@ -111,6 +111,8 @@ async function main() {
   assert(gitignore.includes('/training/output/') && gitignore.includes('*.gguf') && gitignore.includes('*.safetensors'), '모델 가중치와 튜닝 산출물의 Git 제외 규칙이 부족합니다.', errors);
   assert(loading.includes('role="progressbar"') && loading.includes('aria-valuenow={safeProgress}'), '전체 화면 로딩 진행률의 접근성 정보가 없습니다.', errors);
   assert(loading.includes('aria-busy="true"') && loading.includes('role="status"'), '전체 화면 로딩 상태가 화면 읽기 도구에 전달되지 않습니다.', errors);
+  assert(loading.includes('loading-device-status') && loading.includes('loading-message-preview') && loading.includes('loading-device-gesture'), '전체 화면 로딩이 휴대폰 앱 실행·알림 수신 화면으로 구성되지 않았습니다.', errors);
+  assert(css.includes('@keyframes phoneTyping') && css.includes('.ai-wait-card .model-pulse::before'), '메신저 입력 중 말풍선 애니메이션이 없습니다.', errors);
   assert(client.includes('aria-labelledby="debrief-title"'), '판정 결과 대화상자에 접근 가능한 제목이 없습니다.', errors);
   assert(client.includes('aria-labelledby="summary-title"'), '최종 결과 대화상자에 접근 가능한 제목이 없습니다.', errors);
   assert(!client.includes('role="button" tabIndex={0}'), '키보드 실행 처리가 없는 가상 버튼이 남아 있습니다.', errors);

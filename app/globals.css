@@ -1220,3 +1220,160 @@ body { background: #e9edf3; color: #172033; font-weight: 400; }
   .simulation-intro .intro-panel { background: rgba(244,247,250,.84); border-radius: 22px; padding: 22px 18px 18px; backdrop-filter: blur(14px); box-shadow: 0 18px 50px rgba(23,32,51,.13); }
   .simulation-intro .intro-phone-preview { opacity: .28; }
 }
+
+/* Native phone loading and chat typing states */
+.game-loading-screen {
+  min-height: 100dvh;
+  padding: 18px;
+  background: linear-gradient(180deg,#dfe5ec 0%,#eef1f5 100%);
+}
+.loading-device {
+  position: relative;
+  z-index: 1;
+  width: min(430px,100%);
+  height: min(820px,calc(100dvh - 36px));
+  min-height: 590px;
+  overflow: hidden;
+  border: 8px solid #151922;
+  border-radius: 40px;
+  background: #f5f7fa;
+  color: #172033;
+  box-shadow: 0 30px 80px rgba(23,32,51,.24),inset 0 0 0 1px #343b46;
+}
+.loading-device::before {
+  content: "";
+  position: absolute;
+  z-index: 4;
+  top: 10px;
+  left: 50%;
+  width: 92px;
+  height: 24px;
+  transform: translateX(-50%);
+  border-radius: 14px;
+  background: #080b10;
+}
+.loading-device-status {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  background: #0f141d;
+  color: #f7f9fc;
+  font-size: 10px;
+  font-weight: 600;
+}
+.loading-device-content {
+  height: calc(100% - 42px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(34px,7vh,72px) clamp(22px,6vw,38px) 46px;
+  text-align: center;
+}
+.loading-device-content::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 42px 0 0;
+  background:
+    radial-gradient(circle at 76% 12%,rgba(98,142,198,.14),transparent 28%),
+    linear-gradient(180deg,#f9fafc,#f2f5f8);
+}
+.loading-app-mark {
+  width: 86px;
+  height: 86px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 22px;
+  border-radius: 24px;
+  background: linear-gradient(145deg,#3f7de7,#245fc7);
+  color: white;
+  box-shadow: 0 12px 28px rgba(47,111,222,.22);
+}
+.loading-app-mark > span { font-size: 31px; font-weight: 780; letter-spacing: -.07em; }
+.loading-app-mark.is-message { background: transparent; box-shadow: none; }
+.loading-app-mark.is-message .mini-icon { width: 78px; height: 78px; border-radius: 22px; }
+.loading-app-mark.is-message .mini-icon::before { font-size: 31px; }
+.loading-device-content > .pixel-label { margin-bottom: 8px; color: #64748b !important; }
+.loading-device-content h1 { margin: 0; color: #172033; font-size: clamp(25px,6vw,34px); font-weight: 740; letter-spacing: -.045em; }
+.loading-device-content > p { min-height: 3.2em; margin: 12px 0 24px; color: #65748a; font-size: 12px; line-height: 1.65; }
+.loading-message-preview {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 40px minmax(0,1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin: -3px 0 22px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.72);
+  border-radius: 17px;
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 8px 24px rgba(25,39,60,.1);
+  text-align: left;
+  backdrop-filter: blur(12px);
+}
+.loading-message-preview > span { min-width: 0; display: grid; gap: 3px; }
+.loading-message-preview b { font-size: 11px; }.loading-message-preview small { overflow: hidden; color: #66758a; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.loading-message-preview em { align-self: start; color: #8a95a5; font-size: 8px; font-style: normal; }
+.loading-device .game-loading-progress { width: 100%; height: 6px; border: 0; border-radius: 999px; background: #e1e6ed; box-shadow: none; }
+.loading-device .game-loading-progress > i { border-radius: inherit; background: #2f6fde; transition: width .22s ease; }
+.loading-device .loading-progress-copy { width: 100%; margin: 9px 0 22px; color: #8793a3; font-size: 9px; }
+.loading-device .loading-progress-copy b { color: #315b96; font-size: 11px; font-variant-numeric: tabular-nums; }
+.loading-device .loading-steps { width: 100%; grid-template-columns: 1fr; gap: 0; overflow: hidden; border: 1px solid #e0e5ec; border-radius: 14px; background: #fff; }
+.loading-device .loading-steps li {
+  min-height: 48px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e7ebf0;
+  border-radius: 0;
+  background: #fff;
+  color: #8a96a7;
+  box-shadow: none;
+}
+.loading-device .loading-steps li:last-child { border-bottom: 0; }
+.loading-device .loading-steps li > i { background: #eef1f5; color: #8491a2; }
+.loading-device .loading-steps li.active { background: #f7f9fc; color: #315b96; box-shadow: none; }
+.loading-device .loading-steps li.active > i { background: #dfeafb; color: #2f6fde; }
+.loading-device .loading-steps li.done { color: #3f745f; }
+.loading-device .loading-steps li.done > i { background: #dff1e8; color: #2c7a5c; }
+.loading-device-content > small { margin-top: 18px; color: #8994a4; font-size: 8px; line-height: 1.55; }
+.loading-device-gesture { position: absolute; z-index: 5; left: 50%; bottom: 8px; width: 116px; height: 5px; transform: translateX(-50%); border-radius: 999px; background: #1c2532; }
+
+.ai-wait-card {
+  width: max-content;
+  max-width: 78%;
+  gap: 0;
+  margin: 0 0 13px;
+  padding: 10px 13px;
+  border: 0;
+  border-radius: 18px 18px 18px 6px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(25,39,60,.1);
+}
+.ai-wait-card > div:first-child { grid-template-columns: 34px minmax(120px,1fr) auto; gap: 8px; }
+.ai-wait-card .model-pulse {
+  width: 34px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #edf1f5;
+  box-shadow: none;
+  animation: none;
+}
+.ai-wait-card .model-pulse::before { content: "•••"; color: #6f7e91; font-size: 13px; letter-spacing: .08em; animation: phoneTyping 1.15s ease-in-out infinite; }
+.ai-wait-card span { gap: 1px; }.ai-wait-card b { color: #334155; font-size: 9px; font-weight: 700; }.ai-wait-card small { color: #7b8798; font-size: 8px; }
+.ai-wait-card em { color: #8b96a5; font-size: 8px; font-weight: 600; }
+.ai-wait-card .ai-wait-progress { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.ai-wait-card > p { display: none; }
+@keyframes phoneTyping { 0%,100% { opacity: .42; transform: translateY(1px); } 50% { opacity: 1; transform: translateY(-1px); } }
+
+@media (max-width: 520px) {
+  .game-loading-screen { padding: 0; background: #f5f7fa; }
+  .loading-device { width: 100%; height: 100dvh; min-height: 560px; border: 0; border-radius: 0; box-shadow: none; }
+  .loading-device::before { top: 8px; }
+  .loading-device-content { padding: clamp(30px,6vh,54px) 20px 38px; }
+  .loading-app-mark { width: 76px; height: 76px; border-radius: 21px; }
+  .loading-app-mark.is-message .mini-icon { width: 70px; height: 70px; }
+}
