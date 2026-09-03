@@ -143,6 +143,8 @@ async function main() {
   assert(client.includes('start-menu') && client.includes('이어하기') && client.includes('새로 시작') && client.includes('showStartSettings'), '첫 화면의 이어하기·새 게임·설정 메뉴가 없습니다.', errors);
   assert(client.includes('confirmNewGame') && client.includes('PREFERENCES_KEY') && css.includes('.start-setting-list'), '새 게임 확인 또는 시작 설정 저장이 없습니다.', errors);
   assert(client.includes('followUpCue') && client.includes('habitBadges') && css.includes('.habit-badges') && css.includes('.summary-badges'), '선택 결과 후속 알림 또는 안전 습관 배지가 없습니다.', errors);
+  assert(client.includes('showPauseMenu') && client.includes('returnToMainMenu') && client.includes('저장하고 메인 메뉴로'), '게임 중 메뉴 또는 즉시 저장 후 메인 화면 복귀가 없습니다.', errors);
+  assert(css.includes('.game-menu-button') && css.includes('.pause-menu-backdrop') && css.includes('.pause-progress'), '게임 중 메뉴의 화면 스타일이 없습니다.', errors);
 
   if (errors.length) throw new Error(`출시 전 자동 점검 실패:\n- ${errors.join('\n- ')}`);
   console.log(`출시 전 자동 점검 완료: ${cases.length}개 사건 순차 진행 · 읽음 처리 · 자동 저장 · 로딩 전환 · 점수 · Gemini 서버 격리 · 키보드 · 모바일 · 콘텐츠 안전`);

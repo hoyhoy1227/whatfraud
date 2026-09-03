@@ -329,6 +329,7 @@ export default function GameClient() {
   const [preferences, setPreferences] = useState<PlayerPreferences>({ reduceMotion: false, guideOnNewGame: false });
   const [showStartSettings, setShowStartSettings] = useState(false);
   const [confirmNewGame, setConfirmNewGame] = useState(false);
+  const [showPauseMenu, setShowPauseMenu] = useState(false);
 
   const activeCase = cases[activeIndex];
   const activeChat = chats[activeCase.id] ?? initialChat(activeCase);
@@ -502,18 +503,20 @@ export default function GameClient() {
         return;
       }
       if (event.key !== 'Escape') return;
-      if (confirmNewGame) setConfirmNewGame(false);
+      if (showPauseMenu) setShowPauseMenu(false);
+      else if (confirmNewGame) setConfirmNewGame(false);
       else if (showStartSettings) setShowStartSettings(false);
       else if (infoApp) setInfoApp(null);
       else if (showVerdictPanel) setShowVerdictPanel(false);
       else if (tutorialStep !== null) setTutorialStep(null);
+      else if (started && !loadingTask && !isAmbientEntry && !showDebrief && !complete) setShowPauseMenu(true);
     }
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [confirmNewGame, infoApp, showStartSettings, showVerdictPanel, tutorialStep]);
+  }, [complete, confirmNewGame, infoApp, isAmbientEntry, loadingTask, showDebrief, showPauseMenu, showStartSettings, showVerdictPanel, started, tutorialStep]);
 
   useEffect(() => {
-    const hasDialog = Boolean(showStartSettings || confirmNewGame || showVerdictPanel || infoApp || tutorialStep !== null || showDebrief || complete);
+    const hasDialog = Boolean(showPauseMenu || showStartSettings || confirmNewGame || showVerdictPanel || infoApp || tutorialStep !== null || showDebrief || complete);
     if (hasDialog) {
       if (!dialogReturnFocus.current) dialogReturnFocus.current = document.activeElement as HTMLElement | null;
       const timer = window.setTimeout(() => {
@@ -525,7 +528,7 @@ export default function GameClient() {
     }
     dialogReturnFocus.current?.focus();
     dialogReturnFocus.current = null;
-  }, [complete, confirmNewGame, infoApp, showDebrief, showStartSettings, showVerdictPanel, tutorialStep]);
+  }, [complete, confirmNewGame, infoApp, showDebrief, showPauseMenu, showStartSettings, showVerdictPanel, tutorialStep]);
 
   const modelLabel = useMemo(() => ({
     unchecked: 'Gemini 확인 전', checking: 'AI 확인 중', connected: 'Gemini 연결', fallback: '대체 대사'
@@ -753,6 +756,44 @@ export default function GameClient() {
     });
   }
 
+  function saveProgressNow() {
+    const snapshot: SavedProgress = {
+      version: 1,
+      savedAt: Date.now(),
+      availableCount,
+      activeIndex,
+      location: 'home',
+      view: 'phone',
+      phoneApp,
+      phoneLocked,
+      results,
+      evidence,
+      verificationHistory,
+      openedLinks,
+      openedCases,
+      openedCues,
+      seenFollowUps,
+      safetySeenCount,
+    };
+    try {
+      window.localStorage.setItem(PROGRESS_SAVE_KEY, JSON.stringify(snapshot));
+    } catch {
+      // 저장 공간을 사용할 수 없어도 메인 메뉴로 이동할 수 있다.
+    }
+    setSavedProgress(snapshot);
+  }
+
+  function returnToMainMenu() {
+    saveProgressNow();
+    setShowPauseMenu(false);
+    setShowVerdictPanel(false);
+    setShowDebrief(false);
+    setInfoApp(null);
+    setTutorialStep(null);
+    setShowObjectiveCue(false);
+    setStarted(false);
+  }
+
   function requestNewGame() {
     if (savedProgress) {
       setConfirmNewGame(true);
@@ -857,6 +898,7 @@ export default function GameClient() {
     setPhoneApp('home');
     setPhoneLocked(true);
     setTutorialStep(null);
+    setShowPauseMenu(false);
     setAvailableCount(1);
     setStarted(false);
     setActiveIndex(0);
@@ -916,6 +958,7 @@ export default function GameClient() {
             <span><small>사건</small><b>{Math.min(results.length + 1, cases.length)}/{cases.length}</b></span>
             <span><small>점수</small><b>{score}</b></span>
           </div>
+          <button className="game-menu-button" onClick={() => setShowPauseMenu(true)} aria-label="게임 메뉴 열기"><i/><i/><i/></button>
           <button className="game-help-button" onClick={() => setTutorialStep(0)} aria-label="조작법과 게임 안내 다시 보기">?</button>
         </div>
       </header>}
@@ -1027,6 +1070,16 @@ export default function GameClient() {
         <button className={phoneApp === 'home' && !phoneLocked ? 'active' : ''} onClick={() => { setPhoneLocked(false); setPhoneApp('home'); }}><i>●</i><span>홈</span>{unreadCount > 0 && <em>{unreadCount}</em>}</button>
         <button className={`verdict-action ${showVerdictPanel ? 'active' : ''} ${objectiveStage === 2 ? 'ready' : ''}`} onClick={openVerdictPanel} aria-haspopup="dialog" aria-expanded={showVerdictPanel}><i>{activeResult ? '✓' : '!'}</i><span>{activeResult ? '결과 보기' : '판정하기'}</span>{activeEvidence.length > 0 && <em>{activeEvidence.length}</em>}</button>
       </nav>}
+
+      {showPauseMenu && <div className="pause-menu-backdrop" role="dialog" aria-modal="true" aria-labelledby="pause-menu-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowPauseMenu(false); }}>
+        <section className="pause-menu">
+          <header><div><small>진행 자동 저장됨</small><h2 id="pause-menu-title">게임 메뉴</h2></div><button onClick={() => setShowPauseMenu(false)} aria-label="게임 메뉴 닫기">×</button></header>
+          <div className="pause-progress"><span><small>현재 시간</small><b>{gameTime}</b></span><span><small>진행 사건</small><b>{Math.min(results.length + 1, cases.length)}/{cases.length}</b></span><span><small>현재 점수</small><b>{score}</b></span></div>
+          <button className="pause-continue" onClick={() => setShowPauseMenu(false)}>계속하기</button>
+          <section className="pause-settings" aria-labelledby="pause-settings-title"><h3 id="pause-settings-title">화면 설정</h3><div className="start-setting-list"><button role="switch" aria-checked={preferences.reduceMotion} onClick={() => updatePreference('reduceMotion', !preferences.reduceMotion)}><span><b>화면 움직임 줄이기</b><small>알림과 화면 전환 움직임을 최소화합니다.</small></span><i>{preferences.reduceMotion ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.guideOnNewGame} onClick={() => updatePreference('guideOnNewGame', !preferences.guideOnNewGame)}><span><b>새 게임에서 안내 먼저 보기</b><small>다음 새 게임부터 조작 안내를 먼저 표시합니다.</small></span><i>{preferences.guideOnNewGame ? '켜짐' : '꺼짐'}</i></button></div></section>
+          <div className="pause-secondary-actions"><button onClick={() => { setShowPauseMenu(false); setTutorialStep(0); }}>게임 방법 다시 보기</button><button onClick={returnToMainMenu}>저장하고 메인 메뉴로</button></div>
+        </section>
+      </div>}
 
       {showVerdictPanel && !activeResult && <div className="verdict-overlay-backdrop" role="dialog" aria-modal="true" aria-labelledby="global-verdict-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowVerdictPanel(false); }}><section className="verdict-overlay"><header><div><span className="pixel-label">CASE {String(activeIndex + 1).padStart(2,'0')} · 어디서든 판정</span><h2 id="global-verdict-title">{activeCase.sender} 판단 등록</h2></div><button onClick={() => setShowVerdictPanel(false)} aria-label="판정창 닫기">×</button></header><div className="verdict-screen verdict-overlay-content"><div className="verdict-file"><p className="case-preview">“{activeCase.preview}”</p><div className="case-meta"><span>{activeCase.channel}</span><span>{activeCase.category}</span></div><h3>판정에 사용할 근거</h3><p className="selection-help">직접 확인한 근거를 선택하세요. 선택한 근거만 점수에 반영됩니다.</p>{activeEvidence.length ? <div className="evidence-picker">{activeEvidence.map((item) => <button key={item} className={selectedEvidence.includes(item) ? 'active' : ''} onClick={() => toggleEvidence(item)}><i>{selectedEvidence.includes(item) ? '✓' : '+'}</i><span>{item}</span></button>)}</div> : <p className="empty-note">아직 확인한 근거가 없습니다. 바로 판정할 수 있지만 공식 조사 점수는 받을 수 없습니다.</p>}<button className="back-to-world" onClick={() => { setShowVerdictPanel(false); setPhoneLocked(false); setPhoneApp('home'); }}>앱에서 더 확인하기</button></div><div className="verdict-card"><span className="pixel-label">판정과 대응</span><h2>이 연락은 무엇일까요?</h2><div className="verdict-buttons">{(['normal','caution','scam'] as Verdict[]).map((value) => <button key={value} className={picked === value ? 'active' : ''} onClick={() => setPicked(value)}>{verdictLabels[value]}</button>)}</div><h3>실제로 어떻게 행동할까요?</h3><div className="response-actions">{responseActions.map((action) => <button key={action.id} className={selectedAction === action.id ? 'active' : ''} onClick={() => setSelectedAction(action.id)}><b>{action.label}</b><small>{action.description}</small></button>)}</div><p className="confidence-label">판정 확신도 <strong>{confidence}%</strong></p><div className="confidence-buttons">{confidenceOptions.map((value) => <button key={value} className={confidence === value ? 'active' : ''} onClick={() => setConfidence(value)}>{value}%</button>)}</div><button className="submit-verdict" onClick={submitVerdict} disabled={!picked || !selectedAction}>{!picked ? '판정을 선택하세요' : !selectedAction ? '대응 행동을 선택하세요' : '판정 제출'}</button></div></div></section></div>}
 

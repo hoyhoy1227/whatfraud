@@ -1842,6 +1842,68 @@ body { background: #e9edf3; color: #172033; font-weight: 400; }
   transition-duration: .01ms !important;
 }
 
+/* In-game pause menu keeps the current phone state intact while offering a safe exit. */
+.game-menu-button {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-content: center;
+  gap: 3px;
+  border: 0;
+  border-radius: 50%;
+  background: #eef2f7;
+  color: #2d466b;
+  box-shadow: inset 0 0 0 1px #d9e1ec;
+  cursor: pointer;
+}
+.game-menu-button > i { width: 14px; height: 2px; border-radius: 999px; background: currentColor; }
+.game-menu-button:hover, .game-menu-button:focus-visible { background: #dfe8f5; outline: 2px solid #7fa6e7; outline-offset: 2px; }
+
+.pause-menu-backdrop {
+  position: fixed;
+  z-index: 90;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(17,25,38,.58);
+  backdrop-filter: blur(12px);
+}
+.pause-menu {
+  width: min(480px,100%);
+  max-height: min(90dvh,760px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid #dce2ea;
+  border-radius: 23px;
+  background: #f8fafc;
+  color: #172033;
+  box-shadow: 0 32px 100px rgba(15,24,38,.38);
+}
+.pause-menu > header { display: grid; grid-template-columns: minmax(0,1fr) 36px; gap: 12px; align-items: start; margin-bottom: 16px; }
+.pause-menu > header small { color: #2f6fde; font-size: 9px; font-weight: 750; }
+.pause-menu > header h2 { margin: 3px 0 0; font-size: 25px; letter-spacing: -.045em; }
+.pause-menu > header > button { width: 34px; height: 34px; border: 0; border-radius: 50%; background: #e9edf3; color: #526278; font-size: 21px; cursor: pointer; }
+.pause-progress { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; overflow: hidden; margin-bottom: 12px; border: 1px solid #dfe5ed; border-radius: 14px; background: #dfe5ed; }
+.pause-progress > span { min-width: 0; display: grid; gap: 4px; padding: 13px 8px; background: white; text-align: center; }
+.pause-progress small { color: #778397; font-size: 8px; }.pause-progress b { font-size: 12px; }
+.pause-continue { width: 100%; min-height: 48px; border: 0; border-radius: 13px; background: #2f6fde; color: white; font-size: 12px; font-weight: 780; cursor: pointer; box-shadow: 0 10px 24px rgba(47,111,222,.2); }
+.pause-settings { margin-top: 18px; }.pause-settings > h3 { margin: 0 0 9px; color: #5f6e82; font-size: 10px; }
+.pause-secondary-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.pause-secondary-actions > button { min-height: 44px; padding: 9px; border: 0; border-radius: 12px; background: #e8edf3; color: #38506f; font-size: 10px; font-weight: 750; cursor: pointer; }
+.pause-secondary-actions > button:last-child { background: #27364a; color: white; }
+
+@media (max-width: 760px) {
+  .game-menu-button { width: 32px; height: 32px; }
+  .pause-menu { padding: 19px; border-radius: 20px; }
+}
+
+@media (max-width: 430px) {
+  .pause-menu-backdrop { padding: 10px; }
+  .pause-secondary-actions { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 760px) {
   .start-menu { margin-inline: auto; }
   .start-menu-item { min-height: 62px; background: rgba(255,255,255,.88); }
