@@ -29,6 +29,7 @@ type VerificationDefinition = { id: LocationId; label: string; app: string; desc
 type LoadingTask = { kind: 'startup' | 'case'; progress: number };
 type InvestigationEvent = { source: LocationId; evidence: string | null; minuteOffset: number };
 type CinematicCue = { app: AppId; sender: string; title: string; detail: string; icon: string; tone: 'routine' | 'social' | 'warning' };
+type PlayerPreferences = { reduceMotion: boolean; guideOnNewGame: boolean };
 type SavedProgress = {
   version: 1;
   savedAt: number;
@@ -48,6 +49,7 @@ type SavedProgress = {
 };
 
 const PROGRESS_SAVE_KEY = 'profit-24-progress-v1';
+const PREFERENCES_KEY = 'profit-24-preferences-v1';
 const AI_REQUEST_TIMEOUT_MS = 16_000;
 const AI_SLOW_NOTICE_MS = 10_000;
 const verdictValues: Verdict[] = ['normal', 'caution', 'scam'];
@@ -320,6 +322,9 @@ export default function GameClient() {
   const [aiSessionId] = useState(() => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `session-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const [bestScore, setBestScore] = useState(0);
   const [savedProgress, setSavedProgress] = useState<SavedProgress | null>(null);
+  const [preferences, setPreferences] = useState<PlayerPreferences>({ reduceMotion: false, guideOnNewGame: false });
+  const [showStartSettings, setShowStartSettings] = useState(false);
+  const [confirmNewGame, setConfirmNewGame] = useState(false);
 
   const activeCase = cases[activeIndex];
   const activeChat = chats[activeCase.id] ?? initialChat(activeCase);
@@ -380,9 +385,12 @@ export default function GameClient() {
   useEffect(() => {
     let storedBest = 0;
     let storedProgress: SavedProgress | null = null;
+    let storedPreferences: PlayerPreferences = { reduceMotion: false, guideOnNewGame: false };
     try {
       storedBest = Number(window.localStorage.getItem('profit-24-best-score') ?? 0);
       storedProgress = readSavedProgress(window.localStorage.getItem(PROGRESS_SAVE_KEY));
+      const rawPreferences = JSON.parse(window.localStorage.getItem(PREFERENCES_KEY) ?? '{}') as Partial<PlayerPreferences>;
+      storedPreferences = { reduceMotion: rawPreferences.reduceMotion === true, guideOnNewGame: rawPreferences.guideOnNewGame === true };
     } catch {
       storedBest = 0;
       storedProgress = null;
@@ -390,8 +398,14 @@ export default function GameClient() {
     window.setTimeout(() => {
       setBestScore(Number.isFinite(storedBest) ? storedBest : 0);
       setSavedProgress(storedProgress);
+      setPreferences(storedPreferences);
     }, 0);
   }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('whatfraud-reduce-motion', preferences.reduceMotion);
+    return () => document.documentElement.classList.remove('whatfraud-reduce-motion');
+  }, [preferences.reduceMotion]);
 
   useEffect(() => {
     if (complete && score > bestScore) {
@@ -459,16 +473,18 @@ export default function GameClient() {
         return;
       }
       if (event.key !== 'Escape') return;
-      if (infoApp) setInfoApp(null);
+      if (confirmNewGame) setConfirmNewGame(false);
+      else if (showStartSettings) setShowStartSettings(false);
+      else if (infoApp) setInfoApp(null);
       else if (showVerdictPanel) setShowVerdictPanel(false);
       else if (tutorialStep !== null) setTutorialStep(null);
     }
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [infoApp, showVerdictPanel, tutorialStep]);
+  }, [confirmNewGame, infoApp, showStartSettings, showVerdictPanel, tutorialStep]);
 
   useEffect(() => {
-    const hasDialog = Boolean(showVerdictPanel || infoApp || tutorialStep !== null || showDebrief || complete);
+    const hasDialog = Boolean(showStartSettings || confirmNewGame || showVerdictPanel || infoApp || tutorialStep !== null || showDebrief || complete);
     if (hasDialog) {
       if (!dialogReturnFocus.current) dialogReturnFocus.current = document.activeElement as HTMLElement | null;
       const timer = window.setTimeout(() => {
@@ -480,7 +496,7 @@ export default function GameClient() {
     }
     dialogReturnFocus.current?.focus();
     dialogReturnFocus.current = null;
-  }, [complete, infoApp, showDebrief, showVerdictPanel, tutorialStep]);
+  }, [complete, confirmNewGame, infoApp, showDebrief, showStartSettings, showVerdictPanel, tutorialStep]);
 
   const modelLabel = useMemo(() => ({
     unchecked: 'Gemini 확인 전', checking: 'AI 확인 중', connected: 'Gemini 연결', fallback: '대체 대사'
@@ -696,6 +712,32 @@ export default function GameClient() {
     setSavedProgress(null);
   }
 
+  function updatePreference(key: keyof PlayerPreferences, value: boolean) {
+    setPreferences((current) => {
+      const next = { ...current, [key]: value };
+      try {
+        window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(next));
+      } catch {
+        // 설정 저장을 사용할 수 없어도 현재 접속 중에는 선택을 유지한다.
+      }
+      return next;
+    });
+  }
+
+  function requestNewGame() {
+    if (savedProgress) {
+      setConfirmNewGame(true);
+      return;
+    }
+    void startSimulation(preferences.guideOnNewGame, false);
+  }
+
+  function startNewGame() {
+    clearSavedProgress();
+    setConfirmNewGame(false);
+    void startSimulation(preferences.guideOnNewGame, false);
+  }
+
   async function startSimulation(forceGuide = false, resume = false) {
     if (loadingTask) return;
     const progressToRestore = resume ? savedProgress : null;
@@ -820,13 +862,14 @@ export default function GameClient() {
         <div className="intro-shade" />
         <section className="intro-panel" aria-labelledby="game-title">
           <h1 id="game-title">휴대폰을 확인해 보세요</h1>
-          {savedProgress && <div className="resume-summary" aria-label="저장된 게임 진행"><span>이어할 기록</span><b>사건 {Math.min(savedProgress.results.length + 1, cases.length)}/{cases.length} · 판정 {savedProgress.results.length}건 완료</b><small>{formatSavedTime(savedProgress.savedAt)} 자동 저장 · 대화 입력은 저장하지 않음</small></div>}
-          <button className="start-simulation" onClick={() => startSimulation(false, Boolean(savedProgress))}>
-            <b>{savedProgress ? '이어서 열기' : '열기'}</b><i>›</i>
-          </button>
-          {savedProgress && <button className="intro-new-game" onClick={() => { clearSavedProgress(); void startSimulation(false, false); }}>처음부터 새로 시작</button>}
-          <button className="intro-guide-button intro-guide-icon" onClick={() => startSimulation(true, Boolean(savedProgress))} aria-label="게임 방법 보기">?</button>
+          <nav className="start-menu" aria-label="게임 시작 메뉴">
+            {savedProgress && <button className="start-menu-item resume" onClick={() => startSimulation(false, true)}><span><b>이어하기</b><small>사건 {Math.min(savedProgress.results.length + 1, cases.length)}/{cases.length} · {formatSavedTime(savedProgress.savedAt)} 저장</small></span><i>›</i></button>}
+            <button className={`start-menu-item new ${savedProgress ? '' : 'primary'}`} onClick={requestNewGame}><span><b>새로 시작</b><small>{savedProgress ? '현재 기록을 지우고 처음부터 시작' : '새로운 하루를 처음부터 시작'}</small></span><i>＋</i></button>
+            <button className="start-menu-item settings" onClick={() => setShowStartSettings(true)}><span><b>설정</b><small>안내와 화면 움직임 조정</small></span><AppIcon name="settings" size="mini"/></button>
+          </nav>
         </section>
+        {showStartSettings && <div className="start-dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="start-settings-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowStartSettings(false); }}><section className="start-dialog settings-dialog"><header><div><small>게임 설정</small><h2 id="start-settings-title">시작 전 설정</h2></div><button onClick={() => setShowStartSettings(false)} aria-label="설정 닫기">×</button></header><div className="start-setting-list"><button role="switch" aria-checked={preferences.reduceMotion} onClick={() => updatePreference('reduceMotion', !preferences.reduceMotion)}><span><b>화면 움직임 줄이기</b><small>알림과 화면 전환 애니메이션을 최소화합니다.</small></span><i>{preferences.reduceMotion ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.guideOnNewGame} onClick={() => updatePreference('guideOnNewGame', !preferences.guideOnNewGame)}><span><b>새 게임에서 안내 먼저 보기</b><small>새로 시작할 때 조작 방법을 먼저 보여줍니다.</small></span><i>{preferences.guideOnNewGame ? '켜짐' : '꺼짐'}</i></button></div><div className="start-save-note"><AppIcon name="settings" size="mini"/><span><b>진행 기록은 이 기기에 자동 저장됩니다</b><small>직접 입력한 대화와 AI 답변은 저장하지 않습니다.</small></span></div><button className="start-dialog-guide" onClick={() => { setShowStartSettings(false); void startSimulation(true, Boolean(savedProgress)); }}>게임 방법부터 보기</button><button className="start-dialog-close" onClick={() => setShowStartSettings(false)}>완료</button></section></div>}
+        {confirmNewGame && <div className="start-dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="new-game-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmNewGame(false); }}><section className="start-dialog confirm-dialog"><header><div><small>새 게임</small><h2 id="new-game-title">처음부터 시작할까요?</h2></div><button onClick={() => setConfirmNewGame(false)} aria-label="확인창 닫기">×</button></header><p>현재 저장된 사건 진행과 판정 기록이 지워집니다.</p><div><button onClick={() => setConfirmNewGame(false)}>취소</button><button className="danger" onClick={startNewGame}>기록을 지우고 시작</button></div></section></div>}
       </main>
     );
   }

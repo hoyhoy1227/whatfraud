@@ -1724,3 +1724,112 @@ body { background: #e9edf3; color: #172033; font-weight: 400; }
   .phone-home-content { padding-top: 47px; }
   .phone-home-screen .phone-dock { margin-bottom: 25px; }
 }
+
+/* First-entry main menu and pre-game settings. */
+.start-menu {
+  width: min(410px,100%);
+  display: grid;
+  gap: 9px;
+  margin-top: 28px;
+}
+.start-menu-item {
+  width: 100%;
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 11px 15px 11px 18px;
+  border: 1px solid rgba(68,86,112,.2);
+  border-radius: 15px;
+  background: rgba(255,255,255,.76);
+  color: #26364d;
+  box-shadow: 0 8px 24px rgba(23,32,51,.08);
+  text-align: left;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.start-menu-item:hover { transform: translateY(-2px); border-color: rgba(47,111,222,.48); box-shadow: 0 12px 28px rgba(23,32,51,.13); }
+.start-menu-item > span { min-width: 0; display: grid; gap: 4px; }
+.start-menu-item b { font-size: 15px; font-weight: 750; letter-spacing: -.025em; }
+.start-menu-item small { color: #69778b; font-size: 9px; line-height: 1.4; }
+.start-menu-item > i { min-width: 34px; color: #5f718a; font-size: 23px; font-style: normal; text-align: center; }
+.start-menu-item.resume, .start-menu-item.primary { border-color: #2f6fde; background: #2f6fde; color: white; box-shadow: 0 13px 28px rgba(47,111,222,.24); }
+.start-menu-item.resume small, .start-menu-item.primary small { color: rgba(255,255,255,.8); }
+.start-menu-item.resume > i, .start-menu-item.primary > i { color: white; }
+.start-menu-item.settings > .mini-icon { width: 36px; height: 36px; border-radius: 11px; }
+
+.start-dialog-backdrop {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(17,25,38,.48);
+  backdrop-filter: blur(10px);
+}
+.start-dialog {
+  width: min(470px,100%);
+  max-height: min(88dvh,720px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid #dce2ea;
+  border-radius: 22px;
+  background: #f8fafc;
+  color: #172033;
+  box-shadow: 0 30px 90px rgba(15,24,38,.32);
+}
+.start-dialog > header { display: grid; grid-template-columns: minmax(0,1fr) 36px; gap: 12px; align-items: start; margin-bottom: 18px; }
+.start-dialog > header small { color: #6e7d92; font-size: 9px; font-weight: 700; }
+.start-dialog > header h2 { margin: 3px 0 0; font-size: 24px; letter-spacing: -.045em; }
+.start-dialog > header > button { width: 34px; height: 34px; border: 0; border-radius: 50%; background: #e9edf3; color: #526278; font-size: 21px; cursor: pointer; }
+.start-setting-list { display: grid; gap: 9px; }
+.start-setting-list > button {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid #dce2ea;
+  border-radius: 14px;
+  background: white;
+  text-align: left;
+  cursor: pointer;
+}
+.start-setting-list span { display: grid; gap: 4px; }
+.start-setting-list b { font-size: 12px; }.start-setting-list small { color: #6d798b; font-size: 9px; line-height: 1.45; }
+.start-setting-list i { min-width: 47px; padding: 6px 8px; border-radius: 999px; background: #e6eaf0; color: #6e7b8d; font-size: 9px; font-style: normal; font-weight: 700; text-align: center; }
+.start-setting-list button[aria-checked="true"] { border-color: #9bb9ed; background: #f4f7fd; }
+.start-setting-list button[aria-checked="true"] i { background: #2f6fde; color: white; }
+.start-save-note { display: grid; grid-template-columns: 38px minmax(0,1fr); gap: 10px; align-items: center; margin: 14px 0; padding: 12px; border-radius: 14px; background: #edf2f7; }
+.start-save-note span { display: grid; gap: 3px; }.start-save-note b { font-size: 10px; }.start-save-note small { color: #68768a; font-size: 8px; line-height: 1.45; }
+.start-dialog-guide, .start-dialog-close { width: 100%; min-height: 44px; border: 0; border-radius: 12px; font-size: 11px; font-weight: 750; cursor: pointer; }
+.start-dialog-guide { margin-bottom: 8px; background: #e8eef8; color: #315889; }
+.start-dialog-close { background: #2f6fde; color: white; }
+.confirm-dialog > p { margin: 0 0 20px; color: #617086; font-size: 11px; line-height: 1.65; }
+.confirm-dialog > div { display: grid; grid-template-columns: 1fr 1.5fr; gap: 8px; }
+.confirm-dialog > div button { min-height: 44px; border: 0; border-radius: 12px; background: #e8edf3; font-size: 11px; font-weight: 750; cursor: pointer; }
+.confirm-dialog > div button.danger { background: #cf4658; color: white; }
+
+.whatfraud-reduce-motion *, .whatfraud-reduce-motion *::before, .whatfraud-reduce-motion *::after {
+  scroll-behavior: auto !important;
+  animation-duration: .01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .01ms !important;
+}
+
+@media (max-width: 760px) {
+  .start-menu { margin-inline: auto; }
+  .start-menu-item { min-height: 62px; background: rgba(255,255,255,.88); }
+  .start-dialog { padding: 19px; border-radius: 19px; }
+}
+
+@media (max-width: 430px) {
+  .simulation-intro .intro-panel:has(.start-menu) { padding-top: 25vh; }
+  .start-menu { margin-top: 20px; }
+  .start-menu-item { min-height: 58px; padding: 9px 12px 9px 15px; }
+  .start-menu-item b { font-size: 13px; }
+  .start-dialog-backdrop { padding: 10px; }
+}
