@@ -29,6 +29,7 @@ type VerificationDefinition = { id: LocationId; label: string; app: string; desc
 type LoadingTask = { kind: 'startup' | 'case'; progress: number };
 type InvestigationEvent = { source: LocationId; evidence: string | null; minuteOffset: number };
 type CinematicCue = { app: AppId; sender: string; title: string; detail: string; icon: string; tone: 'routine' | 'social' | 'warning' };
+type HabitBadge = { id: string; icon: string; title: string; detail: string; unlocked: boolean };
 type PlayerPreferences = { reduceMotion: boolean; guideOnNewGame: boolean };
 type SavedProgress = {
   version: 1;
@@ -45,6 +46,7 @@ type SavedProgress = {
   openedLinks: Record<string, boolean>;
   openedCases: Record<string, boolean>;
   openedCues: Record<string, boolean>;
+  seenFollowUps: Record<string, boolean>;
   safetySeenCount: number;
 };
 
@@ -179,6 +181,7 @@ function readSavedProgress(serialized: string | null): SavedProgress | null {
       openedLinks: booleanRecord(raw.openedLinks),
       openedCases: booleanRecord(raw.openedCases),
       openedCues: booleanRecord(raw.openedCues),
+      seenFollowUps: booleanRecord(raw.seenFollowUps),
       safetySeenCount: typeof raw.safetySeenCount === 'number' && Number.isFinite(raw.safetySeenCount)
         ? Math.max(0, Math.min(results.length, Math.floor(raw.safetySeenCount)))
         : 0,
@@ -301,6 +304,7 @@ export default function GameClient() {
   const [openedLinks, setOpenedLinks] = useState<Record<string, boolean>>({});
   const [openedCases, setOpenedCases] = useState<Record<string, boolean>>({});
   const [openedCues, setOpenedCues] = useState<Record<string, boolean>>({});
+  const [seenFollowUps, setSeenFollowUps] = useState<Record<string, boolean>>({});
   const [safetySeenCount, setSafetySeenCount] = useState(0);
   const [results, setResults] = useState<Result[]>([]);
   const [draft, setDraft] = useState('');
@@ -357,8 +361,32 @@ export default function GameClient() {
           ? '공식 경로 확인 후 정상 안내를 안전하게 처리했습니다.'
           : '정상 연락이었지만 공식 기록을 확인하는 습관은 더 필요합니다.'
     : null;
+  const followUpCue: CinematicCue | null = previousResult && previousCase && activeIndex === availableCount - 1
+    ? previousCase.verdict === 'scam'
+      ? previousResult.actionCorrect
+        ? { app: 'safety', sender: '안전센터', title: '의심 계정 차단 완료', detail: `${previousCase.sender}의 후속 접근이 차단되었습니다.`, icon: 'safety', tone: 'routine' }
+        : { app: 'social', sender: '모임', title: '비슷한 계정이 다시 접근함', detail: `${previousCase.sender}와 유사한 홍보 계정이 새 요청을 보냈습니다.`, icon: 'social', tone: 'warning' }
+      : previousCase.verdict === 'caution'
+        ? previousResult.actionCorrect
+          ? { app: 'calendar', sender: '달력', title: '재검토 일정이 저장됨', detail: `${previousCase.sender}의 제안을 바로 결정하지 않고 확인 시간을 확보했습니다.`, icon: 'calendar', tone: 'routine' }
+          : { app: 'social', sender: '모임', title: '비슷한 추천 게시물 증가', detail: '빠르게 반응한 주제와 유사한 광고가 피드에 더 많이 보입니다.', icon: 'social', tone: 'warning' }
+        : previousResult.actionCorrect
+          ? { app: 'bank', sender: '공식 기록', title: '정상 안내 확인 완료', detail: `${previousCase.sender}의 내용이 설치된 공식 앱 기록과 일치했습니다.`, icon: 'bank', tone: 'routine' }
+          : { app: 'safety', sender: '안전센터', title: '정상 알림 처리 복습', detail: '정상 연락도 발신자 표시만 믿지 말고 공식 기록과 비교해야 합니다.', icon: 'safety', tone: 'social' }
+    : null;
   const activeAppInfo = infoApp ? phoneApps.find((app) => app.id === infoApp) : undefined;
   const playerTitle = accuracy >= 80 && actionAccuracy >= 80 ? '근거 중심 안전 탐정' : actionAccuracy >= accuracy ? '신중한 안전 행동가' : groundedCount >= Math.ceil(Math.max(results.length, 1) / 2) ? '공식 확인 습관가' : '성장 중인 디지털 시민';
+  const correctNormalCount = results.filter((result) => result.correct && cases.find((item) => item.id === result.caseId)?.verdict === 'normal').length;
+  const correctScamCount = results.filter((result) => result.correct && cases.find((item) => item.id === result.caseId)?.verdict === 'scam').length;
+  const correctActionCount = results.filter((result) => result.actionCorrect).length;
+  const habitBadges: HabitBadge[] = [
+    { id: 'first-check', icon: '✓', title: '첫 교차 확인', detail: '공식 경로에서 근거를 한 번 이상 확인했습니다.', unlocked: groundedCount >= 1 },
+    { id: 'steady-check', icon: '3', title: '확인 습관', detail: '서로 다른 사건 3건 이상에서 근거를 확인했습니다.', unlocked: groundedCount >= 3 },
+    { id: 'calm-action', icon: 'Ⅱ', title: '침착한 대응', detail: '안전한 대응 행동을 3번 이상 선택했습니다.', unlocked: correctActionCount >= 3 },
+    { id: 'balanced-eye', icon: '↔', title: '균형 잡힌 판단', detail: '정상 연락과 사기 연락을 모두 정확히 구분했습니다.', unlocked: correctNormalCount >= 1 && correctScamCount >= 1 },
+    { id: 'no-overblock', icon: '○', title: '과잉 차단 방지', detail: '정상 연락을 공식 확인 후 안전하게 처리했습니다.', unlocked: correctNormalCount >= 2 },
+  ];
+  const earnedBadges = habitBadges.filter((badge) => badge.unlocked);
   const contactReviewed = Boolean(openedCases[activeCase.id]);
   const isAmbientEntry = results.length === 0 && activeIndex === 0 && phoneLocked && !contactReviewed;
   const objectiveStage = activeResult ? 3 : activeEvidence.length ? 2 : contactReviewed ? 1 : 0;
@@ -431,6 +459,7 @@ export default function GameClient() {
       openedLinks,
       openedCases,
       openedCues,
+      seenFollowUps,
       safetySeenCount,
     };
     const timer = window.setTimeout(() => {
@@ -442,7 +471,7 @@ export default function GameClient() {
       }
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [activeIndex, availableCount, evidence, loadingTask, openedCases, openedCues, openedLinks, phoneApp, phoneLocked, results, safetySeenCount, started, verificationHistory]);
+  }, [activeIndex, availableCount, evidence, loadingTask, openedCases, openedCues, openedLinks, phoneApp, phoneLocked, results, safetySeenCount, seenFollowUps, started, verificationHistory]);
 
   useEffect(() => {
     if (!sending) return;
@@ -765,6 +794,7 @@ export default function GameClient() {
       setOpenedLinks(progressToRestore.openedLinks);
       setOpenedCases(progressToRestore.openedCases);
       setOpenedCues(progressToRestore.openedCues);
+      setSeenFollowUps(progressToRestore.seenFollowUps);
       setSafetySeenCount(progressToRestore.safetySeenCount);
       setPhoneApp(progressToRestore.phoneApp);
       setPhoneLocked(progressToRestore.phoneLocked);
@@ -803,6 +833,7 @@ export default function GameClient() {
   function selectPhoneApp(target: PhoneApp) {
     setPhoneApp(target);
     if (target === cinematicCue.app) setOpenedCues((current) => ({ ...current, [activeCase.id]: true }));
+    if (followUpCue?.app === target) setSeenFollowUps((current) => ({ ...current, [activeCase.id]: true }));
     if (target === 'safety') setSafetySeenCount(results.length);
     if (target === 'messages') {
       setOpenedCases((current) => ({ ...current, [activeCase.id]: true }));
@@ -817,8 +848,8 @@ export default function GameClient() {
   }
 
   function renderCinematicTrace(app: AppId) {
-    if (cinematicCue.app !== app) return null;
-    return <div className={`app-scene-trace cue-${cinematicCue.tone}`}><AppIcon name={cinematicCue.icon} size="mini"/><span><b>{cinematicCue.title}</b><small>{cinematicCue.detail}</small></span><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + 1)}</time></div>;
+    if (cinematicCue.app !== app && followUpCue?.app !== app) return null;
+    return <>{followUpCue?.app === app && <div className={`app-scene-trace follow-up cue-${followUpCue.tone}`}><AppIcon name={followUpCue.icon} size="mini"/><span><b>{followUpCue.title}</b><small>{followUpCue.detail}</small></span><time>방금</time></div>}{cinematicCue.app === app && <div className={`app-scene-trace cue-${cinematicCue.tone}`}><AppIcon name={cinematicCue.icon} size="mini"/><span><b>{cinematicCue.title}</b><small>{cinematicCue.detail}</small></span><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + 1)}</time></div>}</>;
   }
 
   function restart() {
@@ -835,6 +866,7 @@ export default function GameClient() {
     setOpenedLinks({});
     setOpenedCases({});
     setOpenedCues({});
+    setSeenFollowUps({});
     setSafetySeenCount(0);
     setShowDebrief(false);
     setShowVerdictPanel(false);
@@ -903,6 +935,7 @@ export default function GameClient() {
                 <time>{gameTime}</time><span>8월 29일 토요일</span>
                 <div className="lock-notifications" aria-label="새 알림">
                   {!contactReviewed && <button onClick={() => unlockPhone('messages')}><AppIcon name="messages" size="mini"/><span><b>메시지 · 지금</b><strong>{activeCase.sender}</strong><small>{activeCase.preview}</small></span></button>}
+                  {followUpCue && !seenFollowUps[activeCase.id] && <button className={`cue-${followUpCue.tone}`} onClick={() => unlockPhone(followUpCue.app)}><AppIcon name={followUpCue.icon} size="mini"/><span><b>{followUpCue.sender} · 방금</b><strong>{followUpCue.title}</strong><small>{followUpCue.detail}</small></span></button>}
                   {!openedCues[activeCase.id] && <button className={`cue-${cinematicCue.tone}`} onClick={() => unlockPhone(cinematicCue.app)}><AppIcon name={cinematicCue.icon} size="mini"/><span><b>{cinematicCue.sender} · {activeIndex % 2 ? '3분 전' : '12분 전'}</b><strong>{cinematicCue.title}</strong><small>{cinematicCue.detail}</small></span></button>}
                   {results.length > safetySeenCount && <button onClick={() => unlockPhone('safety')}><AppIcon name="safety" size="mini"/><span><b>안전센터 · 오늘</b><strong>새 판정 기록 {results.length - safetySeenCount}건</strong><small>완료한 사건의 판단과 안전 행동을 복습할 수 있습니다.</small></span></button>}
                 </div>
@@ -916,8 +949,9 @@ export default function GameClient() {
                 <div className="phone-home-screen">
                   <div className="phone-home-content">
                     <div className="chapter-card"><span>{actInfo.eyebrow}</span><b>{actInfo.title}</b><small>{actInfo.detail}</small></div>
-                    {previousConsequence && <div className={`previous-choice-card ${previousResult?.actionCorrect ? 'resolved' : 'unresolved'}`}><i>{previousResult?.actionCorrect ? '✓' : '!'}</i><span><b>이전 선택의 여파</b><small>{previousConsequence}</small></span></div>}
+                    {previousConsequence && seenFollowUps[activeCase.id] && <div className={`previous-choice-card ${previousResult?.actionCorrect ? 'resolved' : 'unresolved'}`}><i>{previousResult?.actionCorrect ? '✓' : '!'}</i><span><b>이전 선택의 여파</b><small>{previousConsequence}</small></span></div>}
                     {!contactReviewed && <button className="home-notification" onClick={() => selectPhoneApp('messages')}><AppIcon name="messages" size="mini"/><span><b>{activeCase.sender}</b><small>{activeCase.preview}</small></span><em>{formatGameClock(ARRIVAL_MINUTES[activeIndex])}</em></button>}
+                    {followUpCue && !seenFollowUps[activeCase.id] && <button className={`ambient-notification follow-up cue-${followUpCue.tone}`} onClick={() => selectPhoneApp(followUpCue.app)}><AppIcon name={followUpCue.icon} size="mini"/><span><b>{followUpCue.sender}</b><small>{followUpCue.title} · {followUpCue.detail}</small></span><em>확인</em></button>}
                     {!openedCues[activeCase.id] && <button className={`ambient-notification cue-${cinematicCue.tone}`} onClick={() => selectPhoneApp(cinematicCue.app)}><AppIcon name={cinematicCue.icon} size="mini"/><span><b>{cinematicCue.sender}</b><small>{cinematicCue.title} · {cinematicCue.detail}</small></span><em>열기</em></button>}
                     <div className="home-widgets">
                       <div><span>오늘의 판별 훈련</span><strong>{results.length}/{cases.length}</strong><small>정확도 {accuracy}% · 점수 {score}</small></div>
@@ -973,6 +1007,7 @@ export default function GameClient() {
               {phoneApp === 'safety' && (
                 <div className="native-app phone-app-body safety-history">
                   <div className="safety-overview"><span className="pixel-label">안전 활동 요약</span><h2>오늘의 판정 기록</h2><div><span><b>{results.length}</b><small>완료 사건</small></span><span><b>{accuracy}%</b><small>판정 정확도</small></span><span><b>{actionAccuracy}%</b><small>안전 대응</small></span></div></div>
+                  <section className="habit-badges" aria-labelledby="habit-badges-title"><header><div><span className="pixel-label">SAFE HABITS</span><h3 id="habit-badges-title">안전 습관 배지</h3></div><b>{earnedBadges.length}/{habitBadges.length}</b></header><div>{habitBadges.map((badge) => <article key={badge.id} className={badge.unlocked ? 'unlocked' : 'locked'}><i>{badge.unlocked ? badge.icon : '·'}</i><span><b>{badge.title}</b><small>{badge.unlocked ? badge.detail : '계속 조사하고 안전하게 대응하면 해제됩니다.'}</small></span></article>)}</div></section>
                   {results.length ? <div className="safety-records">{results.map((result) => { const index = cases.findIndex((item) => item.id === result.caseId); const item = cases[index]; return <button key={result.caseId} onClick={() => openCase(index)}><i>{item.sender.slice(0,1)}</i><span><b>{item.sender}</b><small>나의 판정 {verdictLabels[result.picked]} · 대응 {responseActions.find((action) => action.id === result.action)?.label}</small></span><em className={result.correct && result.actionCorrect ? 'safe' : 'review'}>{result.correct && result.actionCorrect ? '안전' : '복습'}</em></button>; })}</div> : <div className="safety-empty"><b>아직 완료한 판정이 없습니다</b><p>현재 사건을 조사한 뒤 화면 아래의 판정하기를 누르세요.</p></div>}
                   <button className="app-primary safety-current-action" onClick={openVerdictPanel}>{activeResult ? '현재 사건 결과 보기' : '현재 사건 판정하기'}</button>
                 </div>
@@ -1028,7 +1063,7 @@ export default function GameClient() {
         </div>
       )}
 
-      {complete && !showDebrief && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="summary-title" tabIndex={-1}><section className="summary-card"><span className="pixel-label">DAY CLEAR!</span><h2 id="summary-title">{playerTitle}</h2><p className="summary-lead">판정 정확도 {accuracy}% · 안전 대응 {actionAccuracy}%</p><div className="summary-grid"><div><span>최종 점수</span><strong>{score}</strong></div><div><span>근거 판정</span><strong>{groundedCount}/{results.length}</strong></div><div><span>공식 확인</span><strong>{Object.values(evidence).flat().length}회</strong></div></div><p>사기범을 말로 이기는 것보다, 돈을 보내기 전에 독립적인 공식 경로로 확인하는 습관이 중요합니다.</p><button onClick={restart}>새로운 하루 시작</button></section></div>}
+      {complete && !showDebrief && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="summary-title" tabIndex={-1}><section className="summary-card"><span className="pixel-label">DAY CLEAR!</span><h2 id="summary-title">{playerTitle}</h2><p className="summary-lead">판정 정확도 {accuracy}% · 안전 대응 {actionAccuracy}%</p><div className="summary-grid"><div><span>최종 점수</span><strong>{score}</strong></div><div><span>근거 판정</span><strong>{groundedCount}/{results.length}</strong></div><div><span>공식 확인</span><strong>{Object.values(evidence).flat().length}회</strong></div></div><section className="summary-badges"><span>오늘 얻은 안전 습관</span>{earnedBadges.length ? <div>{earnedBadges.map((badge) => <span key={badge.id}><i>{badge.icon}</i><b>{badge.title}</b></span>)}</div> : <p>다음 플레이에서는 연락 밖의 공식 앱에서 근거를 먼저 확인해 보세요.</p>}</section><p>사기범을 말로 이기는 것보다, 돈을 보내기 전에 독립적인 공식 경로로 확인하는 습관이 중요합니다.</p><button onClick={restart}>새로운 하루 시작</button></section></div>}
     </main>
   );
 }

@@ -1541,9 +1541,30 @@ body { background: #e9edf3; color: #172033; font-weight: 400; }
 .app-scene-trace.cue-warning { border-left: 3px solid #d99b3a; }
 .app-scene-trace.cue-social { border-left: 3px solid #5f79d4; }
 .app-scene-trace.cue-routine { border-left: 3px solid #4ba083; }
+.app-scene-trace.follow-up { background: #f3f7fd; box-shadow: inset 0 0 0 1px #d9e4f3; }
+.ambient-notification.follow-up { animation: notificationArrive .42s ease-out both; }
 .previous-choice-card { grid-template-columns: 28px minmax(0,1fr); padding-block: 8px; background: rgba(238,243,249,.82); }
 .previous-choice-card > i { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: #dce9e4; color: #34775f; font-size: 10px; font-style: normal; font-weight: 800; }
 .previous-choice-card.unresolved > i { background: #fff0d7; color: #986b1b; }
+
+.habit-badges { margin-top: 14px; padding: 14px; border: 1px solid #dfe5ed; border-radius: 15px; background: #fff; }
+.habit-badges > header { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.habit-badges > header h3 { margin: 3px 0 0; color: #233249; font-size: 15px; letter-spacing: -.025em; }
+.habit-badges > header > b { color: #426b9f; font-size: 12px; }
+.habit-badges > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+.habit-badges article { min-width: 0; display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 8px; align-items: center; padding: 9px; border-radius: 11px; background: #f2f4f7; color: #8390a1; }
+.habit-badges article > i { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: #e2e6eb; font-size: 11px; font-style: normal; font-weight: 800; }
+.habit-badges article > span { min-width: 0; display: grid; gap: 2px; }
+.habit-badges article b { font-size: 9px; }.habit-badges article small { color: inherit; font-size: 7px; line-height: 1.4; }
+.habit-badges article.unlocked { background: #eaf3ff; color: #315987; box-shadow: inset 0 0 0 1px #cedff5; }
+.habit-badges article.unlocked > i { background: #2f6fde; color: white; }
+.summary-badges { margin: 16px 0; padding: 13px; border-radius: 12px; background: #eef4fc; }
+.summary-badges > span { display: block; margin-bottom: 8px; color: #61718a; font-size: 9px; font-weight: 700; }
+.summary-badges > div { display: flex; flex-wrap: wrap; gap: 7px; }
+.summary-badges > p { margin: 0; color: #6a788c; font-size: 9px; line-height: 1.5; }
+.summary-badges > div > span { display: flex; align-items: center; gap: 5px; padding: 7px 9px; border-radius: 999px; background: white; color: #315987; box-shadow: inset 0 0 0 1px #d7e3f2; }
+.summary-badges i { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: #2f6fde; color: white; font-size: 8px; font-style: normal; }
+.summary-badges b { font-size: 8px; }
 .lock-notifications .cue-warning { border-left: 3px solid #d99b3a !important; }
 .lock-notifications .cue-social { border-left: 3px solid #5f79d4 !important; }
 .lock-notifications .cue-routine { border-left: 3px solid #4ba083 !important; }
@@ -1576,6 +1597,7 @@ body { background: #e9edf3; color: #172033; font-weight: 400; }
   .ambient-notification em { display: none; }
   .case-rewind { padding: 12px 10px; }
   .case-rewind > header { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .habit-badges > div { grid-template-columns: 1fr; }
 }
 
 /* Quiet entry: begin as an ordinary phone, reveal game guidance after unlock */
