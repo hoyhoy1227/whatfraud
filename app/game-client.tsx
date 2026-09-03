@@ -876,17 +876,19 @@ export default function GameClient() {
             <>
               {phoneApp === 'home' && (
                 <div className="phone-home-screen">
-                  <div className="chapter-card"><span>{actInfo.eyebrow}</span><b>{actInfo.title}</b><small>{actInfo.detail}</small></div>
-                  {previousConsequence && <div className={`previous-choice-card ${previousResult?.actionCorrect ? 'resolved' : 'unresolved'}`}><i>{previousResult?.actionCorrect ? '✓' : '!'}</i><span><b>이전 선택의 여파</b><small>{previousConsequence}</small></span></div>}
-                  {!contactReviewed && <button className="home-notification" onClick={() => selectPhoneApp('messages')}><AppIcon name="messages" size="mini"/><span><b>{activeCase.sender}</b><small>{activeCase.preview}</small></span><em>{formatGameClock(ARRIVAL_MINUTES[activeIndex])}</em></button>}
-                  {!openedCues[activeCase.id] && <button className={`ambient-notification cue-${cinematicCue.tone}`} onClick={() => selectPhoneApp(cinematicCue.app)}><AppIcon name={cinematicCue.icon} size="mini"/><span><b>{cinematicCue.sender}</b><small>{cinematicCue.title} · {cinematicCue.detail}</small></span><em>열기</em></button>}
-                  <div className="home-widgets">
-                    <div><span>오늘의 판별 훈련</span><strong>{results.length}/{cases.length}</strong><small>정확도 {accuracy}% · 점수 {score}</small></div>
-                    <div><span>현재 연락</span><strong>{activeCase.sender}</strong><small>{activeCase.category} · 확인 {activeEvidence.length}건</small></div>
-                  </div>
-                  <button className="home-verify-card" onClick={() => verifySource('home')}><i>▤</i><span><b>내 알림·앱 기록 비교</b><small>현재 연락이 공식 앱 안에도 남아 있는지 확인</small></span><em>확인</em></button>
-                  <div className="app-grid" aria-label="앱 목록">
-                    {phoneApps.map((app) => <button key={app.id} onClick={() => selectPhoneApp(app.id)}><AppIcon name={app.icon}/><span>{app.label}</span>{app.id === 'messages' && unreadCount > 0 && <em>{unreadCount}</em>}</button>)}
+                  <div className="phone-home-content">
+                    <div className="chapter-card"><span>{actInfo.eyebrow}</span><b>{actInfo.title}</b><small>{actInfo.detail}</small></div>
+                    {previousConsequence && <div className={`previous-choice-card ${previousResult?.actionCorrect ? 'resolved' : 'unresolved'}`}><i>{previousResult?.actionCorrect ? '✓' : '!'}</i><span><b>이전 선택의 여파</b><small>{previousConsequence}</small></span></div>}
+                    {!contactReviewed && <button className="home-notification" onClick={() => selectPhoneApp('messages')}><AppIcon name="messages" size="mini"/><span><b>{activeCase.sender}</b><small>{activeCase.preview}</small></span><em>{formatGameClock(ARRIVAL_MINUTES[activeIndex])}</em></button>}
+                    {!openedCues[activeCase.id] && <button className={`ambient-notification cue-${cinematicCue.tone}`} onClick={() => selectPhoneApp(cinematicCue.app)}><AppIcon name={cinematicCue.icon} size="mini"/><span><b>{cinematicCue.sender}</b><small>{cinematicCue.title} · {cinematicCue.detail}</small></span><em>열기</em></button>}
+                    <div className="home-widgets">
+                      <div><span>오늘의 판별 훈련</span><strong>{results.length}/{cases.length}</strong><small>정확도 {accuracy}% · 점수 {score}</small></div>
+                      <div><span>현재 연락</span><strong>{activeCase.sender}</strong><small>{activeCase.category} · 확인 {activeEvidence.length}건</small></div>
+                    </div>
+                    <button className="home-verify-card" onClick={() => verifySource('home')}><i>▤</i><span><b>내 알림·앱 기록 비교</b><small>현재 연락이 공식 앱 안에도 남아 있는지 확인</small></span><em>확인</em></button>
+                    <div className="app-grid" aria-label="앱 목록">
+                      {phoneApps.map((app) => <button key={app.id} onClick={() => selectPhoneApp(app.id)}><AppIcon name={app.icon}/><span>{app.label}</span>{app.id === 'messages' && unreadCount > 0 && <em>{unreadCount}</em>}</button>)}
+                    </div>
                   </div>
                   <div className="phone-dock">
                     {phoneApps.filter((app) => ['calls','messages','browser','safety'].includes(app.id)).map((app) => <button key={app.id} onClick={() => selectPhoneApp(app.id)} aria-label={`${app.label} 열기`}><AppIcon name={app.icon}/></button>)}

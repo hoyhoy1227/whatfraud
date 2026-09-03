@@ -137,6 +137,8 @@ async function main() {
   assert(css.includes('.chapter-card') && css.includes('.ambient-notification') && css.includes('.case-rewind'), '3막·주변 알림·사건 되감기 스타일이 없습니다.', errors);
   assert(css.includes('@media (max-width: 680px)') && css.includes('@media (max-width: 430px)'), '모바일 대응 구간이 부족합니다.', errors);
   assert(css.includes('overflow-wrap: anywhere'), '긴 한글 문구와 가상 주소의 화면 이탈 방어가 없습니다.', errors);
+  assert(client.includes('phone-home-content') && css.includes('overscroll-behavior: contain') && css.includes('.phone-home-screen .phone-dock'), '홈 화면 콘텐츠 스크롤과 고정 독 분리가 없습니다.', errors);
+  assert(css.includes('.phone-only-game:not(.ambient-entry)') && css.includes('height: 100dvh'), '게임 화면이 브라우저 뷰포트에 고정되지 않습니다.', errors);
 
   if (errors.length) throw new Error(`출시 전 자동 점검 실패:\n- ${errors.join('\n- ')}`);
   console.log(`출시 전 자동 점검 완료: ${cases.length}개 사건 순차 진행 · 읽음 처리 · 자동 저장 · 로딩 전환 · 점수 · Gemini 서버 격리 · 키보드 · 모바일 · 콘텐츠 안전`);

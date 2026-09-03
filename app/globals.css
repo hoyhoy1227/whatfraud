@@ -1582,3 +1582,64 @@ body { background: #e9edf3; color: #172033; font-weight: 400; }
   .phone-only-game .mission-strip.objective-toast { top: 61px; }
   .phone-only-game:not(.ambient-entry) .phone-screen { height: calc(100dvh - 115px); }
 }
+
+/* Keep the simulated device fixed to the viewport while only app content scrolls. */
+.phone-only-game:not(.ambient-entry) {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.phone-only-game:not(.ambient-entry) .phone-screen {
+  width: min(1040px, 100%);
+  height: 100%;
+  min-height: 0;
+}
+.phone-home-screen {
+  height: calc(100% - 31px);
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  padding: 0 !important;
+  overflow: hidden;
+  background: radial-gradient(circle at 76% 13%,rgba(255,255,255,.58),transparent 24%),radial-gradient(circle at 14% 72%,rgba(126,171,197,.46),transparent 36%),linear-gradient(150deg,#6f89a7 0%,#5f8195 40%,#3f596d 72%,#2d4053 100%);
+}
+.phone-home-screen::before { display: none; }
+.phone-os-shell.act-afternoon .phone-home-screen {
+  background: radial-gradient(circle at 82% 18%,rgba(255,224,174,.44),transparent 27%),radial-gradient(circle at 12% 76%,rgba(112,145,171,.42),transparent 38%),linear-gradient(150deg,#7d8295 0%,#6b7589 42%,#4c5569 72%,#343d50 100%);
+}
+.phone-os-shell.act-night .phone-home-screen {
+  background: radial-gradient(circle at 78% 12%,rgba(119,146,207,.32),transparent 24%),radial-gradient(circle at 18% 72%,rgba(52,78,121,.48),transparent 35%),linear-gradient(155deg,#36435d 0%,#29374f 43%,#1c273c 72%,#111a2a 100%);
+}
+.phone-home-content {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 55px clamp(16px, 4vw, 48px) 18px;
+}
+.phone-home-content .app-grid { padding-bottom: 4px; }
+.phone-home-screen .phone-dock {
+  position: relative;
+  z-index: 3;
+  left: auto;
+  bottom: auto;
+  width: min(390px, calc(100% - 28px));
+  margin: 0 auto 28px;
+  transform: none;
+}
+
+@media (max-width: 760px) {
+  .phone-only-game:not(.ambient-entry) { padding: 8px 8px 72px; }
+  .phone-home-content { padding: 49px 11px 14px; }
+}
+
+@media (max-width: 430px) {
+  .phone-only-game:not(.ambient-entry) { padding-bottom: 66px; }
+  .phone-home-content { padding-top: 47px; }
+  .phone-home-screen .phone-dock { margin-bottom: 25px; }
+}
