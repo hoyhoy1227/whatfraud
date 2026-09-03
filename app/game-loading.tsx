@@ -5,53 +5,36 @@ type LoadingVariant = 'startup' | 'case';
 type GameLoadingScreenProps = {
   variant: LoadingVariant;
   progress: number;
-  eyebrow: string;
-  title: string;
-  detail: string;
-  steps: string[];
 };
 
-export default function GameLoadingScreen({ variant, progress, eyebrow, title, detail, steps }: GameLoadingScreenProps) {
+export default function GameLoadingScreen({ variant, progress }: GameLoadingScreenProps) {
   const safeProgress = Math.max(0, Math.min(100, Math.round(progress)));
-  const activeStep = Math.min(steps.length - 1, Math.floor((safeProgress / 100) * steps.length));
 
   return (
-    <main className={`game-loading-screen loading-${variant}`} aria-busy="true" aria-live="polite">
-      <section className="loading-device" role="status" aria-label={`${title} ${safeProgress}%`}>
+    <main className={`game-loading-screen loading-${variant}`} aria-busy="true">
+      <section className="loading-device" role="status" aria-label="잠시 기다려 주세요">
         <div className="loading-device-status" aria-hidden="true"><b>08:20</b><span>SIM · Wi-Fi ▮▮▮</span></div>
-        <div className="loading-device-content">
-          <div className={`loading-app-mark ${variant === 'case' ? 'is-message' : ''}`} aria-hidden="true">
-            {variant === 'startup' ? <span>24</span> : <AppIcon name="messages" size="mini" />}
-          </div>
-          <span className="pixel-label">{eyebrow}</span>
-          <h1>{title}</h1>
-          <p>{detail}</p>
-          {variant === 'case' && (
+        <div className={`loading-device-content native-loading-${variant}`}>
+          {variant === 'startup' ? (
+            <div className="native-app-launch" aria-hidden="true">
+              <div className="loading-app-mark"><span>24</span></div>
+              <strong>수익률 24시</strong>
+              <i className="native-loading-spinner" />
+            </div>
+          ) : (
+            <>
+              <div className="loading-lock-clock" aria-hidden="true"><time>08:20</time><span>8월 29일 토요일</span></div>
+              <i className="native-loading-spinner" aria-hidden="true" />
+            </>
+          )}
+          {variant === 'case' && safeProgress >= 82 && (
             <div className="loading-message-preview" aria-hidden="true">
               <AppIcon name="messages" size="mini" />
-              <span><b>메시지</b><small>{safeProgress === 100 ? '새 연락이 도착했습니다.' : '새로운 연락을 수신하고 있습니다.'}</small></span>
+              <span><b>메시지</b><small>새 알림이 도착했습니다.</small></span>
               <em>지금</em>
             </div>
           )}
-          <div
-            className="game-loading-progress"
-            role="progressbar"
-            aria-label="게임 준비 진행률"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={safeProgress}
-          >
-            <i style={{ width: `${safeProgress}%` }} />
-          </div>
-          <div className="loading-progress-copy"><b>{safeProgress}%</b><span>{safeProgress === 100 ? '완료' : '준비 중'}</span></div>
-          <ol className="loading-steps" aria-label="준비 단계">
-            {steps.map((step, index) => (
-              <li key={step} className={index < activeStep || safeProgress === 100 ? 'done' : index === activeStep ? 'active' : ''}>
-                <i>{index < activeStep || safeProgress === 100 ? '✓' : index + 1}</i><span>{step}</span>
-              </li>
-            ))}
-          </ol>
-          <small>{variant === 'startup' ? 'AI 연결은 화면을 연 뒤 백그라운드에서 확인합니다.' : '판정을 마칠 때마다 다음 연락이 한 건씩 도착합니다.'}</small>
+          <progress className="native-loading-progress" role="progressbar" aria-label="로딩 진행률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={safeProgress} max={100} value={safeProgress}>잠시 기다려 주세요</progress>
         </div>
         <div className="loading-device-gesture" aria-hidden="true" />
       </section>

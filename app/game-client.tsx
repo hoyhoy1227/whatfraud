@@ -26,7 +26,7 @@ type DayAct = 'morning' | 'afternoon' | 'night';
 type TutorialKind = 'controls' | 'interface' | 'mission' | 'verify' | 'apps' | 'verdict' | 'score';
 type PhoneAppDefinition = { id: AppId; label: string; icon: string; purpose: string; useWhen: string; caution: string };
 type VerificationDefinition = { id: LocationId; label: string; app: string; description: string; icon: string };
-type LoadingTask = { kind: 'startup' | 'case'; progress: number; title: string; detail: string };
+type LoadingTask = { kind: 'startup' | 'case'; progress: number };
 type InvestigationEvent = { source: LocationId; evidence: string | null; minuteOffset: number };
 type CinematicCue = { app: AppId; sender: string; title: string; detail: string; icon: string; tone: 'routine' | 'social' | 'warning' };
 type SavedProgress = {
@@ -85,11 +85,6 @@ function actForIndex(index: number): DayAct {
 const startupAssets = [
   '/og.png',
 ];
-const loadingSteps = {
-  startup: ['사건 데이터 확인', '휴대폰 환경 준비', '플레이 기록과 AI 경로 설정'],
-  case: ['판정 기록 반영', '게임 시간 진행', '새 연락 수신'],
-};
-
 function wait(milliseconds: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
 }
@@ -651,9 +646,9 @@ export default function GameClient() {
     const nextIndex = progress.activeIndex;
     const nextAct = actForIndex(nextIndex);
     const actChanged = nextAct !== actForIndex(activeIndex);
-    setLoadingTask({ kind: 'case', progress: 12, title: '하루의 시간이 흐릅니다', detail: '방금 내린 판단과 조사 경로를 기록하고 다음 연락을 기다리는 중입니다.' });
+    setLoadingTask({ kind: 'case', progress: 12 });
     await wait(180);
-    setLoadingTask({ kind: 'case', progress: 48, title: actChanged ? dayActs[nextAct].title : '판정 기록을 정리했습니다', detail: actChanged ? `${dayActs[nextAct].eyebrow} · ${dayActs[nextAct].detail}` : `${formatGameClock(ARRIVAL_MINUTES[nextIndex])} 시점으로 게임 시간을 이동합니다.` });
+    setLoadingTask({ kind: 'case', progress: 48 });
     await wait(180);
     setAvailableCount(progress.availableCount);
     setActiveIndex(nextIndex);
@@ -666,9 +661,9 @@ export default function GameClient() {
     setPhoneLocked(true);
     setShowObjectiveCue(false);
     setNotice(`${formatGameClock(ARRIVAL_MINUTES[nextIndex])}, ${actChanged ? `${dayActs[nextAct].eyebrow}이 시작되고 ` : ''}새로운 연락이 도착했다.`);
-    setLoadingTask({ kind: 'case', progress: 82, title: '새 연락을 수신 중입니다', detail: `오늘의 ${nextIndex + 1}번째 연락을 휴대폰 알림에 추가합니다.` });
+    setLoadingTask({ kind: 'case', progress: 82 });
     await wait(220);
-    setLoadingTask({ kind: 'case', progress: 100, title: '새 연락이 도착했습니다', detail: '휴대폰 알림에서 발신자와 연락 내용을 확인하세요.' });
+    setLoadingTask({ kind: 'case', progress: 100 });
     await wait(180);
     setLoadingTask(null);
   }
@@ -704,20 +699,20 @@ export default function GameClient() {
   async function startSimulation(forceGuide = false, resume = false) {
     if (loadingTask) return;
     const progressToRestore = resume ? savedProgress : null;
-    setLoadingTask({ kind: 'startup', progress: 8, title: progressToRestore ? '저장한 하루를 불러옵니다' : '시뮬레이션을 준비합니다', detail: progressToRestore ? '기기에 저장된 판정과 조사 기록을 확인하는 중입니다.' : `오늘의 판별 사건 ${cases.length}건을 안전하게 불러오는 중입니다.` });
+    setLoadingTask({ kind: 'startup', progress: 8 });
     const minimumDisplay = wait(900);
     await wait(120);
-    setLoadingTask({ kind: 'startup', progress: 18, title: progressToRestore ? '저장 기록을 확인했습니다' : '사건 데이터를 확인했습니다', detail: progressToRestore ? `완료한 사건 ${progressToRestore.results.length}/${cases.length} · 현재 사건 ${progressToRestore.activeIndex + 1}번` : '정상·주의·사기 연락의 순서와 판정 규칙을 준비합니다.' });
+    setLoadingTask({ kind: 'startup', progress: 18 });
     let loadedAssets = 0;
     await Promise.all(startupAssets.map(async (source) => {
       await preloadAsset(source);
       loadedAssets += 1;
       const progress = 18 + Math.round((loadedAssets / startupAssets.length) * 58);
-      setLoadingTask({ kind: 'startup', progress, title: '휴대폰 환경을 준비합니다', detail: `화면 자산 ${loadedAssets}/${startupAssets.length}개를 불러왔습니다.` });
+      setLoadingTask({ kind: 'startup', progress });
     }));
-    setLoadingTask({ kind: 'startup', progress: 90, title: '플레이 환경을 설정합니다', detail: progressToRestore ? '개인 대화 입력은 복원하지 않고 사건 진행 상태만 적용합니다.' : '저장된 안내 설정과 Gemini 보조 AI 사용 가능 여부를 확인합니다.' });
+    setLoadingTask({ kind: 'startup', progress: 90 });
     await minimumDisplay;
-    setLoadingTask({ kind: 'startup', progress: 100, title: '휴대폰을 열 수 있습니다', detail: forceGuide ? '선택한 게임 안내부터 시작합니다.' : progressToRestore ? '저장했던 휴대폰 화면으로 돌아갑니다.' : '평소처럼 잠금 화면의 새 알림을 확인하세요.' });
+    setLoadingTask({ kind: 'startup', progress: 100 });
     await wait(220);
     if (progressToRestore) {
       setAvailableCount(progressToRestore.availableCount);
@@ -810,7 +805,7 @@ export default function GameClient() {
   }
 
   if (loadingTask) {
-    return <GameLoadingScreen variant={loadingTask.kind} progress={loadingTask.progress} eyebrow={loadingTask.kind === 'startup' ? '안전 시뮬레이션 준비' : `다음 연락 준비 · ${Math.min(results.length + 1, cases.length)}/${cases.length}`} title={loadingTask.title} detail={loadingTask.detail} steps={loadingSteps[loadingTask.kind]} />;
+    return <GameLoadingScreen variant={loadingTask.kind} progress={loadingTask.progress} />;
   }
 
   if (!started) {

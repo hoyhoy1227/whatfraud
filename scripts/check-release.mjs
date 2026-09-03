@@ -123,7 +123,8 @@ async function main() {
   assert(gitignore.includes('/training/output/') && gitignore.includes('*.gguf') && gitignore.includes('*.safetensors'), '모델 가중치와 튜닝 산출물의 Git 제외 규칙이 부족합니다.', errors);
   assert(loading.includes('role="progressbar"') && loading.includes('aria-valuenow={safeProgress}'), '전체 화면 로딩 진행률의 접근성 정보가 없습니다.', errors);
   assert(loading.includes('aria-busy="true"') && loading.includes('role="status"'), '전체 화면 로딩 상태가 화면 읽기 도구에 전달되지 않습니다.', errors);
-  assert(loading.includes('loading-device-status') && loading.includes('loading-message-preview') && loading.includes('loading-device-gesture'), '전체 화면 로딩이 휴대폰 앱 실행·알림 수신 화면으로 구성되지 않았습니다.', errors);
+  assert(loading.includes('loading-device-status') && loading.includes('loading-message-preview') && loading.includes('loading-device-gesture') && loading.includes('native-loading-spinner'), '전체 화면 로딩이 휴대폰 앱 실행·알림 수신 화면으로 구성되지 않았습니다.', errors);
+  assert(!loading.includes('loading-steps') && !loading.includes('detail: string') && !loading.includes('준비 단계'), '로딩 화면에 내부 처리 단계 설명이 노출될 수 있습니다.', errors);
   assert(client.includes("import AppIcon from './app-icon'") && loading.includes("import AppIcon from './app-icon'"), '홈 화면과 로딩 화면이 공통 앱 아이콘을 사용하지 않습니다.', errors);
   assert(['messages', 'calls', 'bank', 'stocks', 'browser', 'social', 'calendar', 'notes', 'contacts', 'safety', 'settings', 'photos'].every((name) => appIcon.includes(`case '${name}'`)), '앱 기능별 벡터 아이콘이 모두 구현되지 않았습니다.', errors);
   assert(appIcon.includes('<svg') && appIcon.includes('strokeLinecap="round"') && css.includes('.app-icon svg, .mini-icon svg'), '확대 가능한 벡터 아이콘 또는 크기별 표시 규칙이 없습니다.', errors);
