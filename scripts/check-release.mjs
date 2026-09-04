@@ -97,7 +97,7 @@ async function main() {
   assert(client.includes('cinematicCues') && client.includes('ambient-notification') && client.includes('이전 선택의 여파'), '사건별 주변 알림 또는 이전 선택의 후속 연출이 없습니다.', errors);
   assert(client.includes('verificationHistory') && client.includes('case-rewind') && client.includes('사건 되감기'), '조사 순서 저장 또는 판정 후 되감기 복습이 없습니다.', errors);
   assert(client.includes('openedCues') && client.includes('seenFollowUps') && client.includes('safetySeenCount') && client.includes('!openedCases[item.id]'), '메시지·앱·후속 알림의 읽음 상태가 저장되거나 표시에서 제거되지 않습니다.', errors);
-  assert(client.includes('!contactReviewed && <button className="home-notification"') && client.includes('!openedCues[activeCase.id]'), '확인한 홈·잠금 알림을 숨기는 흐름이 없습니다.', errors);
+  assert(client.includes('!contactReviewed && <button className="home-notification"') && client.includes('nextSceneCue && <button'), '확인한 홈·잠금 알림을 한 건씩 이어 보여 주는 흐름이 없습니다.', errors);
   assert(client.includes('AI_REQUEST_TIMEOUT_MS = 16_000') && client.includes('AI_SLOW_NOTICE_MS = 10_000'), '보조 AI의 전체 대기 시간 또는 지연 안내 기준이 올바르지 않습니다.', errors);
   const saveSnapshot = client.match(/const snapshot: SavedProgress = \{([\s\S]*?)\n    \};/);
   assert(client.includes("const PROGRESS_SAVE_KEY = 'profit-24-progress-v1'"), '버전이 있는 진행 저장 키가 없습니다.', errors);
@@ -145,6 +145,8 @@ async function main() {
   assert(client.includes('followUpCue') && client.includes('habitBadges') && css.includes('.habit-badges') && css.includes('.summary-badges'), '선택 결과 후속 알림 또는 안전 습관 배지가 없습니다.', errors);
   assert(client.includes('showPauseMenu') && client.includes('returnToMainMenu') && client.includes('저장하고 메인 메뉴로'), '게임 중 메뉴 또는 즉시 저장 후 메인 화면 복귀가 없습니다.', errors);
   assert(css.includes('.game-menu-button') && css.includes('.pause-menu-backdrop') && css.includes('.pause-progress'), '게임 중 메뉴의 화면 스타일이 없습니다.', errors);
+  assert(client.includes('cinematicSceneExtras') && client.includes('nextSceneCue') && client.includes('seenSceneCues'), '사건별 순차 앱 흔적 또는 확인 상태 저장이 없습니다.', errors);
+  assert(client.includes('rewindScenes') && client.includes('도착했지만 확인하지 않은 앱 알림') && css.includes('.scene-rewind'), '사건 되감기에 앱 흔적과 놓친 알림 복기가 없습니다.', errors);
 
   if (errors.length) throw new Error(`출시 전 자동 점검 실패:\n- ${errors.join('\n- ')}`);
   console.log(`출시 전 자동 점검 완료: ${cases.length}개 사건 순차 진행 · 읽음 처리 · 자동 저장 · 로딩 전환 · 점수 · Gemini 서버 격리 · 키보드 · 모바일 · 콘텐츠 안전`);

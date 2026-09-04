@@ -29,6 +29,7 @@ type VerificationDefinition = { id: LocationId; label: string; app: string; desc
 type LoadingTask = { kind: 'startup' | 'case'; progress: number };
 type InvestigationEvent = { source: LocationId; evidence: string | null; minuteOffset: number };
 type CinematicCue = { app: AppId; sender: string; title: string; detail: string; icon: string; tone: 'routine' | 'social' | 'warning' };
+type SceneCue = CinematicCue & { id: string; minuteOffset: number; stage: 'signal' | 'pressure' | 'decision' };
 type HabitBadge = { id: string; icon: string; title: string; detail: string; unlocked: boolean };
 type PlayerPreferences = { reduceMotion: boolean; guideOnNewGame: boolean };
 type SavedProgress = {
@@ -46,6 +47,7 @@ type SavedProgress = {
   openedLinks: Record<string, boolean>;
   openedCases: Record<string, boolean>;
   openedCues: Record<string, boolean>;
+  seenSceneCues: Record<string, string[]>;
   seenFollowUps: Record<string, boolean>;
   safetySeenCount: number;
 };
@@ -79,6 +81,26 @@ const cinematicCues: Record<string, CinematicCue> = {
   'overseas-preipo-agent': { app: 'calls', sender: '전화', title: '국제 번호 · 다시 걸기 요청', detail: '메신저 상담원이 통화로만 배정 절차를 설명하겠다고 합니다.', icon: 'calls', tone: 'warning' },
   'worldcup-betting-bonus': { app: 'calendar', sender: '달력', title: '경기 시작까지 35분', detail: '시간 제한을 강조하는 이벤트 문자가 경기 직전에 도착했습니다.', icon: 'calendar', tone: 'warning' },
 };
+
+const cinematicSceneExtras: Record<string, SceneCue[]> = {
+  'official-etf-fill': [{ id: 'payday', app: 'bank', sender: '새봄은행', title: '월급 입금 완료', detail: '설치된 은행 앱의 입금 기록과 오늘의 주문 내역이 함께 보입니다.', icon: 'bank', tone: 'routine', minuteOffset: 9, stage: 'signal' }],
+  'friend-hot-tip': [{ id: 'disclosure-gap', app: 'stocks', sender: '채움증권', title: '관련 공시 없음', detail: '추천 내용과 연결되는 특별 공시는 공식 목록에서 확인되지 않습니다.', icon: 'stocks', tone: 'routine', minuteOffset: 11, stage: 'pressure' }],
+  'vip-research-room': [{ id: 'room-invite', app: 'social', sender: '모임', title: '비공개 투자방 초대', detail: '같은 문구를 쓴 계정이 짧은 시간에 여러 초대를 보냈습니다.', icon: 'social', tone: 'warning', minuteOffset: 9, stage: 'pressure' }, { id: 'no-disclosure', app: 'stocks', sender: '채움증권', title: '공식 공시 확인 필요', detail: '방에서 언급한 내용과 연결되는 공식 기록은 아직 보이지 않습니다.', icon: 'stocks', tone: 'routine', minuteOffset: 15, stage: 'decision' }],
+  'bank-fraud-check': [{ id: 'official-record', app: 'bank', sender: '새봄은행', title: '공식 보안 안내 일치', detail: '문자가 아닌 설치된 은행 앱에도 같은 점검 안내가 등록되어 있습니다.', icon: 'bank', tone: 'routine', minuteOffset: 8, stage: 'signal' }],
+  'paid-market-class': [{ id: 'calendar-gap', app: 'calendar', sender: '달력', title: '공식 일정 미등록', detail: '광고 속 설명회는 기관 일정표에서 확인되지 않습니다.', icon: 'calendar', tone: 'warning', minuteOffset: 10, stage: 'pressure' }],
+  'fixed-match-ai': [{ id: 'group-cheer', app: 'social', sender: '모임', title: '단체방 환호가 이어짐', detail: '비슷한 적중 이미지와 짧은 환호가 연달아 표시됩니다.', icon: 'social', tone: 'social', minuteOffset: 8, stage: 'pressure' }, { id: 'recipient-warning', app: 'bank', sender: '새봄은행', title: '수취인 확인 안내', detail: '충전 전 수취인과 운영 주체를 직접 확인하라는 안내가 표시됩니다.', icon: 'bank', tone: 'warning', minuteOffset: 14, stage: 'decision' }],
+  'recovery-team': [{ id: 'repeat-caller', app: 'calls', sender: '전화', title: '같은 이름의 번호 재접촉', detail: '문자 발신과 비슷한 이름의 번호가 다시 전화를 걸었습니다.', icon: 'calls', tone: 'warning', minuteOffset: 9, stage: 'pressure' }, { id: 'second-harm-report', app: 'browser', sender: '신고 조회', title: '유사 2차 피해 사례', detail: '피해 회수를 내세운 낯선 연락의 신고 사례가 확인됩니다.', icon: 'browser', tone: 'warning', minuteOffset: 15, stage: 'decision' }],
+  'official-maintenance': [{ id: 'maintenance-record', app: 'bank', sender: '새봄은행', title: '점검 기록 확인', detail: '공식 앱 안의 점검 시간과 알림 내용이 일치합니다.', icon: 'bank', tone: 'routine', minuteOffset: 8, stage: 'signal' }],
+  'official-ipo-calendar': [{ id: 'ipo-record', app: 'stocks', sender: '채움증권', title: '공식 청약 일정 일치', detail: '외부 홍보가 아닌 증권 앱 일정표에서 같은 일정을 확인할 수 있습니다.', icon: 'stocks', tone: 'routine', minuteOffset: 8, stage: 'signal' }],
+  'ai-celebrity-room': [{ id: 'sponsored-repeat', app: 'social', sender: '모임', title: '유사 광고 반복 노출', detail: '이름만 바꾼 투자 계정들이 비슷한 영상을 다시 올립니다.', icon: 'social', tone: 'warning', minuteOffset: 9, stage: 'pressure' }, { id: 'official-search-gap', app: 'browser', sender: '공식 검색', title: '운영 주체 정보 부족', detail: '광고에서 말한 운영 주체와 등록 정보를 독립적으로 찾기 어렵습니다.', icon: 'browser', tone: 'warning', minuteOffset: 15, stage: 'decision' }],
+  'overseas-preipo-agent': [{ id: 'call-only', app: 'calls', sender: '전화', title: '통화로만 설명 요구', detail: '상담원이 기록을 남기지 않는 통화로 절차를 안내하겠다고 합니다.', icon: 'calls', tone: 'warning', minuteOffset: 9, stage: 'pressure' }, { id: 'issuer-gap', app: 'stocks', sender: '채움증권', title: '공식 배정 기록 없음', detail: '청약·배정 절차와 연결되는 공식 기록은 확인되지 않습니다.', icon: 'stocks', tone: 'routine', minuteOffset: 15, stage: 'decision' }],
+  'worldcup-betting-bonus': [{ id: 'countdown-room', app: 'social', sender: '모임', title: '경기 전 적중 인증 증가', detail: '시작 시간이 가까워지자 단체방의 짧은 인증 게시물이 늘어납니다.', icon: 'social', tone: 'warning', minuteOffset: 8, stage: 'pressure' }, { id: 'payment-condition', app: 'bank', sender: '새봄은행', title: '결제 전 추가 조건 표시', detail: '결제 직전 수취인과 출금 조건을 다시 확인하라는 안내가 나타납니다.', icon: 'bank', tone: 'warning', minuteOffset: 14, stage: 'decision' }],
+};
+
+function sceneCuesForCase(gameCase: CaseData): SceneCue[] {
+  const initial: SceneCue = { ...cinematicCues[gameCase.id], id: 'first-trace', minuteOffset: 4, stage: 'signal' };
+  return [initial, ...(cinematicSceneExtras[gameCase.id] ?? [])];
+}
 
 function actForIndex(index: number): DayAct {
   if (index < 4) return 'morning';
@@ -165,6 +187,11 @@ function readSavedProgress(serialized: string | null): SavedProgress | null {
       }).slice(0, locationValues.length) : [];
       return [gameCase.id, events];
     }).filter(([, events]) => (events as InvestigationEvent[]).length > 0));
+    const seenSceneCues = Object.fromEntries(cases.slice(0, availableCount).map((gameCase) => {
+      const knownCueIds = new Set(sceneCuesForCase(gameCase).map((cue) => cue.id));
+      const items = raw.seenSceneCues?.[gameCase.id];
+      return [gameCase.id, Array.isArray(items) ? items.filter((item): item is string => typeof item === 'string' && knownCueIds.has(item)) : []];
+    }).filter(([, items]) => (items as string[]).length > 0));
 
     return {
       version: 1,
@@ -181,6 +208,7 @@ function readSavedProgress(serialized: string | null): SavedProgress | null {
       openedLinks: booleanRecord(raw.openedLinks),
       openedCases: booleanRecord(raw.openedCases),
       openedCues: booleanRecord(raw.openedCues),
+      seenSceneCues,
       seenFollowUps: booleanRecord(raw.seenFollowUps),
       safetySeenCount: typeof raw.safetySeenCount === 'number' && Number.isFinite(raw.safetySeenCount)
         ? Math.max(0, Math.min(results.length, Math.floor(raw.safetySeenCount)))
@@ -304,6 +332,7 @@ export default function GameClient() {
   const [openedLinks, setOpenedLinks] = useState<Record<string, boolean>>({});
   const [openedCases, setOpenedCases] = useState<Record<string, boolean>>({});
   const [openedCues, setOpenedCues] = useState<Record<string, boolean>>({});
+  const [seenSceneCues, setSeenSceneCues] = useState<Record<string, string[]>>({});
   const [seenFollowUps, setSeenFollowUps] = useState<Record<string, boolean>>({});
   const [safetySeenCount, setSafetySeenCount] = useState(0);
   const [results, setResults] = useState<Result[]>([]);
@@ -346,7 +375,6 @@ export default function GameClient() {
   const gameTime = formatGameClock(ARRIVAL_MINUTES[Math.min(availableCount - 1, ARRIVAL_MINUTES.length - 1)] + activeEvidence.length * 6);
   const activeAct = actForIndex(activeIndex);
   const actInfo = dayActs[activeAct];
-  const cinematicCue = cinematicCues[activeCase.id] ?? { app: 'calendar', sender: '휴대폰', title: '새 활동이 기록됨', detail: '현재 연락과 같은 시간대의 앱 기록을 확인할 수 있습니다.', icon: 'calendar', tone: 'routine' as const };
   const previousResult = activeIndex > 0 ? results.find((result) => result.caseId === cases[activeIndex - 1].id) : undefined;
   const previousCase = activeIndex > 0 ? cases[activeIndex - 1] : undefined;
   const previousConsequence = previousResult && previousCase
@@ -389,6 +417,10 @@ export default function GameClient() {
   ];
   const earnedBadges = habitBadges.filter((badge) => badge.unlocked);
   const contactReviewed = Boolean(openedCases[activeCase.id]);
+  const sceneCues = sceneCuesForCase(activeCase);
+  const viewedSceneCueIds = new Set(seenSceneCues[activeCase.id] ?? []);
+  const viewedSceneCues = sceneCues.filter((cue) => viewedSceneCueIds.has(cue.id));
+  const nextSceneCue = contactReviewed ? sceneCues.find((cue) => !viewedSceneCueIds.has(cue.id)) ?? null : null;
   const isAmbientEntry = results.length === 0 && activeIndex === 0 && phoneLocked && !contactReviewed;
   const objectiveStage = activeResult ? 3 : activeEvidence.length ? 2 : contactReviewed ? 1 : 0;
   const objective = [
@@ -409,6 +441,7 @@ export default function GameClient() {
     const source = locationValues.find((location) => activeCase.checks[location] === item);
     return source ? [{ source, evidence: item, minuteOffset: 4 + index * 5 }] : [];
   });
+  const rewindScenes = sceneCues.map((cue) => ({ ...cue, seen: viewedSceneCueIds.has(cue.id) }));
   const missedVerificationCount = Math.max(0, Object.keys(activeCase.checks).length - rewindHistory.filter((event) => event.evidence).length);
 
   useEffect(() => {
@@ -460,6 +493,7 @@ export default function GameClient() {
       openedLinks,
       openedCases,
       openedCues,
+      seenSceneCues,
       seenFollowUps,
       safetySeenCount,
     };
@@ -472,7 +506,7 @@ export default function GameClient() {
       }
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [activeIndex, availableCount, evidence, loadingTask, openedCases, openedCues, openedLinks, phoneApp, phoneLocked, results, safetySeenCount, seenFollowUps, started, verificationHistory]);
+  }, [activeIndex, availableCount, evidence, loadingTask, openedCases, openedCues, openedLinks, phoneApp, phoneLocked, results, safetySeenCount, seenFollowUps, seenSceneCues, started, verificationHistory]);
 
   useEffect(() => {
     if (!sending) return;
@@ -772,6 +806,7 @@ export default function GameClient() {
       openedLinks,
       openedCases,
       openedCues,
+      seenSceneCues,
       seenFollowUps,
       safetySeenCount,
     };
@@ -835,6 +870,7 @@ export default function GameClient() {
       setOpenedLinks(progressToRestore.openedLinks);
       setOpenedCases(progressToRestore.openedCases);
       setOpenedCues(progressToRestore.openedCues);
+      setSeenSceneCues(progressToRestore.seenSceneCues);
       setSeenFollowUps(progressToRestore.seenFollowUps);
       setSafetySeenCount(progressToRestore.safetySeenCount);
       setPhoneApp(progressToRestore.phoneApp);
@@ -871,9 +907,19 @@ export default function GameClient() {
     setSelectedEvidence((current) => current.includes(item) ? current.filter((entry) => entry !== item) : [...current, item]);
   }
 
+  function markSceneCueSeen(cue: SceneCue) {
+    setSeenSceneCues((current) => {
+      const seen = current[activeCase.id] ?? [];
+      if (seen.includes(cue.id)) return current;
+      return { ...current, [activeCase.id]: [...seen, cue.id] };
+    });
+    if (cue.id === 'first-trace') setOpenedCues((current) => ({ ...current, [activeCase.id]: true }));
+    setNotice(`${cue.sender} 알림을 확인했습니다. 다른 앱의 기록도 직접 비교해 보세요.`);
+  }
+
   function selectPhoneApp(target: PhoneApp) {
     setPhoneApp(target);
-    if (target === cinematicCue.app) setOpenedCues((current) => ({ ...current, [activeCase.id]: true }));
+    if (nextSceneCue?.app === target) markSceneCueSeen(nextSceneCue);
     if (followUpCue?.app === target) setSeenFollowUps((current) => ({ ...current, [activeCase.id]: true }));
     if (target === 'safety') setSafetySeenCount(results.length);
     if (target === 'messages') {
@@ -889,8 +935,9 @@ export default function GameClient() {
   }
 
   function renderCinematicTrace(app: AppId) {
-    if (cinematicCue.app !== app && followUpCue?.app !== app) return null;
-    return <>{followUpCue?.app === app && <div className={`app-scene-trace follow-up cue-${followUpCue.tone}`}><AppIcon name={followUpCue.icon} size="mini"/><span><b>{followUpCue.title}</b><small>{followUpCue.detail}</small></span><time>방금</time></div>}{cinematicCue.app === app && <div className={`app-scene-trace cue-${cinematicCue.tone}`}><AppIcon name={cinematicCue.icon} size="mini"/><span><b>{cinematicCue.title}</b><small>{cinematicCue.detail}</small></span><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + 1)}</time></div>}</>;
+    const traces = viewedSceneCues.filter((cue) => cue.app === app);
+    if (!traces.length && followUpCue?.app !== app) return null;
+    return <>{followUpCue?.app === app && <div className={`app-scene-trace follow-up cue-${followUpCue.tone}`}><AppIcon name={followUpCue.icon} size="mini"/><span><b>{followUpCue.title}</b><small>{followUpCue.detail}</small></span><time>방금</time></div>}{traces.map((cue) => <div key={cue.id} className={`app-scene-trace cue-${cue.tone}`}><AppIcon name={cue.icon} size="mini"/><span><b>{cue.title}</b><small>{cue.detail}</small></span><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + cue.minuteOffset)}</time></div>)}</>;
   }
 
   function restart() {
@@ -908,6 +955,7 @@ export default function GameClient() {
     setOpenedLinks({});
     setOpenedCases({});
     setOpenedCues({});
+    setSeenSceneCues({});
     setSeenFollowUps({});
     setSafetySeenCount(0);
     setShowDebrief(false);
@@ -979,7 +1027,7 @@ export default function GameClient() {
                 <div className="lock-notifications" aria-label="새 알림">
                   {!contactReviewed && <button onClick={() => unlockPhone('messages')}><AppIcon name="messages" size="mini"/><span><b>메시지 · 지금</b><strong>{activeCase.sender}</strong><small>{activeCase.preview}</small></span></button>}
                   {followUpCue && !seenFollowUps[activeCase.id] && <button className={`cue-${followUpCue.tone}`} onClick={() => unlockPhone(followUpCue.app)}><AppIcon name={followUpCue.icon} size="mini"/><span><b>{followUpCue.sender} · 방금</b><strong>{followUpCue.title}</strong><small>{followUpCue.detail}</small></span></button>}
-                  {!openedCues[activeCase.id] && <button className={`cue-${cinematicCue.tone}`} onClick={() => unlockPhone(cinematicCue.app)}><AppIcon name={cinematicCue.icon} size="mini"/><span><b>{cinematicCue.sender} · {activeIndex % 2 ? '3분 전' : '12분 전'}</b><strong>{cinematicCue.title}</strong><small>{cinematicCue.detail}</small></span></button>}
+                  {nextSceneCue && <button className={`cue-${nextSceneCue.tone}`} onClick={() => unlockPhone(nextSceneCue.app)}><AppIcon name={nextSceneCue.icon} size="mini"/><span><b>{nextSceneCue.sender} · {formatGameClock(ARRIVAL_MINUTES[activeIndex] + nextSceneCue.minuteOffset)}</b><strong>{nextSceneCue.title}</strong><small>{nextSceneCue.detail}</small></span></button>}
                   {results.length > safetySeenCount && <button onClick={() => unlockPhone('safety')}><AppIcon name="safety" size="mini"/><span><b>안전센터 · 오늘</b><strong>새 판정 기록 {results.length - safetySeenCount}건</strong><small>완료한 사건의 판단과 안전 행동을 복습할 수 있습니다.</small></span></button>}
                 </div>
               </div>
@@ -995,7 +1043,7 @@ export default function GameClient() {
                     {previousConsequence && seenFollowUps[activeCase.id] && <div className={`previous-choice-card ${previousResult?.actionCorrect ? 'resolved' : 'unresolved'}`}><i>{previousResult?.actionCorrect ? '✓' : '!'}</i><span><b>이전 선택의 여파</b><small>{previousConsequence}</small></span></div>}
                     {!contactReviewed && <button className="home-notification" onClick={() => selectPhoneApp('messages')}><AppIcon name="messages" size="mini"/><span><b>{activeCase.sender}</b><small>{activeCase.preview}</small></span><em>{formatGameClock(ARRIVAL_MINUTES[activeIndex])}</em></button>}
                     {followUpCue && !seenFollowUps[activeCase.id] && <button className={`ambient-notification follow-up cue-${followUpCue.tone}`} onClick={() => selectPhoneApp(followUpCue.app)}><AppIcon name={followUpCue.icon} size="mini"/><span><b>{followUpCue.sender}</b><small>{followUpCue.title} · {followUpCue.detail}</small></span><em>확인</em></button>}
-                    {!openedCues[activeCase.id] && <button className={`ambient-notification cue-${cinematicCue.tone}`} onClick={() => selectPhoneApp(cinematicCue.app)}><AppIcon name={cinematicCue.icon} size="mini"/><span><b>{cinematicCue.sender}</b><small>{cinematicCue.title} · {cinematicCue.detail}</small></span><em>열기</em></button>}
+                    {nextSceneCue && <button className={`ambient-notification scene-notification cue-${nextSceneCue.tone}`} onClick={() => selectPhoneApp(nextSceneCue.app)}><AppIcon name={nextSceneCue.icon} size="mini"/><span><b>{nextSceneCue.sender}</b><small>{nextSceneCue.title} · {nextSceneCue.detail}</small></span><em>열기</em></button>}
                     <div className="home-widgets">
                       <div><span>오늘의 판별 훈련</span><strong>{results.length}/{cases.length}</strong><small>정확도 {accuracy}% · 점수 {score}</small></div>
                       <div><span>현재 연락</span><strong>{activeCase.sender}</strong><small>{activeCase.category} · 확인 {activeEvidence.length}건</small></div>
@@ -1037,9 +1085,9 @@ export default function GameClient() {
 
               {phoneApp === 'stocks' && <div className="native-app phone-app-body stock-app">{renderCinematicTrace('stocks')}<div className="stock-index"><span>가상 종합지수</span><strong>2,614.37 <em>+0.42%</em></strong></div><h3>내 자산</h3><div className="holding"><span>안정 ETF <small>3주</small></span><b>82,450원</b></div><h3>오늘 확인한 투자 연락</h3><div className="watch-list">{availableCases.map((item, index) => ({ item, index })).filter(({ item }) => /투자|주식|공모주|금융/.test(item.category)).map(({ item, index }) => <button key={item.id} onClick={() => openCase(index)}><span>{item.sender}</span><b>{item.mode === 'notice' ? '공식 안내' : item.mode === 'link' ? '광고 링크' : '출처 확인'}</b></button>)}</div><button className="app-primary" onClick={() => { setPhoneApp('browser'); setNotice('증권 앱의 종목·공모주 정보를 공식 검색과 비교해 보세요.'); }}>공시·업체 정보 따로 검색</button><p className="app-footnote">새 연락은 하루의 시간이 흐르면서 하나씩 추가됩니다. 종목과 금액은 모두 교육용 가상 정보입니다.</p></div>}
 
-              {phoneApp === 'browser' && <div className="native-app phone-app-body browser-app"><div className="fake-address"><span>🔒</span><b>직접 주소 입력 또는 공식 검색</b></div><h3>안전한 확인 바로가기</h3><div className="browser-links"><button onClick={() => verifySource('library')}><b>업체·공시 독립 검색</b><span>메시지 속 링크를 거치지 않고 확인</span></button><button onClick={() => verifySource('police')}><b>의심 사이트 신고 조회</b><span>유사 피해와 공식 신고 경로 확인</span></button><button onClick={openVerdictPanel}><b>현재 연락 판정하기</b><span>화면을 이동하지 않고 근거·대응·확신도 제출</span></button></div><div className="search-warning">주소창의 자물쇠 표시는 통신 암호화만 뜻하며, 사이트가 안전하다는 보장은 아닙니다.</div></div>}
+              {phoneApp === 'browser' && <div className="native-app phone-app-body browser-app">{renderCinematicTrace('browser')}<div className="fake-address"><span>🔒</span><b>직접 주소 입력 또는 공식 검색</b></div><h3>안전한 확인 바로가기</h3><div className="browser-links"><button onClick={() => verifySource('library')}><b>업체·공시 독립 검색</b><span>메시지 속 링크를 거치지 않고 확인</span></button><button onClick={() => verifySource('police')}><b>의심 사이트 신고 조회</b><span>유사 피해와 공식 신고 경로 확인</span></button><button onClick={openVerdictPanel}><b>현재 연락 판정하기</b><span>화면을 이동하지 않고 근거·대응·확신도 제출</span></button></div><div className="search-warning">주소창의 자물쇠 표시는 통신 암호화만 뜻하며, 사이트가 안전하다는 보장은 아닙니다.</div></div>}
 
-              {phoneApp === 'social' && <div className="native-app phone-app-body social-app">{renderCinematicTrace('social')}<h2>오늘의 피드</h2>{availableCases.map((item, index) => ({ item, index })).filter(({ item }) => item.channel === 'SNS').map(({ item, index }) => <button className="feed-card" key={item.id} onClick={() => openCase(index)}><span className="feed-avatar">{item.sender.slice(0,1)}</span><div><b>{item.sender}</b><small>{item.handle}</small><p>{item.preview}</p><em>광고·추천도 출처를 확인하세요</em></div></button>)}{availableCases.every((item) => item.channel !== 'SNS') && cinematicCue.app !== 'social' && <p className="app-lead">새 게시물과 연락은 시간이 흐르면 도착합니다.</p>}</div>}
+              {phoneApp === 'social' && <div className="native-app phone-app-body social-app">{renderCinematicTrace('social')}<h2>오늘의 피드</h2>{availableCases.map((item, index) => ({ item, index })).filter(({ item }) => item.channel === 'SNS').map(({ item, index }) => <button className="feed-card" key={item.id} onClick={() => openCase(index)}><span className="feed-avatar">{item.sender.slice(0,1)}</span><div><b>{item.sender}</b><small>{item.handle}</small><p>{item.preview}</p><em>광고·추천도 출처를 확인하세요</em></div></button>)}{availableCases.every((item) => item.channel !== 'SNS') && !viewedSceneCues.some((cue) => cue.app === 'social') && <p className="app-lead">새 게시물과 연락은 시간이 흐르면 도착합니다.</p>}</div>}
 
               {phoneApp === 'calendar' && <div className="native-app phone-app-body calendar-app">{renderCinematicTrace('calendar')}<div className="calendar-date"><strong>29</strong><span>8월 토요일</span></div><h3>오늘 일정</h3><ol><li><time>08:20</time><span><b>시뮬레이션 시작</b><small>첫 연락부터 차례로 확인</small></span></li><li><time>{gameTime}</time><span><b>현재 연락 조사</b><small>{activeCase.sender} 사건 · 진행 {results.length}/{cases.length}</small></span></li><li><time>하루</time><span><b>시간차 연락</b><small>판정 후 다음 연락이 도착합니다</small></span></li></ol></div>}
 
@@ -1098,9 +1146,10 @@ export default function GameClient() {
               <ol>
                 <li><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex])}</time><i className="rewind-contact">1</i><span><b>연락 도착</b><small>{activeCase.sender} · {activeCase.channel}</small></span></li>
                 <li className={contactReviewed ? 'completed' : 'missed'}><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + 2)}</time><i>2</i><span><b>{contactReviewed ? '연락 내용 확인' : '내용을 충분히 열어보지 않음'}</b><small>{contactReviewed ? activeCase.preview : '발신 경로와 전체 문맥을 먼저 확인하세요.'}</small></span></li>
+                {rewindScenes.map((cue, index) => <li key={cue.id} className={cue.seen ? 'completed scene-rewind' : 'missed scene-rewind'}><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + cue.minuteOffset)}</time><i>{index + 3}</i><span><b>{cue.seen ? `${cue.sender} · ${cue.title}` : '도착했지만 확인하지 않은 앱 알림'}</b><small>{cue.seen ? cue.detail : '다른 앱에 남은 기록을 열어보고 공식 확인 전의 흐름을 비교하세요.'}</small></span></li>)}
                 {rewindHistory.map((event, index) => {
                   const source = verificationActions.find((item) => item.id === event.source);
-                  return <li key={event.source} className={event.evidence ? 'completed' : 'missed'}><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + event.minuteOffset)}</time><i>{index + 3}</i><span><b>{source?.label ?? '공식 경로 확인'}</b><small>{event.evidence ?? '현재 연락과 직접 연결되는 기록을 찾지 못했습니다.'}</small></span></li>;
+                  return <li key={event.source} className={event.evidence ? 'completed' : 'missed'}><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + event.minuteOffset)}</time><i>{index + 3 + rewindScenes.length}</i><span><b>{source?.label ?? '공식 경로 확인'}</b><small>{event.evidence ?? '현재 연락과 직접 연결되는 기록을 찾지 못했습니다.'}</small></span></li>;
                 })}
                 <li className="verdict"><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + Math.max(9, 5 + rewindHistory.length * 5))}</time><i>✓</i><span><b>{verdictLabels[activeResult.picked]} · {responseActions.find((action) => action.id === activeResult.action)?.label}</b><small>확신도 {activeResult.confidence}%로 판단을 등록했습니다.</small></span></li>
               </ol>
