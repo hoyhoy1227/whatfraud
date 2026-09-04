@@ -1,4 +1,4 @@
-import { buildSystemPrompt, inferDialogueEmotion, sanitizePlayerText, validateAiReply, type AiChatMessage } from '../../ai-dialogue';
+import { buildSystemPrompt, inferDialogueEmotion, inferDialogueReplyMode, sanitizePlayerText, validateAiReply, type AiChatMessage } from '../../ai-dialogue';
 import { cases } from '../../game-data';
 
 const GEMINI_MODEL = 'gemini-3.6-flash';
@@ -52,7 +52,7 @@ function requestIdentity(request: Request) {
 }
 
 function parseMessages(value: unknown): AiChatMessage[] | null {
-  if (!Array.isArray(value) || value.length < 1 || value.length > 6) return null;
+  if (!Array.isArray(value) || value.length < 1 || value.length > 4) return null;
   const messages: AiChatMessage[] = [];
   for (const candidate of value) {
     if (!candidate || typeof candidate !== 'object') return null;
@@ -94,9 +94,9 @@ export async function POST(request: Request) {
     return json({ code: 'rate_limit' }, 429, { 'Retry-After': '60' });
   }
 
-  let body: { caseId?: unknown; messages?: unknown };
+  let body: { caseId?: unknown; messages?: unknown; userTurnCount?: unknown };
   try {
-    body = await request.json() as { caseId?: unknown; messages?: unknown };
+    body = await request.json() as { caseId?: unknown; messages?: unknown; userTurnCount?: unknown };
   } catch {
     return json({ code: 'invalid_request' }, 400);
   }
@@ -109,7 +109,13 @@ export async function POST(request: Request) {
 
   const firstUser = messages.findIndex((message) => message.role === 'user');
   const conversation = messages.slice(Math.max(firstUser, 0));
-  const emotion = inferDialogueEmotion(conversation);
+  const visibleUserTurns = conversation.filter((message) => message.role === 'user').length;
+  if (!Number.isInteger(body.userTurnCount) || Number(body.userTurnCount) < visibleUserTurns || Number(body.userTurnCount) > 24) {
+    return json({ code: 'invalid_turn_count' }, 400);
+  }
+  const userTurnCount = Number(body.userTurnCount);
+  const emotion = inferDialogueEmotion(conversation, userTurnCount);
+  const replyMode = inferDialogueReplyMode(conversation, userTurnCount);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
 
@@ -122,13 +128,13 @@ export async function POST(request: Request) {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: buildSystemPrompt(gameCase, conversation) }] },
+        systemInstruction: { parts: [{ text: buildSystemPrompt(gameCase, conversation, userTurnCount) }] },
         contents: conversation.map((message) => ({
           role: message.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: message.content }],
         })),
         generationConfig: {
-          maxOutputTokens: 120,
+          maxOutputTokens: replyMode === 'short' ? 40 : 96,
           thinkingConfig: { thinkingLevel: 'minimal' },
         },
       }),
@@ -137,7 +143,7 @@ export async function POST(request: Request) {
     if (response.status === 429) return json({ code: 'free_quota' }, 429, { 'Retry-After': '60' });
     if (!response.ok) return json({ code: response.status === 400 || response.status === 403 ? 'invalid_api_key' : 'provider_error' }, 502);
     const reply = extractGeminiText(await response.json());
-    if (!validateAiReply(reply, emotion)) return json({ code: 'unsafe_response' }, 502);
+    if (!validateAiReply(reply, emotion, replyMode)) return json({ code: 'unsafe_response' }, 502);
     return json({ reply, provider: 'gemini', model: GEMINI_MODEL });
   } catch (error) {
     return json({ code: error instanceof Error && error.name === 'AbortError' ? 'provider_timeout' : 'provider_error' }, 504);

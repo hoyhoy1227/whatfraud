@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { CaseData, cases, DialogueTopic, LocationId, SceneCueData, SceneStage, Verdict, verdictLabels } from './game-data';
-import { inferDialogueEmotion, validateAiReply } from './ai-dialogue';
+import { inferDialogueEmotion, inferDialogueReplyMode, validateAiReply } from './ai-dialogue';
 import { ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore, formatGameClock } from './game-rules';
 import GameLoadingScreen from './game-loading';
 import AppIcon from './app-icon';
@@ -617,14 +617,15 @@ export default function GameClient() {
       signal: controller.signal,
       body: JSON.stringify({
         caseId: gameCase.id,
-        messages: messages.slice(-6),
+        messages: messages.slice(-4),
+        userTurnCount: messages.filter((message) => message.role === 'user').length,
       }),
     }).finally(() => window.clearTimeout(timeout));
     const payload = await response.json().catch(() => ({})) as { reply?: unknown; code?: unknown };
     if (!response.ok) throw new Error(typeof payload.code === 'string' ? payload.code : `gemini ${response.status}`);
     if (typeof payload.reply !== 'string' || !payload.reply.trim()) throw new Error('empty gemini response');
     const reply = payload.reply.trim();
-    if (!validateAiReply(reply, inferDialogueEmotion(messages))) throw new Error('unsafe gemini response');
+    if (!validateAiReply(reply, inferDialogueEmotion(messages), inferDialogueReplyMode(messages))) throw new Error('unsafe gemini response');
     return reply;
   }
 
