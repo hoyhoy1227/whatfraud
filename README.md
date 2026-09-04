@@ -51,7 +51,7 @@ pnpm release:check
 
 콘텐츠 검사기는 중복 ID, 누락된 대화·복기 필드, 독립 확인 경로 부족, 실제 접속 URL, `.invalid`가 아닌 링크와 판정·연락 유형 불균형을 차단합니다. 대화 검사기는 후보 응답의 위험 패턴, 주제 편중과 사건 간 완전 중복을 확인합니다. 필드 정의는 `content/schema/case.schema.json`에서 확인할 수 있습니다.
 
-사건별 제작 검수 항목과 작성 방법은 [CONTENT_REVIEW.md](CONTENT_REVIEW.md)에 정리되어 있습니다. 로컬 Qwen을 준비한 뒤 `pnpm dialogue:qwen:evaluate`를 실행하면 네 대화형 사건에 고정 질문을 사건당 20회 반복하고, 대화 본문을 저장하지 않은 채 실행·프롬프트·데이터·필터·반복 문제를 나누어 집계합니다.
+사건별 제작 검수 항목과 작성 방법은 [CONTENT_REVIEW.md](CONTENT_REVIEW.md)에 정리되어 있습니다. `pnpm dialogue:check`는 네 대화형 사건의 검수된 후보 대사를 대상으로 길이·안전 경계·반복 문제를 검사합니다.
 
 ## 테스트 링크
 
@@ -84,20 +84,6 @@ pnpm dev
 
 프로젝트 루트의 `.env.example`을 참고해 `.env.local`에 `GEMINI_API_KEY`를 넣으면 로컬 보조 AI가 활성화됩니다. 키 없이도 내장 대체 응답으로 모든 사례를 플레이할 수 있습니다.
 
-## 로컬 Qwen 튜닝
-
-검수된 대화형 사건만 사용해 브라우저 호환 Qwen 모델을 LoRA로 튜닝하는 데이터 생성·학습·병합 코드를 [training/README.md](training/README.md)에 정리했습니다. 실제 플레이어 입력과 Qwen 대화 기록은 학습 데이터로 사용하지 않으며 모델·어댑터·GGUF·ONNX 산출물은 Git에서 제외됩니다.
-
-```bash
-pnpm training:data
-```
-
-기본 튜닝 대상은 `Qwen/Qwen2.5-0.5B-Instruct`이며 현재 공개 게임의 Gemini API 경로와는 분리된 선택적 로컬 연구 도구입니다. 최신 `Qwen/Qwen3.5-4B`는 선택적인 고성능 로컬 실험 대상으로만 안내합니다.
-
-## 선택적 로컬 Qwen 연구
-
-Hugging Face Qwen 모델의 튜닝·병합·반복 평가는 `training/`과 `scripts/evaluate-local-qwen.mjs`에 보존되어 있습니다. 모델과 학습 산출물은 게임 배포물과 Git 저장소에 포함하지 않으며 현재 공개 게임 UI에서는 로컬 모델을 직접 연결하지 않습니다.
-
 ## 콘텐츠 원칙
 
 - 실제 피해 사례에서 반복되는 심리 조종 구조를 합성해 사용합니다.
@@ -109,4 +95,4 @@ Hugging Face Qwen 모델의 튜닝·병합·반복 평가는 `training/`과 `scr
 
 현재 게임 자체 코드와 콘텐츠의 모든 권리는 저장소 소유자가 보유합니다. 자세한 이용 조건은 [LICENSE.md](LICENSE.md)를 확인해 주세요.
 
-Gemini API는 Google의 서비스 약관과 무료 등급 조건에 따라 사용합니다. Qwen 모델과 llama.cpp는 선택적 로컬 연구용이며 이 저장소에 포함되지 않습니다. 주요 서비스와 웹 의존성의 상세 고지는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 정리되어 있습니다.
+Gemini API는 Google의 서비스 약관과 무료 등급 조건에 따라 사용합니다. 주요 서비스와 웹 의존성의 상세 고지는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 정리되어 있습니다.

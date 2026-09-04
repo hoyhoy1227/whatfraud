@@ -6,14 +6,9 @@ const generatedFile = path.join(root, 'content', 'generated', 'cases.json');
 const clientFile = path.join(root, 'app', 'game-client.tsx');
 const loadingFile = path.join(root, 'app', 'game-loading.tsx');
 const appIconFile = path.join(root, 'app', 'app-icon.tsx');
-const browserQwenFile = path.join(root, 'app', 'browser-qwen.ts');
 const aiRouteFile = path.join(root, 'app', 'api', 'ai-chat', 'route.ts');
 const aiDialogueFile = path.join(root, 'app', 'ai-dialogue.ts');
 const cssFile = path.join(root, 'app', 'globals.css');
-const trainingBuilderFile = path.join(root, 'training', 'build_dataset.py');
-const trainingTrainerFile = path.join(root, 'training', 'train_lora.py');
-const trainingReadmeFile = path.join(root, 'training', 'README.md');
-const gitignoreFile = path.join(root, '.gitignore');
 const envExampleFile = path.join(root, '.env.example');
 const apiKeyGuideFile = path.join(root, 'API_KEY_MANAGEMENT.md');
 
@@ -22,20 +17,15 @@ function assert(condition, message, errors) {
 }
 
 async function main() {
-  const [{ ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore }, cases, client, loading, appIcon, browserQwen, aiRoute, aiDialogue, css, trainingBuilder, trainingTrainer, trainingReadme, gitignore, envExample, apiKeyGuide] = await Promise.all([
+  const [{ ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore }, cases, client, loading, appIcon, aiRoute, aiDialogue, css, envExample, apiKeyGuide] = await Promise.all([
     import('../app/game-rules.js'),
     readFile(generatedFile, 'utf8').then(JSON.parse),
     readFile(clientFile, 'utf8'),
     readFile(loadingFile, 'utf8'),
     readFile(appIconFile, 'utf8'),
-    readFile(browserQwenFile, 'utf8'),
     readFile(aiRouteFile, 'utf8'),
     readFile(aiDialogueFile, 'utf8'),
     readFile(cssFile, 'utf8'),
-    readFile(trainingBuilderFile, 'utf8'),
-    readFile(trainingTrainerFile, 'utf8'),
-    readFile(trainingReadmeFile, 'utf8'),
-    readFile(gitignoreFile, 'utf8'),
     readFile(envExampleFile, 'utf8'),
     readFile(apiKeyGuideFile, 'utf8'),
   ]);
@@ -106,7 +96,6 @@ async function main() {
   assert(Boolean(saveSnapshot) && !saveSnapshot?.[1].includes('chats') && !saveSnapshot?.[1].includes('draft'), '자유 입력 대화가 진행 저장에 포함될 수 있습니다.', errors);
   assert(client.includes('>이어하기<') && client.includes('>새로 시작<'), '타이틀 화면에 이어하기와 새 게임 선택이 모두 없습니다.', errors);
   assert(client.includes('window.localStorage.removeItem(PROGRESS_SAVE_KEY)'), '새로운 하루를 시작할 때 진행 기록을 지우지 않습니다.', errors);
-  assert(browserQwen.includes('NEXT_PUBLIC_QWEN_MODEL_ID') && browserQwen.includes('DEFAULT_MODEL_ID'), '튜닝한 브라우저 모델을 안전하게 교체할 설정이 없습니다.', errors);
   assert(aiRoute.includes('process.env.GEMINI_API_KEY') && !aiRoute.includes('process.env.NEXT_PUBLIC_GEMINI_API_KEY'), 'Gemini 키가 서버 전용 환경 변수로 격리되지 않았습니다.', errors);
   assert(aiRoute.includes("gameCase.mode !== 'chat'") && aiRoute.includes('value.length > 6'), '서버의 대화형 사건 또는 최근 메시지 제한이 없습니다.', errors);
   assert(aiRoute.includes("GEMINI_MODEL = 'gemini-3.6-flash'") && aiRoute.includes('maxOutputTokens: 120') && aiRoute.includes("thinkingLevel: 'minimal'"), 'Gemini 3.6 Flash의 짧은 응답 설정이 고정되지 않았습니다.', errors);
@@ -118,10 +107,6 @@ async function main() {
   assert(aiDialogue.includes('inferDialogueEmotion') && aiDialogue.includes('현재 정서적 흐름') && aiDialogue.includes('감정 단계는 말투만 바꾸며'), '코드가 제한하는 NPC 감정 단계가 없습니다.', errors);
   assert(envExample.includes('GEMINI_API_KEY=') && !envExample.includes('NEXT_PUBLIC_GEMINI_API_KEY='), '서버 전용 Gemini 환경 변수 예제가 올바르지 않습니다.', errors);
   assert(apiKeyGuide.includes('Sites Secret') && apiKeyGuide.includes('NEXT_PUBLIC_GEMINI_API_KEY') && apiKeyGuide.includes('키가 유출됐을 때'), 'API 키 등록·노출 방지·교체 안내가 부족합니다.', errors);
-  assert(trainingBuilder.includes('contains_player_messages') && trainingBuilder.includes('case.get("mode") == "chat"'), '튜닝 데이터의 대화형 사건 제한 또는 개인정보 비저장 표기가 없습니다.', errors);
-  assert(trainingTrainer.includes('LoraConfig') && trainingTrainer.includes('DataCollatorForSeq2Seq'), '로컬 LoRA 학습 파이프라인이 없습니다.', errors);
-  assert(trainingReadme.includes('training/output/') && trainingReadme.includes('dialogue:qwen:evaluate'), '튜닝 산출물 격리와 배포 전 평가 안내가 부족합니다.', errors);
-  assert(gitignore.includes('/training/output/') && gitignore.includes('*.gguf') && gitignore.includes('*.safetensors'), '모델 가중치와 튜닝 산출물의 Git 제외 규칙이 부족합니다.', errors);
   assert(loading.includes('role="progressbar"') && loading.includes('aria-valuenow={safeProgress}'), '전체 화면 로딩 진행률의 접근성 정보가 없습니다.', errors);
   assert(loading.includes('aria-busy="true"') && loading.includes('role="status"'), '전체 화면 로딩 상태가 화면 읽기 도구에 전달되지 않습니다.', errors);
   assert(loading.includes('loading-device-status') && loading.includes('loading-message-preview') && loading.includes('loading-device-gesture') && loading.includes('native-loading-spinner'), '전체 화면 로딩이 휴대폰 앱 실행·알림 수신 화면으로 구성되지 않았습니다.', errors);

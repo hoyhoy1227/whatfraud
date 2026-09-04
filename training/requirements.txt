@@ -1,7 +1,0 @@
-torch>=2.7,<3
-transformers>=4.57,<5
-accelerate>=1.10,<2
-peft>=0.17,<1
-safetensors>=0.5,<1
-# QLoRA를 사용할 때만 별도로 bitsandbytes를 설치하세요.
-# 브라우저 ONNX 변환 단계에서는 optimum[onnxruntime]과 onnxruntime을 추가로 사용합니다.
