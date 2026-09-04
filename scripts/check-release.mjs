@@ -100,9 +100,9 @@ async function main() {
   assert(client.includes('window.localStorage.removeItem(PROGRESS_SAVE_KEY)'), '새로운 하루를 시작할 때 진행 기록을 지우지 않습니다.', errors);
   assert(aiRoute.includes('process.env.GEMINI_API_KEY') && !aiRoute.includes('process.env.NEXT_PUBLIC_GEMINI_API_KEY'), 'Gemini 키가 서버 전용 환경 변수로 격리되지 않았습니다.', errors);
   assert(aiRoute.includes("gameCase.mode !== 'chat'") && aiRoute.includes('value.length > 4') && aiRoute.includes('invalid_turn_count') && client.includes('messages.slice(-4)') && client.includes('userTurnCount:'), '최근 4개 메시지 제한 또는 전체 대화 단계 보존이 없습니다.', errors);
-  assert(aiRoute.includes("GEMINI_MODEL = 'gemini-3.6-flash'") && aiRoute.includes("replyMode === 'short' ? 40 : 96") && aiRoute.includes("thinkingLevel: 'minimal'"), 'Gemini 3.6 Flash의 동적 응답 길이 또는 최소 생각 설정이 없습니다.', errors);
+  assert(aiRoute.includes("GEMINI_MODEL = 'gemini-3.5-flash-lite'") && aiRoute.includes("replyMode === 'short' ? 40 : 96") && aiRoute.includes("thinkingLevel: 'minimal'"), 'Gemini 3.5 Flash-Lite의 동적 응답 길이 또는 최소 생각 설정이 없습니다.', errors);
   assert(aiRoute.includes('PROVIDER_TIMEOUT_MS = 24_000'), 'Gemini 공급자 대기 시간이 24초로 설정되지 않았습니다.', errors);
-  assert(!aiRoute.includes('temperature:') && !aiRoute.includes('topP:') && !aiRoute.includes('thinkingBudget:'), 'Gemini 3.6 Flash에서 폐기된 생성 옵션이 남아 있습니다.', errors);
+  assert(!aiRoute.includes('temperature:') && !aiRoute.includes('topP:') && !aiRoute.includes('thinkingBudget:'), 'Gemini 3.5 Flash-Lite에서 사용하지 않는 생성 옵션이 남아 있습니다.', errors);
   assert(aiRoute.includes('SESSION_MINUTE_LIMIT = 5') && aiRoute.includes('IP_DAY_LIMIT = 120'), '서버의 기본 호출 제한이 없습니다.', errors);
   assert(aiRoute.includes("'Cache-Control': 'no-store'") && aiRoute.includes('sanitizePlayerText'), '보조 AI 응답 캐시 차단 또는 입력 정제가 없습니다.', errors);
   assert(aiDialogue.includes('[링크 제거]') && aiDialogue.includes('[전화번호 제거]') && aiDialogue.includes('validateAiReply'), '입력 개인정보 제거 또는 AI 답변 검사가 없습니다.', errors);
