@@ -49,6 +49,7 @@ type SavedProgress = {
   openedCues: Record<string, boolean>;
   seenSceneCues: Record<string, string[]>;
   seenFollowUps: Record<string, boolean>;
+  blockedContacts: Record<string, boolean>;
   safetySeenCount: number;
 };
 
@@ -203,6 +204,7 @@ function readSavedProgress(serialized: string | null): SavedProgress | null {
       openedCues: booleanRecord(raw.openedCues),
       seenSceneCues,
       seenFollowUps: booleanRecord(raw.seenFollowUps),
+      blockedContacts: booleanRecord(raw.blockedContacts),
       safetySeenCount: typeof raw.safetySeenCount === 'number' && Number.isFinite(raw.safetySeenCount)
         ? Math.max(0, Math.min(results.length, Math.floor(raw.safetySeenCount)))
         : 0,
@@ -332,6 +334,7 @@ export default function GameClient() {
   const [openedCues, setOpenedCues] = useState<Record<string, boolean>>({});
   const [seenSceneCues, setSeenSceneCues] = useState<Record<string, string[]>>({});
   const [seenFollowUps, setSeenFollowUps] = useState<Record<string, boolean>>({});
+  const [blockedContacts, setBlockedContacts] = useState<Record<string, boolean>>({});
   const [safetySeenCount, setSafetySeenCount] = useState(0);
   const [results, setResults] = useState<Result[]>([]);
   const [draft, setDraft] = useState('');
@@ -364,6 +367,7 @@ export default function GameClient() {
   const activeEvidence = evidence[activeCase.id] ?? [];
   const activeHistory = verificationHistory[activeCase.id] ?? [];
   const activeResult = results.find((result) => result.caseId === activeCase.id);
+  const activeContactBlocked = Boolean(blockedContacts[activeCase.id]);
   const score = results.reduce((sum, result) => sum + result.score, 0);
   const complete = results.length === cases.length;
   const accuracy = results.length ? Math.round((results.filter((result) => result.correct).length / results.length) * 100) : 0;
@@ -445,7 +449,7 @@ export default function GameClient() {
     { title: '판정을 완료했습니다', detail: '해설을 확인한 뒤 시간을 진행하면 다음 연락이 도착합니다.' },
   ][objectiveStage];
   const playerTurns = activeChat.filter((message) => message.role === 'user').length;
-  const conversationPressure = playerTurns >= 3 ? '재촉하는 흐름' : playerTurns >= 1 ? '반응을 살피는 중' : '처음 온 연락';
+  const conversationPressure = activeContactBlocked ? '차단됨' : playerTurns >= 3 ? '재촉하는 흐름' : playerTurns >= 1 ? '반응을 살피는 중' : '처음 온 연락';
   const rewindHistory = activeHistory.length ? activeHistory : activeEvidence.flatMap((item, index) => {
     const source = locationValues.find((location) => activeCase.checks[location] === item);
     return source ? [{ source, evidence: item, minuteOffset: 4 + index * 5 }] : [];
@@ -512,6 +516,7 @@ export default function GameClient() {
       openedCues,
       seenSceneCues,
       seenFollowUps,
+      blockedContacts,
       safetySeenCount,
     };
     const timer = window.setTimeout(() => {
@@ -523,7 +528,7 @@ export default function GameClient() {
       }
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [activeIndex, availableCount, evidence, loadingTask, openedCases, openedCues, openedLinks, phoneApp, phoneLocked, results, safetySeenCount, seenFollowUps, seenSceneCues, started, verificationHistory]);
+  }, [activeIndex, availableCount, blockedContacts, evidence, loadingTask, openedCases, openedCues, openedLinks, phoneApp, phoneLocked, results, safetySeenCount, seenFollowUps, seenSceneCues, started, verificationHistory]);
 
   useEffect(() => () => {
     if (objectiveCueTimer.current !== null) window.clearTimeout(objectiveCueTimer.current);
@@ -619,7 +624,7 @@ export default function GameClient() {
     if (!response.ok) throw new Error(typeof payload.code === 'string' ? payload.code : `gemini ${response.status}`);
     if (typeof payload.reply !== 'string' || !payload.reply.trim()) throw new Error('empty gemini response');
     const reply = payload.reply.trim();
-    if (!validateAiReply(reply)) throw new Error('unsafe gemini response');
+    if (!validateAiReply(reply, inferDialogueEmotion(messages))) throw new Error('unsafe gemini response');
     return reply;
   }
 
@@ -641,7 +646,7 @@ export default function GameClient() {
   async function sendMessage(event: FormEvent) {
     event.preventDefault();
     const content = draft.trim();
-    if (!content || sending || activeResult || activeCase.mode !== 'chat') return;
+    if (!content || sending || activeResult || activeContactBlocked || activeCase.mode !== 'chat') return;
     const nextMessages = [...activeChat, { role: 'user' as const, content }];
     setChats((current) => ({ ...current, [activeCase.id]: nextMessages }));
     setDraft('');
@@ -704,6 +709,16 @@ export default function GameClient() {
       setNotice(`${source?.app ?? '공식 앱'}을 확인했지만, 현재 연락과 직접 연결되는 기록은 없습니다.`);
     }
     revealObjectiveCue();
+  }
+
+  function blockActiveContact() {
+    if (activeCase.mode !== 'chat' || activeResult || sending || activeContactBlocked) return;
+    clearTypingCueTimers();
+    setTypingPhase(null);
+    setDraft('');
+    setBlockedContacts((current) => ({ ...current, [activeCase.id]: true }));
+    setSelectedAction('block');
+    setNotice(`${activeCase.sender} 연락처를 차단했습니다. 더 이상 답장이 오지 않습니다.`);
   }
 
   function openCase(index: number) {
@@ -837,6 +852,7 @@ export default function GameClient() {
       openedCues,
       seenSceneCues,
       seenFollowUps,
+      blockedContacts,
       safetySeenCount,
     };
     try {
@@ -868,6 +884,7 @@ export default function GameClient() {
 
   function startNewGame() {
     clearSavedProgress();
+    setBlockedContacts({});
     setConfirmNewGame(false);
     void startSimulation(preferences.guideOnNewGame, false);
   }
@@ -902,6 +919,7 @@ export default function GameClient() {
       setSeenSceneCues(progressToRestore.seenSceneCues);
       setSceneCueHold(false);
       setSeenFollowUps(progressToRestore.seenFollowUps);
+      setBlockedContacts(progressToRestore.blockedContacts);
       setSafetySeenCount(progressToRestore.safetySeenCount);
       setPhoneApp(progressToRestore.phoneApp);
       setPhoneLocked(progressToRestore.phoneLocked);
@@ -994,6 +1012,7 @@ export default function GameClient() {
     setSceneCueHold(false);
     if (sceneCueTimer.current !== null) window.clearTimeout(sceneCueTimer.current);
     setSeenFollowUps({});
+    setBlockedContacts({});
     setSafetySeenCount(0);
     setShowDebrief(false);
     setShowVerdictPanel(false);
@@ -1110,9 +1129,20 @@ export default function GameClient() {
                     })}
                   </aside>
                   <section className={`messenger-panel mode-${activeCase.mode}`} aria-busy={sending}>
-                    <header className="chat-header"><button onClick={() => setPhoneApp('home')} aria-label="홈 화면으로">◀</button><div><b>{activeCase.sender}</b><small>{activeCase.handle} · {activeCase.channel}{activeCase.mode === 'chat' ? ` · ${conversationPressure}` : ''}</small></div>{activeCase.mode === 'chat' && <span className={`model-dot ${modelState}`}>{modelLabel}</span>}</header>
+                    <header className="chat-header"><button onClick={() => setPhoneApp('home')} aria-label="홈 화면으로">◀</button><div><b>{activeCase.sender}</b><small>{activeCase.handle} · {activeCase.channel}{activeCase.mode === 'chat' ? ` · ${conversationPressure}` : ''}</small></div>{activeCase.mode === 'chat' && <div className="chat-header-actions"><span className={`model-dot ${modelState}`}>{modelLabel}</span><button className="contact-block-button" onClick={blockActiveContact} disabled={Boolean(activeResult) || sending || activeContactBlocked}>{activeContactBlocked ? '차단됨' : '차단'}</button></div>}</header>
                     {renderCinematicTrace('messages')}
-                    {activeCase.mode === 'chat' && <><div className="chat-area" aria-live="polite"><span className="date-pill">오늘</span>{activeChat.map((message, index) => <div key={`${message.role}-${index}`} className={`message ${message.role}`}><p>{message.content}</p><time>{formatGameClock(9 * 60 + 3 + index * 2)}</time></div>)}{viewedMessageEvents.map((cue) => <div key={cue.id} className={`message-status-event ${cue.messageState?.kind}`}><span>{cue.messageState?.text}</span><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + cue.minuteOffset)} · {cue.messageState?.kind === 'edited' ? '수정됨' : '삭제됨'}</time></div>)}{nextSceneCue?.presentation === 'message-status' && <button className="message-status-event pending" onClick={() => markSceneCueSeen(nextSceneCue)}><span>{nextSceneCue.title}</span><time>변경 내용 확인</time></button>}{!activeResult && activeCase.dialogue && <div className="quick-questions" aria-label="추천 질문"><span>어떤 점을 물어볼까요?</span><div>{activeCase.dialogue.quickQuestions.map((question) => <button key={question} type="button" onClick={() => setDraft(question)} disabled={sending}>{question}</button>)}</div></div>}{sending && typingPhase === 'typing' && <div className="message-typing-indicator" role="status" aria-label={`${activeCase.sender}가 입력 중입니다`}><i/><i/><i/><span>입력 중</span></div>}</div><form className="reply-row" onSubmit={sendMessage}><input aria-label="메시지" maxLength={500} autoComplete="off" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={activeResult ? '판정이 완료된 연락입니다' : sending ? '답장을 기다리는 중' : '상대에게 질문하거나 직접 입력하기'} disabled={Boolean(activeResult) || sending} /><button type="submit" disabled={!draft.trim() || sending || Boolean(activeResult)}>전송</button></form></>}
+                    {activeCase.mode === 'chat' && <>
+                      <div className="chat-area" aria-live="polite">
+                        <span className="date-pill">오늘</span>
+                        {activeChat.map((message, index) => <div key={`${message.role}-${index}`} className={`message ${message.role}`}><p>{message.content}</p><time>{formatGameClock(9 * 60 + 3 + index * 2)}</time></div>)}
+                        {viewedMessageEvents.map((cue) => <div key={cue.id} className={`message-status-event ${cue.messageState?.kind}`}><span>{cue.messageState?.text}</span><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + cue.minuteOffset)} · {cue.messageState?.kind === 'edited' ? '수정됨' : '삭제됨'}</time></div>)}
+                        {nextSceneCue?.presentation === 'message-status' && <button className="message-status-event pending" onClick={() => markSceneCueSeen(nextSceneCue)}><span>{nextSceneCue.title}</span><time>변경 내용 확인</time></button>}
+                        {activeContactBlocked && <div className="blocked-contact-status" role="status"><i>⊘</i><span><b>차단한 연락처입니다</b><small>이 대화에서는 더 이상 답장이 오지 않습니다.</small></span></div>}
+                        {!activeResult && !activeContactBlocked && activeCase.dialogue && <div className="quick-questions" aria-label="추천 질문"><span>어떤 점을 물어볼까요?</span><div>{activeCase.dialogue.quickQuestions.map((question) => <button key={question} type="button" onClick={() => setDraft(question)} disabled={sending}>{question}</button>)}</div></div>}
+                        {!activeContactBlocked && sending && typingPhase === 'typing' && <div className="message-typing-indicator" role="status" aria-label={`${activeCase.sender}가 입력 중입니다`}><i/><i/><i/><span>입력 중</span></div>}
+                      </div>
+                      <form className="reply-row" onSubmit={sendMessage}><input aria-label="메시지" maxLength={500} autoComplete="off" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={activeContactBlocked ? '차단한 연락처입니다' : activeResult ? '판정이 완료된 연락입니다' : sending ? '답장을 기다리는 중' : '상대에게 질문하거나 직접 입력하기'} disabled={activeContactBlocked || Boolean(activeResult) || sending} /><button type="submit" disabled={activeContactBlocked || !draft.trim() || sending || Boolean(activeResult)}>전송</button></form>
+                    </>}
                     {activeCase.mode === 'notice' && <div className="read-only-surface notice-surface"><span className="date-pill">오늘</span><article><header><span>{activeCase.channel}</span><time>{formatGameClock(9 * 60 + 8)}</time></header><div className="notice-brand"><i>{activeCase.sender.slice(0,1)}</i><div><b>{activeCase.sender}</b><small>{activeCase.handle}</small></div></div><h2>{activeCase.initialMessages[0]}</h2>{activeCase.initialMessages.slice(1).map((text) => <p key={text}>{text}</p>)}<button className="official-app-button" onClick={() => setPhoneApp(activeCase.id === 'bank-fraud-check' ? 'bank' : activeCase.id === 'official-etf-fill' ? 'stocks' : 'browser')}>메시지를 닫고 관련 앱 직접 열기</button></article></div>}
                     {activeCase.mode === 'link' && <div className="read-only-surface link-surface"><span className="date-pill">오늘</span><article className="one-way-message"><header><b>{activeCase.handle}</b><time>{formatGameClock(10 * 60 + 17)}</time></header>{activeCase.initialMessages.map((text) => <p key={text}>{text}</p>)}<button className="embedded-link" onClick={() => setOpenedLinks((current) => ({ ...current, [activeCase.id]: true }))}><span>외부 페이지</span><b>{activeCase.linkLabel}</b><small>{activeCase.displayUrl}</small></button></article>{openedLinks[activeCase.id] && <section className="simulated-landing"><div className="landing-address"><span>교육용 가상 주소</span><b>{activeCase.displayUrl}</b></div><div className="landing-copy"><small>SPONSORED INFORMATION</small><h2>{activeCase.landingTitle}</h2><p>{activeCase.landingCopy}</p><button disabled>{activeCase.landingCta}</button><span>시뮬레이션에서는 정보 제출과 결제가 실행되지 않습니다.</span></div></section>}</div>}
                   </section>

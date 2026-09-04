@@ -11,13 +11,14 @@ const aiDialogueFile = path.join(root, 'app', 'ai-dialogue.ts');
 const cssFile = path.join(root, 'app', 'globals.css');
 const envExampleFile = path.join(root, '.env.example');
 const apiKeyGuideFile = path.join(root, 'API_KEY_MANAGEMENT.md');
+const liveGeminiEvaluationFile = path.join(root, 'scripts', 'evaluate-live-gemini.mjs');
 
 function assert(condition, message, errors) {
   if (!condition) errors.push(message);
 }
 
 async function main() {
-  const [{ ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore }, cases, client, loading, appIcon, aiRoute, aiDialogue, css, envExample, apiKeyGuide] = await Promise.all([
+  const [{ ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore }, cases, client, loading, appIcon, aiRoute, aiDialogue, css, envExample, apiKeyGuide, liveGeminiEvaluation] = await Promise.all([
     import('../app/game-rules.js'),
     readFile(generatedFile, 'utf8').then(JSON.parse),
     readFile(clientFile, 'utf8'),
@@ -28,6 +29,7 @@ async function main() {
     readFile(cssFile, 'utf8'),
     readFile(envExampleFile, 'utf8'),
     readFile(apiKeyGuideFile, 'utf8'),
+    readFile(liveGeminiEvaluationFile, 'utf8'),
   ]);
   const errors = [];
   const expectedOrder = [
@@ -105,6 +107,10 @@ async function main() {
   assert(aiRoute.includes("'Cache-Control': 'no-store'") && aiRoute.includes('sanitizePlayerText'), '보조 AI 응답 캐시 차단 또는 입력 정제가 없습니다.', errors);
   assert(aiDialogue.includes('[링크 제거]') && aiDialogue.includes('[전화번호 제거]') && aiDialogue.includes('validateAiReply'), '입력 개인정보 제거 또는 AI 답변 검사가 없습니다.', errors);
   assert(aiDialogue.includes('inferDialogueEmotion') && aiDialogue.includes('현재 정서적 흐름') && aiDialogue.includes('감정 단계는 말투만 바꾸며'), '코드가 제한하는 NPC 감정 단계가 없습니다.', errors);
+  assert(aiDialogue.includes('40~100자') && aiDialogue.includes('closed 단계는 10~45자') && aiDialogue.includes('/보장|확정|무조건|100'), 'Gemini 장문·보장·과장 표현 제한이 없습니다.', errors);
+  assert(aiDialogue.includes("emotion === 'closed'") && aiDialogue.includes('생각이\\s*바뀌'), '연락 중단 요청 뒤 재접촉 문구 차단이 없습니다.', errors);
+  assert(aiRoute.includes('validateAiReply(reply, emotion)') && client.includes('validateAiReply(reply, inferDialogueEmotion(messages))'), '서버와 브라우저가 같은 감정 단계로 Gemini 답변을 검사하지 않습니다.', errors);
+  assert(liveGeminiEvaluation.includes('친구·출처 질문') && liveGeminiEvaluation.includes('리딩방·말로 중단 요구') && liveGeminiEvaluation.includes('guardedFallbacks'), '대표 반응을 점검하는 Gemini 실응답 평가가 없습니다.', errors);
   assert(envExample.includes('GEMINI_API_KEY=') && !envExample.includes('NEXT_PUBLIC_GEMINI_API_KEY='), '서버 전용 Gemini 환경 변수 예제가 올바르지 않습니다.', errors);
   assert(apiKeyGuide.includes('Sites Secret') && apiKeyGuide.includes('NEXT_PUBLIC_GEMINI_API_KEY') && apiKeyGuide.includes('키가 유출됐을 때'), 'API 키 등록·노출 방지·교체 안내가 부족합니다.', errors);
   assert(loading.includes('role="progressbar"') && loading.includes('aria-valuenow={safeProgress}'), '전체 화면 로딩 진행률의 접근성 정보가 없습니다.', errors);
@@ -133,6 +139,8 @@ async function main() {
   assert(css.includes('.game-menu-button') && css.includes('.pause-menu-backdrop') && css.includes('.pause-progress'), '게임 중 메뉴의 화면 스타일이 없습니다.', errors);
   assert(client.includes('SCENE_GAP_MS') && client.includes('nextSceneCue') && client.includes('seenSceneCues'), '사건별 순차 앱 흔적 또는 확인 상태 저장이 없습니다.', errors);
   assert(client.includes('incoming-call-screen') && client.includes('bank-interruption-banner') && client.includes('message-status-event'), '수신 전화·은행 겹침·메시지 상태 변화 연출이 없습니다.', errors);
+  assert(client.includes('blockActiveContact') && client.includes('blockedContacts') && client.includes('차단한 연락처입니다'), '휴대폰에서 직접 연락처를 차단하는 기능이 없습니다.', errors);
+  assert(aiDialogue.includes('실제 차단되기 전') && aiDialogue.includes('신체 위해') && aiDialogue.includes('/죽|해코지|찾아가'), '차단 전 회유 또는 위험한 협박 차단 규칙이 없습니다.', errors);
   assert(client.includes('playPhoneFeedback') && client.includes('navigator.vibrate') && client.includes('soundEnabled') && client.includes('vibrationEnabled'), '선택 가능한 휴대폰 알림음·진동이 없습니다.', errors);
   assert(client.includes('fallbackByEmotion[emotion]'), 'Gemini 실패 시 동일 감정 단계의 검수 대사를 사용하지 않습니다.', errors);
   assert(client.includes('anyRiskExposure') && cases.some((item) => item.sceneCues.some((cue) => cue.condition === 'any-risk-exposure')), '플레이어 행동에 따른 조건부 후속 연락이 없습니다.', errors);

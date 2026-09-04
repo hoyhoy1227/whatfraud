@@ -1,4 +1,4 @@
-import { buildSystemPrompt, sanitizePlayerText, validateAiReply, type AiChatMessage } from '../../ai-dialogue';
+import { buildSystemPrompt, inferDialogueEmotion, sanitizePlayerText, validateAiReply, type AiChatMessage } from '../../ai-dialogue';
 import { cases } from '../../game-data';
 
 const GEMINI_MODEL = 'gemini-3.6-flash';
@@ -109,6 +109,7 @@ export async function POST(request: Request) {
 
   const firstUser = messages.findIndex((message) => message.role === 'user');
   const conversation = messages.slice(Math.max(firstUser, 0));
+  const emotion = inferDialogueEmotion(conversation);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
 
@@ -136,7 +137,7 @@ export async function POST(request: Request) {
     if (response.status === 429) return json({ code: 'free_quota' }, 429, { 'Retry-After': '60' });
     if (!response.ok) return json({ code: response.status === 400 || response.status === 403 ? 'invalid_api_key' : 'provider_error' }, 502);
     const reply = extractGeminiText(await response.json());
-    if (!validateAiReply(reply)) return json({ code: 'unsafe_response' }, 502);
+    if (!validateAiReply(reply, emotion)) return json({ code: 'unsafe_response' }, 502);
     return json({ reply, provider: 'gemini', model: GEMINI_MODEL });
   } catch (error) {
     return json({ code: error instanceof Error && error.name === 'AbortError' ? 'provider_timeout' : 'provider_error' }, 504);
