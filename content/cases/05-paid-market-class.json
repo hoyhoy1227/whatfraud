@@ -14,6 +14,11 @@
   "role": "실재하는 교육 업체의 다소 과장된 일방형 광고 페이지",
   "npcGoal": "유료 강의를 홍보하지만 투자금 송금이나 수익 보장은 하지 않는다.",
   "allowedClaims": ["수강료와 환불 규정 공개", "수익 비보장 고지", "과장된 마감 홍보"],
+  "sceneCues": [
+    { "id": "first-trace", "app": "calendar", "sender": "달력", "title": "무료 설명회 · 오늘 마감", "detail": "광고가 일정 접근을 유도했지만 공식 일정에는 등록되지 않았습니다.", "icon": "calendar", "tone": "warning", "minuteOffset": 4, "stage": "signal", "interference": false },
+    { "id": "calendar-gap", "app": "calendar", "sender": "달력", "title": "공식 일정 미등록", "detail": "광고 속 설명회는 기관 일정표에서 확인되지 않습니다.", "icon": "calendar", "tone": "warning", "minuteOffset": 10, "stage": "pressure", "interference": false },
+    { "id": "dinner-reminder", "app": "calendar", "sender": "달력", "title": "저녁 약속 1시간 전", "detail": "오늘 저장해 둔 친구와의 저녁 약속 알림입니다.", "icon": "calendar", "tone": "routine", "minuteOffset": 15, "stage": "decision", "interference": true }
+  ],
   "checks": {
     "library": "사업자와 환불 약관은 확인되지만 광고 후기 일부가 지나치게 선별돼 있습니다.",
     "cafe": "친구는 강의 내용이 기초적이었다며 가격 대비 가치는 낮았다고 말합니다."

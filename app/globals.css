@@ -1476,6 +1476,15 @@ body { background: #e9edf3; color: #172033; font-weight: 400; }
 }
 .phone-os-shell.act-night .phone-lock-screen::after,
 .phone-os-shell.act-night .phone-home-screen::after { background: linear-gradient(180deg,rgba(5,9,18,.1),rgba(4,8,16,.56)); }
+.phone-os-shell .phone-lock-screen::before,
+.phone-os-shell .phone-home-screen::before { transition: filter .45s ease, opacity .45s ease; }
+.phone-only-game .phone-screen { transition: box-shadow .45s ease; }
+.phone-os-shell.scene-pressure .phone-lock-screen::before,
+.phone-os-shell.scene-pressure .phone-home-screen::before { filter: saturate(.93) brightness(.97); }
+.phone-only-game.scene-pressure .phone-screen { box-shadow: 0 28px 70px rgba(0,0,0,.52), 0 0 0 1px rgba(125,156,209,.16), inset 0 0 0 1px #2b3340; }
+.phone-os-shell.scene-decision .phone-lock-screen::before,
+.phone-os-shell.scene-decision .phone-home-screen::before { filter: saturate(.86) brightness(.91); }
+.phone-only-game.scene-decision .phone-screen { box-shadow: 0 30px 78px rgba(0,0,0,.6), 0 0 0 1px rgba(219,169,91,.2), inset 0 0 0 1px #2b3340; }
 
 .chapter-card {
   width: min(620px,100%);

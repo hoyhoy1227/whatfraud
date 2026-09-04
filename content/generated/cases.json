@@ -18,6 +18,32 @@
       "공식 앱 내부 조회만 안내",
       "비밀번호나 송금을 요구하지 않음"
     ],
+    "sceneCues": [
+      {
+        "id": "first-trace",
+        "app": "stocks",
+        "sender": "채움증권",
+        "title": "주문 내역이 갱신됨",
+        "detail": "오늘 체결 내역이 증권 앱에도 기록되었습니다.",
+        "icon": "stocks",
+        "tone": "routine",
+        "minuteOffset": 4,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "payday",
+        "app": "bank",
+        "sender": "새봄은행",
+        "title": "월급 입금 완료",
+        "detail": "평소처럼 월급 입금 알림이 도착했습니다.",
+        "icon": "bank",
+        "tone": "routine",
+        "minuteOffset": 9,
+        "stage": "signal",
+        "interference": true
+      }
+    ],
     "checks": {
       "home": "설치된 공식 앱 안에서 동일한 체결 내역이 확인됩니다.",
       "bank": "연결 계좌에는 주문 금액 외의 출금이 없습니다."
@@ -102,6 +128,44 @@
         "default": "나도 자세한 건 몰라. 그냥 들은 소문이라 무리해서 결정하지는 마."
       }
     },
+    "sceneCues": [
+      {
+        "id": "first-trace",
+        "app": "social",
+        "sender": "모임",
+        "title": "준호가 게시물을 공유함",
+        "detail": "메시지와 같은 종목을 언급한 짧은 게시물이 보입니다.",
+        "icon": "social",
+        "tone": "social",
+        "minuteOffset": 4,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "disclosure-gap",
+        "app": "stocks",
+        "sender": "채움증권",
+        "title": "관련 공시 없음",
+        "detail": "추천 내용과 연결되는 특별 공시는 공식 목록에서 확인되지 않습니다.",
+        "icon": "stocks",
+        "tone": "routine",
+        "minuteOffset": 11,
+        "stage": "pressure",
+        "interference": false
+      },
+      {
+        "id": "transit-payment",
+        "app": "bank",
+        "sender": "새봄은행",
+        "title": "교통카드 이용 내역",
+        "detail": "평소 이용하던 교통카드 결제 알림이 함께 도착했습니다.",
+        "icon": "bank",
+        "tone": "routine",
+        "minuteOffset": 16,
+        "stage": "decision",
+        "interference": true
+      }
+    ],
     "checks": {
       "cafe": "준호는 같은 이야기를 다른 친구에게도 들었을 뿐, 대가를 받지는 않았습니다.",
       "library": "해당 회사의 공식 공시에는 소문의 근거가 확인되지 않습니다."
@@ -191,6 +255,44 @@
         "default": "의심하시는 게 당연합니다. 우선 무료 자료만 살펴보시고 판단하셔도 됩니다."
       }
     },
+    "sceneCues": [
+      {
+        "id": "first-trace",
+        "app": "calls",
+        "sender": "전화",
+        "title": "알 수 없는 번호 · 부재중",
+        "detail": "투자방 메시지가 도착한 직후 짧은 전화가 걸려 왔습니다.",
+        "icon": "calls",
+        "tone": "warning",
+        "minuteOffset": 4,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "room-invite",
+        "app": "social",
+        "sender": "모임",
+        "title": "비공개 투자방 초대",
+        "detail": "같은 문구를 쓴 계정이 짧은 시간에 여러 초대를 보냈습니다.",
+        "icon": "social",
+        "tone": "warning",
+        "minuteOffset": 9,
+        "stage": "pressure",
+        "interference": false
+      },
+      {
+        "id": "no-disclosure",
+        "app": "stocks",
+        "sender": "채움증권",
+        "title": "공식 공시 확인 필요",
+        "detail": "방에서 언급한 내용과 연결되는 공식 기록은 아직 보이지 않습니다.",
+        "icon": "stocks",
+        "tone": "routine",
+        "minuteOffset": 15,
+        "stage": "decision",
+        "interference": false
+      }
+    ],
     "checks": {
       "library": "소개된 연구소 명칭과 상담원 신원을 독립적으로 확인할 수 없습니다.",
       "bank": "안내된 입금처는 금융회사가 아닌 개인 명의 계좌입니다.",
@@ -249,6 +351,32 @@
       "공식 앱 안에서만 확인",
       "인증번호와 비밀번호를 요구하지 않음"
     ],
+    "sceneCues": [
+      {
+        "id": "first-trace",
+        "app": "bank",
+        "sender": "새봄은행",
+        "title": "보안 알림 확인 가능",
+        "detail": "문자 링크가 아닌 설치된 은행 앱에서도 확인할 수 있습니다.",
+        "icon": "bank",
+        "tone": "routine",
+        "minuteOffset": 4,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "official-record",
+        "app": "bank",
+        "sender": "새봄은행",
+        "title": "공식 보안 안내 일치",
+        "detail": "문자가 아닌 설치된 은행 앱에도 같은 점검 안내가 등록되어 있습니다.",
+        "icon": "bank",
+        "tone": "routine",
+        "minuteOffset": 8,
+        "stage": "signal",
+        "interference": false
+      }
+    ],
     "checks": {
       "bank": "은행 직원이 공식 시스템에서 동일한 이상거래 확인 요청을 찾았습니다.",
       "home": "직접 연 공식 은행 앱의 보안센터에 동일한 이상거래 확인 요청이 있습니다."
@@ -302,6 +430,44 @@
       "수강료와 환불 규정 공개",
       "수익 비보장 고지",
       "과장된 마감 홍보"
+    ],
+    "sceneCues": [
+      {
+        "id": "first-trace",
+        "app": "calendar",
+        "sender": "달력",
+        "title": "무료 설명회 · 오늘 마감",
+        "detail": "광고가 일정 접근을 유도했지만 공식 일정에는 등록되지 않았습니다.",
+        "icon": "calendar",
+        "tone": "warning",
+        "minuteOffset": 4,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "calendar-gap",
+        "app": "calendar",
+        "sender": "달력",
+        "title": "공식 일정 미등록",
+        "detail": "광고 속 설명회는 기관 일정표에서 확인되지 않습니다.",
+        "icon": "calendar",
+        "tone": "warning",
+        "minuteOffset": 10,
+        "stage": "pressure",
+        "interference": false
+      },
+      {
+        "id": "dinner-reminder",
+        "app": "calendar",
+        "sender": "달력",
+        "title": "저녁 약속 1시간 전",
+        "detail": "오늘 저장해 둔 친구와의 저녁 약속 알림입니다.",
+        "icon": "calendar",
+        "tone": "routine",
+        "minuteOffset": 15,
+        "stage": "decision",
+        "interference": true
+      }
     ],
     "checks": {
       "library": "사업자와 환불 약관은 확인되지만 광고 후기 일부가 지나치게 선별돼 있습니다.",
@@ -397,6 +563,44 @@
         "default": "첫 체험은 무료입니다. 결과를 먼저 보신 뒤 VIP 데이터가 필요한지 결정하셔도 됩니다."
       }
     },
+    "sceneCues": [
+      {
+        "id": "first-trace",
+        "app": "social",
+        "sender": "모임",
+        "title": "경기 시작 임박 게시물 증가",
+        "detail": "비슷한 적중 인증 이미지가 여러 계정에서 반복됩니다.",
+        "icon": "social",
+        "tone": "warning",
+        "minuteOffset": 4,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "group-cheer",
+        "app": "social",
+        "sender": "모임",
+        "title": "단체방 환호가 이어짐",
+        "detail": "비슷한 적중 이미지와 짧은 환호가 연달아 표시됩니다.",
+        "icon": "social",
+        "tone": "social",
+        "minuteOffset": 8,
+        "stage": "pressure",
+        "interference": false
+      },
+      {
+        "id": "recipient-warning",
+        "app": "bank",
+        "sender": "새봄은행",
+        "title": "수취인 확인 안내",
+        "detail": "충전 전 수취인과 운영 주체를 직접 확인하라는 안내가 표시됩니다.",
+        "icon": "bank",
+        "tone": "warning",
+        "minuteOffset": 14,
+        "stage": "decision",
+        "interference": false
+      }
+    ],
     "checks": {
       "library": "제시된 적중률은 전체 예측이 아니라 성공한 일부 기록만 모은 것입니다.",
       "police": "같은 제휴 사이트에서 충전 후 출금이 막혔다는 신고가 있습니다.",
@@ -456,6 +660,44 @@
       "피해자 명단을 확보했다고 주장",
       "초기 무료 상담",
       "환급 가능성을 암시"
+    ],
+    "sceneCues": [
+      {
+        "id": "first-trace",
+        "app": "calls",
+        "sender": "전화",
+        "title": "회수 상담 · 부재중 2건",
+        "detail": "문자와 같은 이름을 쓴 번호들이 연달아 전화를 걸었습니다.",
+        "icon": "calls",
+        "tone": "warning",
+        "minuteOffset": 4,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "repeat-caller",
+        "app": "calls",
+        "sender": "전화",
+        "title": "같은 이름의 번호 재접촉",
+        "detail": "문자 발신과 비슷한 이름의 번호가 다시 전화를 걸었습니다.",
+        "icon": "calls",
+        "tone": "warning",
+        "minuteOffset": 9,
+        "stage": "pressure",
+        "interference": false
+      },
+      {
+        "id": "second-harm-report",
+        "app": "browser",
+        "sender": "신고 조회",
+        "title": "유사 2차 피해 사례",
+        "detail": "피해 회수를 내세운 낯선 연락의 신고 사례가 확인됩니다.",
+        "icon": "browser",
+        "tone": "warning",
+        "minuteOffset": 15,
+        "stage": "decision",
+        "interference": false
+      }
     ],
     "checks": {
       "police": "경찰은 해당 명칭의 공식 회복기관이 없고 같은 문구의 2차 피해 신고가 있다고 안내합니다.",
@@ -518,6 +760,44 @@
       "공식 공지와 동일",
       "송금이나 개인정보 요구 없음"
     ],
+    "sceneCues": [
+      {
+        "id": "first-trace",
+        "app": "calendar",
+        "sender": "달력",
+        "title": "서비스 점검 일정",
+        "detail": "공식 앱 일정에 오늘 밤 점검 시간이 등록되어 있습니다.",
+        "icon": "calendar",
+        "tone": "routine",
+        "minuteOffset": 4,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "maintenance-record",
+        "app": "bank",
+        "sender": "새봄은행",
+        "title": "점검 기록 확인",
+        "detail": "공식 앱 안의 점검 시간과 알림 내용이 일치합니다.",
+        "icon": "bank",
+        "tone": "routine",
+        "minuteOffset": 8,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "photo-comment",
+        "app": "social",
+        "sender": "모임",
+        "title": "사진에 새 댓글",
+        "detail": "친구가 지난 모임 사진에 평범한 댓글을 남겼습니다.",
+        "icon": "social",
+        "tone": "social",
+        "minuteOffset": 13,
+        "stage": "pressure",
+        "interference": true
+      }
+    ],
     "checks": {
       "home": "공식 앱 공지사항에 동일한 점검 일정이 있습니다.",
       "library": "직접 입력한 공식 홈페이지 주소에서도 같은 공지가 확인됩니다."
@@ -572,6 +852,44 @@
       "투자설명서 확인 권고",
       "외부 송금이나 개인정보 요구 없음"
     ],
+    "sceneCues": [
+      {
+        "id": "first-trace",
+        "app": "stocks",
+        "sender": "채움증권",
+        "title": "공모 일정표 갱신",
+        "detail": "앱의 공식 청약 일정이 새로 반영되었습니다.",
+        "icon": "stocks",
+        "tone": "routine",
+        "minuteOffset": 4,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "ipo-record",
+        "app": "stocks",
+        "sender": "채움증권",
+        "title": "공식 청약 일정 일치",
+        "detail": "외부 홍보가 아닌 증권 앱 일정표에서 같은 일정을 확인할 수 있습니다.",
+        "icon": "stocks",
+        "tone": "routine",
+        "minuteOffset": 8,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "subscription-debit",
+        "app": "bank",
+        "sender": "새봄은행",
+        "title": "정기 결제 완료",
+        "detail": "평소 이용하던 구독 서비스의 정기 결제 알림입니다.",
+        "icon": "bank",
+        "tone": "routine",
+        "minuteOffset": 13,
+        "stage": "pressure",
+        "interference": true
+      }
+    ],
     "checks": {
       "home": "공식 증권 앱의 관심 일정에 같은 가상기업과 청약 기간이 등록돼 있습니다.",
       "library": "직접 확인한 공시 자료의 일정과 주관 정보가 앱 안내와 일치합니다."
@@ -625,6 +943,44 @@
       "유명 경제전문가가 참여한다고 주장",
       "무료 한정 강연이라고 주장",
       "별도 상담방과 전용 거래 화면 안내"
+    ],
+    "sceneCues": [
+      {
+        "id": "first-trace",
+        "app": "social",
+        "sender": "모임",
+        "title": "후원 표시가 작은 영상 광고",
+        "detail": "같은 영상이 이름이 다른 여러 투자 계정에서 노출됩니다.",
+        "icon": "social",
+        "tone": "warning",
+        "minuteOffset": 4,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "sponsored-repeat",
+        "app": "social",
+        "sender": "모임",
+        "title": "유사 광고 반복 노출",
+        "detail": "이름만 바꾼 투자 계정들이 비슷한 영상을 다시 올립니다.",
+        "icon": "social",
+        "tone": "warning",
+        "minuteOffset": 9,
+        "stage": "pressure",
+        "interference": false
+      },
+      {
+        "id": "official-search-gap",
+        "app": "browser",
+        "sender": "공식 검색",
+        "title": "운영 주체 정보 부족",
+        "detail": "광고에서 말한 운영 주체와 등록 정보를 독립적으로 찾기 어렵습니다.",
+        "icon": "browser",
+        "tone": "warning",
+        "minuteOffset": 15,
+        "stage": "decision",
+        "interference": false
+      }
     ],
     "checks": {
       "library": "영상에 등장한 전문가의 공식 채널에는 해당 강연이나 운영사 안내가 없습니다.",
@@ -724,6 +1080,44 @@
         "default": "처음 접하면 낯설 수 있습니다. 일반 공모주 청약과 다른 기관 배정 구조라는 점부터 설명드리겠습니다."
       }
     },
+    "sceneCues": [
+      {
+        "id": "first-trace",
+        "app": "calls",
+        "sender": "전화",
+        "title": "국제 번호 · 다시 걸기 요청",
+        "detail": "메신저 상담원이 통화로만 배정 절차를 설명하겠다고 합니다.",
+        "icon": "calls",
+        "tone": "warning",
+        "minuteOffset": 4,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "call-only",
+        "app": "calls",
+        "sender": "전화",
+        "title": "통화로만 설명 요구",
+        "detail": "상담원이 기록을 남기지 않는 통화로 절차를 안내하겠다고 합니다.",
+        "icon": "calls",
+        "tone": "warning",
+        "minuteOffset": 9,
+        "stage": "pressure",
+        "interference": false
+      },
+      {
+        "id": "issuer-gap",
+        "app": "stocks",
+        "sender": "채움증권",
+        "title": "공식 배정 기록 없음",
+        "detail": "청약·배정 절차와 연결되는 공식 기록은 확인되지 않습니다.",
+        "icon": "stocks",
+        "tone": "routine",
+        "minuteOffset": 15,
+        "stage": "decision",
+        "interference": false
+      }
+    ],
     "checks": {
       "library": "공시와 공식 증권사 청약 일정에서 주장한 해외 기업과 배정 계약을 확인할 수 없습니다.",
       "bank": "입금 요청은 증권사 청약 계좌가 아니라 상담 업체 명의의 일반 법인 계좌입니다.",
@@ -783,6 +1177,44 @@
       "가입 체험머니 주장",
       "빠른 정산 주장",
       "운영자·허가 정보 미표시"
+    ],
+    "sceneCues": [
+      {
+        "id": "first-trace",
+        "app": "calendar",
+        "sender": "달력",
+        "title": "경기 시작까지 35분",
+        "detail": "시간 제한을 강조하는 이벤트 문자가 경기 직전에 도착했습니다.",
+        "icon": "calendar",
+        "tone": "warning",
+        "minuteOffset": 4,
+        "stage": "signal",
+        "interference": false
+      },
+      {
+        "id": "countdown-room",
+        "app": "social",
+        "sender": "모임",
+        "title": "경기 전 적중 인증 증가",
+        "detail": "시작 시간이 가까워지자 단체방의 짧은 인증 게시물이 늘어납니다.",
+        "icon": "social",
+        "tone": "warning",
+        "minuteOffset": 8,
+        "stage": "pressure",
+        "interference": false
+      },
+      {
+        "id": "payment-condition",
+        "app": "bank",
+        "sender": "새봄은행",
+        "title": "결제 전 추가 조건 표시",
+        "detail": "결제 직전 수취인과 출금 조건을 다시 확인하라는 안내가 나타납니다.",
+        "icon": "bank",
+        "tone": "warning",
+        "minuteOffset": 14,
+        "stage": "decision",
+        "interference": false
+      }
     ],
     "checks": {
       "police": "해당 주소는 불법도박사이트 신고 대상과 같은 형태이며 운영 주체를 확인할 수 없습니다.",

@@ -14,6 +14,11 @@
   "role": "합성된 유명인 영상을 이용하는 가상의 일방형 투자 광고",
   "npcGoal": "유명인의 신뢰도를 빌려 별도 상담방과 가상 거래 화면으로 이동시킨다.",
   "allowedClaims": ["유명 경제전문가가 참여한다고 주장", "무료 한정 강연이라고 주장", "별도 상담방과 전용 거래 화면 안내"],
+  "sceneCues": [
+    { "id": "first-trace", "app": "social", "sender": "모임", "title": "후원 표시가 작은 영상 광고", "detail": "같은 영상이 이름이 다른 여러 투자 계정에서 노출됩니다.", "icon": "social", "tone": "warning", "minuteOffset": 4, "stage": "signal", "interference": false },
+    { "id": "sponsored-repeat", "app": "social", "sender": "모임", "title": "유사 광고 반복 노출", "detail": "이름만 바꾼 투자 계정들이 비슷한 영상을 다시 올립니다.", "icon": "social", "tone": "warning", "minuteOffset": 9, "stage": "pressure", "interference": false },
+    { "id": "official-search-gap", "app": "browser", "sender": "공식 검색", "title": "운영 주체 정보 부족", "detail": "광고에서 말한 운영 주체와 등록 정보를 독립적으로 찾기 어렵습니다.", "icon": "browser", "tone": "warning", "minuteOffset": 15, "stage": "decision", "interference": false }
+  ],
   "checks": {
     "library": "영상에 등장한 전문가의 공식 채널에는 해당 강연이나 운영사 안내가 없습니다.",
     "police": "유명인 영상과 가짜 투자 화면을 함께 사용한 유사 사칭 신고가 확인됩니다.",

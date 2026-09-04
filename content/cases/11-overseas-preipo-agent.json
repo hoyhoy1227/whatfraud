@@ -41,6 +41,11 @@
       "default": "처음 접하면 낯설 수 있습니다. 일반 공모주 청약과 다른 기관 배정 구조라는 점부터 설명드리겠습니다."
     }
   },
+  "sceneCues": [
+    { "id": "first-trace", "app": "calls", "sender": "전화", "title": "국제 번호 · 다시 걸기 요청", "detail": "메신저 상담원이 통화로만 배정 절차를 설명하겠다고 합니다.", "icon": "calls", "tone": "warning", "minuteOffset": 4, "stage": "signal", "interference": false },
+    { "id": "call-only", "app": "calls", "sender": "전화", "title": "통화로만 설명 요구", "detail": "상담원이 기록을 남기지 않는 통화로 절차를 안내하겠다고 합니다.", "icon": "calls", "tone": "warning", "minuteOffset": 9, "stage": "pressure", "interference": false },
+    { "id": "issuer-gap", "app": "stocks", "sender": "채움증권", "title": "공식 배정 기록 없음", "detail": "청약·배정 절차와 연결되는 공식 기록은 확인되지 않습니다.", "icon": "stocks", "tone": "routine", "minuteOffset": 15, "stage": "decision", "interference": false }
+  ],
   "checks": {
     "library": "공시와 공식 증권사 청약 일정에서 주장한 해외 기업과 배정 계약을 확인할 수 없습니다.",
     "bank": "입금 요청은 증권사 청약 계좌가 아니라 상담 업체 명의의 일반 법인 계좌입니다.",

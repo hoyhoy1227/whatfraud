@@ -14,6 +14,11 @@
   "role": "공식 증권 앱의 공모주 일정 알림",
   "npcGoal": "등록한 관심 일정과 공식 투자설명서 확인 경로를 안내한다.",
   "allowedClaims": ["공식 앱의 관심 일정과 일치", "투자설명서 확인 권고", "외부 송금이나 개인정보 요구 없음"],
+  "sceneCues": [
+    { "id": "first-trace", "app": "stocks", "sender": "채움증권", "title": "공모 일정표 갱신", "detail": "앱의 공식 청약 일정이 새로 반영되었습니다.", "icon": "stocks", "tone": "routine", "minuteOffset": 4, "stage": "signal", "interference": false },
+    { "id": "ipo-record", "app": "stocks", "sender": "채움증권", "title": "공식 청약 일정 일치", "detail": "외부 홍보가 아닌 증권 앱 일정표에서 같은 일정을 확인할 수 있습니다.", "icon": "stocks", "tone": "routine", "minuteOffset": 8, "stage": "signal", "interference": false },
+    { "id": "subscription-debit", "app": "bank", "sender": "새봄은행", "title": "정기 결제 완료", "detail": "평소 이용하던 구독 서비스의 정기 결제 알림입니다.", "icon": "bank", "tone": "routine", "minuteOffset": 13, "stage": "pressure", "interference": true }
+  ],
   "checks": {
     "home": "공식 증권 앱의 관심 일정에 같은 가상기업과 청약 기간이 등록돼 있습니다.",
     "library": "직접 확인한 공시 자료의 일정과 주관 정보가 앱 안내와 일치합니다."

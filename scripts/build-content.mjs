@@ -11,10 +11,13 @@ const verdicts = new Set(['normal', 'caution', 'scam']);
 const modes = new Set(['chat', 'notice', 'link']);
 const channels = new Set(['메신저', '문자', '앱 알림', 'SNS']);
 const locations = new Set(['home', 'bank', 'cafe', 'police', 'library']);
+const sceneApps = new Set(['messages', 'calls', 'bank', 'stocks', 'browser', 'social', 'calendar', 'notes', 'contacts', 'safety', 'settings', 'photos']);
+const sceneTones = new Set(['routine', 'social', 'warning']);
+const sceneStages = new Set(['signal', 'pressure', 'decision']);
 const dialogueTopics = ['source', 'identity', 'risk', 'money', 'default'];
 const commonKeys = new Set([
   'id', 'sender', 'handle', 'channel', 'mode', 'preview', 'verdict', 'category',
-  'initialMessages', 'role', 'npcGoal', 'allowedClaims', 'fallbackReplies', 'dialogue',
+  'initialMessages', 'role', 'npcGoal', 'allowedClaims', 'sceneCues', 'fallbackReplies', 'dialogue',
   'checks', 'clueLabels', 'debrief', 'safeAction', 'displayUrl', 'linkLabel',
   'landingTitle', 'landingCopy', 'landingCta', 'review',
 ]);
@@ -53,6 +56,30 @@ function validateCase(data, file, errors) {
   requireStringArray(data, 'initialMessages', 1, errors, file);
   requireStringArray(data, 'allowedClaims', 1, errors, file);
   requireStringArray(data, 'clueLabels', 2, errors, file);
+
+  if (!Array.isArray(data.sceneCues) || data.sceneCues.length < 1 || data.sceneCues.length > 3) {
+    addError(errors, file, 'sceneCues에는 영화형 앱 알림이 1~3개 필요합니다.');
+  } else {
+    const cueIds = new Set();
+    let previousOffset = 0;
+    for (const cue of data.sceneCues) {
+      if (!isRecord(cue)) {
+        addError(errors, file, 'sceneCues의 각 항목은 객체여야 합니다.');
+        continue;
+      }
+      for (const key of ['id', 'sender', 'title', 'detail', 'icon']) requireString(cue, key, errors, file);
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(cue.id ?? '')) addError(errors, file, 'sceneCues.id는 소문자 kebab-case여야 합니다.');
+      if (cueIds.has(cue.id)) addError(errors, file, `sceneCues에 중복 ID ${cue.id}가 있습니다.`);
+      cueIds.add(cue.id);
+      if (!sceneApps.has(cue.app)) addError(errors, file, `sceneCues의 앱 ${cue.app}은 지원하지 않습니다.`);
+      if (!sceneTones.has(cue.tone)) addError(errors, file, `sceneCues의 분위기 ${cue.tone}은 지원하지 않습니다.`);
+      if (!sceneStages.has(cue.stage)) addError(errors, file, `sceneCues의 단계 ${cue.stage}는 지원하지 않습니다.`);
+      if (!Number.isInteger(cue.minuteOffset) || cue.minuteOffset < 1 || cue.minuteOffset > 59) addError(errors, file, 'sceneCues.minuteOffset은 1~59 사이의 정수여야 합니다.');
+      if (Number.isInteger(cue.minuteOffset) && cue.minuteOffset <= previousOffset) addError(errors, file, 'sceneCues.minuteOffset은 앞 알림보다 커야 합니다.');
+      if (Number.isInteger(cue.minuteOffset)) previousOffset = cue.minuteOffset;
+      if (typeof cue.interference !== 'boolean') addError(errors, file, 'sceneCues.interference는 불리언이어야 합니다.');
+    }
+  }
 
   if (!isRecord(data.review)) {
     addError(errors, file, 'review 콘텐츠 검수표가 필요합니다.');

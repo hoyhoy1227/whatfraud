@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { CaseData, cases, DialogueTopic, LocationId, Verdict, verdictLabels } from './game-data';
+import { CaseData, cases, DialogueTopic, LocationId, SceneCueData, SceneStage, Verdict, verdictLabels } from './game-data';
 import { validateAiReply } from './ai-dialogue';
 import { ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore, formatGameClock } from './game-rules';
 import GameLoadingScreen from './game-loading';
@@ -29,7 +29,6 @@ type VerificationDefinition = { id: LocationId; label: string; app: string; desc
 type LoadingTask = { kind: 'startup' | 'case'; progress: number };
 type InvestigationEvent = { source: LocationId; evidence: string | null; minuteOffset: number };
 type CinematicCue = { app: AppId; sender: string; title: string; detail: string; icon: string; tone: 'routine' | 'social' | 'warning' };
-type SceneCue = CinematicCue & { id: string; minuteOffset: number; stage: 'signal' | 'pressure' | 'decision' };
 type HabitBadge = { id: string; icon: string; title: string; detail: string; unlocked: boolean };
 type PlayerPreferences = { reduceMotion: boolean; guideOnNewGame: boolean };
 type SavedProgress = {
@@ -56,6 +55,7 @@ const PROGRESS_SAVE_KEY = 'profit-24-progress-v1';
 const PREFERENCES_KEY = 'profit-24-preferences-v1';
 const AI_REQUEST_TIMEOUT_MS = 16_000;
 const AI_SLOW_NOTICE_MS = 10_000;
+const SCENE_GAP_MS: Record<DayAct, number> = { morning: 1_400, afternoon: 900, night: 550 };
 const verdictValues: Verdict[] = ['normal', 'caution', 'scam'];
 const responseActionValues: ResponseAction[] = ['verify', 'pause', 'block'];
 const phoneAppValues: PhoneApp[] = ['home', 'messages', 'calls', 'bank', 'stocks', 'browser', 'social', 'calendar', 'notes', 'contacts', 'safety', 'settings', 'photos'];
@@ -66,41 +66,6 @@ const dayActs: Record<DayAct, { eyebrow: string; title: string; detail: string }
   afternoon: { eyebrow: '2막 · 흔들리는 오후', title: '정보가 겹치기 시작한다', detail: '친구·광고·투자방의 주장이 이어져도 공식 경로를 놓치지 마세요.' },
   night: { eyebrow: '3막 · 압박의 밤', title: '서두르게 만드는 시간', detail: '마감과 재촉이 겹칠수록 결제보다 확인을 먼저 해야 합니다.' },
 };
-
-const cinematicCues: Record<string, CinematicCue> = {
-  'official-etf-fill': { app: 'stocks', sender: '채움증권', title: '주문 내역이 갱신됨', detail: '오늘 체결 내역이 증권 앱에도 기록되었습니다.', icon: 'stocks', tone: 'routine' },
-  'friend-hot-tip': { app: 'social', sender: '모임', title: '준호가 게시물을 공유함', detail: '메시지와 같은 종목을 언급한 짧은 게시물이 보입니다.', icon: 'social', tone: 'social' },
-  'vip-research-room': { app: 'calls', sender: '전화', title: '알 수 없는 번호 · 부재중', detail: '투자방 메시지가 도착한 직후 짧은 전화가 걸려 왔습니다.', icon: 'calls', tone: 'warning' },
-  'bank-fraud-check': { app: 'bank', sender: '새봄은행', title: '보안 알림 확인 가능', detail: '문자 링크가 아닌 설치된 은행 앱에서도 확인할 수 있습니다.', icon: 'bank', tone: 'routine' },
-  'paid-market-class': { app: 'calendar', sender: '달력', title: '무료 설명회 · 오늘 마감', detail: '광고가 일정 접근을 유도했지만 공식 일정에는 등록되지 않았습니다.', icon: 'calendar', tone: 'warning' },
-  'fixed-match-ai': { app: 'social', sender: '모임', title: '경기 시작 임박 게시물 증가', detail: '비슷한 적중 인증 이미지가 여러 계정에서 반복됩니다.', icon: 'social', tone: 'warning' },
-  'recovery-team': { app: 'calls', sender: '전화', title: '회수 상담 · 부재중 2건', detail: '문자와 같은 이름을 쓴 번호들이 연달아 전화를 걸었습니다.', icon: 'calls', tone: 'warning' },
-  'official-maintenance': { app: 'calendar', sender: '달력', title: '서비스 점검 일정', detail: '공식 앱 일정에 오늘 밤 점검 시간이 등록되어 있습니다.', icon: 'calendar', tone: 'routine' },
-  'official-ipo-calendar': { app: 'stocks', sender: '채움증권', title: '공모 일정표 갱신', detail: '앱의 공식 청약 일정이 새로 반영되었습니다.', icon: 'stocks', tone: 'routine' },
-  'ai-celebrity-room': { app: 'social', sender: '모임', title: '후원 표시가 작은 영상 광고', detail: '같은 영상이 이름이 다른 여러 투자 계정에서 노출됩니다.', icon: 'social', tone: 'warning' },
-  'overseas-preipo-agent': { app: 'calls', sender: '전화', title: '국제 번호 · 다시 걸기 요청', detail: '메신저 상담원이 통화로만 배정 절차를 설명하겠다고 합니다.', icon: 'calls', tone: 'warning' },
-  'worldcup-betting-bonus': { app: 'calendar', sender: '달력', title: '경기 시작까지 35분', detail: '시간 제한을 강조하는 이벤트 문자가 경기 직전에 도착했습니다.', icon: 'calendar', tone: 'warning' },
-};
-
-const cinematicSceneExtras: Record<string, SceneCue[]> = {
-  'official-etf-fill': [{ id: 'payday', app: 'bank', sender: '새봄은행', title: '월급 입금 완료', detail: '설치된 은행 앱의 입금 기록과 오늘의 주문 내역이 함께 보입니다.', icon: 'bank', tone: 'routine', minuteOffset: 9, stage: 'signal' }],
-  'friend-hot-tip': [{ id: 'disclosure-gap', app: 'stocks', sender: '채움증권', title: '관련 공시 없음', detail: '추천 내용과 연결되는 특별 공시는 공식 목록에서 확인되지 않습니다.', icon: 'stocks', tone: 'routine', minuteOffset: 11, stage: 'pressure' }],
-  'vip-research-room': [{ id: 'room-invite', app: 'social', sender: '모임', title: '비공개 투자방 초대', detail: '같은 문구를 쓴 계정이 짧은 시간에 여러 초대를 보냈습니다.', icon: 'social', tone: 'warning', minuteOffset: 9, stage: 'pressure' }, { id: 'no-disclosure', app: 'stocks', sender: '채움증권', title: '공식 공시 확인 필요', detail: '방에서 언급한 내용과 연결되는 공식 기록은 아직 보이지 않습니다.', icon: 'stocks', tone: 'routine', minuteOffset: 15, stage: 'decision' }],
-  'bank-fraud-check': [{ id: 'official-record', app: 'bank', sender: '새봄은행', title: '공식 보안 안내 일치', detail: '문자가 아닌 설치된 은행 앱에도 같은 점검 안내가 등록되어 있습니다.', icon: 'bank', tone: 'routine', minuteOffset: 8, stage: 'signal' }],
-  'paid-market-class': [{ id: 'calendar-gap', app: 'calendar', sender: '달력', title: '공식 일정 미등록', detail: '광고 속 설명회는 기관 일정표에서 확인되지 않습니다.', icon: 'calendar', tone: 'warning', minuteOffset: 10, stage: 'pressure' }],
-  'fixed-match-ai': [{ id: 'group-cheer', app: 'social', sender: '모임', title: '단체방 환호가 이어짐', detail: '비슷한 적중 이미지와 짧은 환호가 연달아 표시됩니다.', icon: 'social', tone: 'social', minuteOffset: 8, stage: 'pressure' }, { id: 'recipient-warning', app: 'bank', sender: '새봄은행', title: '수취인 확인 안내', detail: '충전 전 수취인과 운영 주체를 직접 확인하라는 안내가 표시됩니다.', icon: 'bank', tone: 'warning', minuteOffset: 14, stage: 'decision' }],
-  'recovery-team': [{ id: 'repeat-caller', app: 'calls', sender: '전화', title: '같은 이름의 번호 재접촉', detail: '문자 발신과 비슷한 이름의 번호가 다시 전화를 걸었습니다.', icon: 'calls', tone: 'warning', minuteOffset: 9, stage: 'pressure' }, { id: 'second-harm-report', app: 'browser', sender: '신고 조회', title: '유사 2차 피해 사례', detail: '피해 회수를 내세운 낯선 연락의 신고 사례가 확인됩니다.', icon: 'browser', tone: 'warning', minuteOffset: 15, stage: 'decision' }],
-  'official-maintenance': [{ id: 'maintenance-record', app: 'bank', sender: '새봄은행', title: '점검 기록 확인', detail: '공식 앱 안의 점검 시간과 알림 내용이 일치합니다.', icon: 'bank', tone: 'routine', minuteOffset: 8, stage: 'signal' }],
-  'official-ipo-calendar': [{ id: 'ipo-record', app: 'stocks', sender: '채움증권', title: '공식 청약 일정 일치', detail: '외부 홍보가 아닌 증권 앱 일정표에서 같은 일정을 확인할 수 있습니다.', icon: 'stocks', tone: 'routine', minuteOffset: 8, stage: 'signal' }],
-  'ai-celebrity-room': [{ id: 'sponsored-repeat', app: 'social', sender: '모임', title: '유사 광고 반복 노출', detail: '이름만 바꾼 투자 계정들이 비슷한 영상을 다시 올립니다.', icon: 'social', tone: 'warning', minuteOffset: 9, stage: 'pressure' }, { id: 'official-search-gap', app: 'browser', sender: '공식 검색', title: '운영 주체 정보 부족', detail: '광고에서 말한 운영 주체와 등록 정보를 독립적으로 찾기 어렵습니다.', icon: 'browser', tone: 'warning', minuteOffset: 15, stage: 'decision' }],
-  'overseas-preipo-agent': [{ id: 'call-only', app: 'calls', sender: '전화', title: '통화로만 설명 요구', detail: '상담원이 기록을 남기지 않는 통화로 절차를 안내하겠다고 합니다.', icon: 'calls', tone: 'warning', minuteOffset: 9, stage: 'pressure' }, { id: 'issuer-gap', app: 'stocks', sender: '채움증권', title: '공식 배정 기록 없음', detail: '청약·배정 절차와 연결되는 공식 기록은 확인되지 않습니다.', icon: 'stocks', tone: 'routine', minuteOffset: 15, stage: 'decision' }],
-  'worldcup-betting-bonus': [{ id: 'countdown-room', app: 'social', sender: '모임', title: '경기 전 적중 인증 증가', detail: '시작 시간이 가까워지자 단체방의 짧은 인증 게시물이 늘어납니다.', icon: 'social', tone: 'warning', minuteOffset: 8, stage: 'pressure' }, { id: 'payment-condition', app: 'bank', sender: '새봄은행', title: '결제 전 추가 조건 표시', detail: '결제 직전 수취인과 출금 조건을 다시 확인하라는 안내가 나타납니다.', icon: 'bank', tone: 'warning', minuteOffset: 14, stage: 'decision' }],
-};
-
-function sceneCuesForCase(gameCase: CaseData): SceneCue[] {
-  const initial: SceneCue = { ...cinematicCues[gameCase.id], id: 'first-trace', minuteOffset: 4, stage: 'signal' };
-  return [initial, ...(cinematicSceneExtras[gameCase.id] ?? [])];
-}
 
 function actForIndex(index: number): DayAct {
   if (index < 4) return 'morning';
@@ -188,7 +153,7 @@ function readSavedProgress(serialized: string | null): SavedProgress | null {
       return [gameCase.id, events];
     }).filter(([, events]) => (events as InvestigationEvent[]).length > 0));
     const seenSceneCues = Object.fromEntries(cases.slice(0, availableCount).map((gameCase) => {
-      const knownCueIds = new Set(sceneCuesForCase(gameCase).map((cue) => cue.id));
+      const knownCueIds = new Set(gameCase.sceneCues.map((cue) => cue.id));
       const items = raw.seenSceneCues?.[gameCase.id];
       return [gameCase.id, Array.isArray(items) ? items.filter((item): item is string => typeof item === 'string' && knownCueIds.has(item)) : []];
     }).filter(([, items]) => (items as string[]).length > 0));
@@ -316,6 +281,7 @@ function fallbackReply(gameCase: CaseData, userText: string, messages: ChatMessa
 export default function GameClient() {
   const dialogReturnFocus = useRef<HTMLElement | null>(null);
   const objectiveCueTimer = useRef<number | null>(null);
+  const sceneCueTimer = useRef<number | null>(null);
   const [started, setStarted] = useState(false);
   const [loadingTask, setLoadingTask] = useState<LoadingTask | null>(null);
   const [phoneApp, setPhoneApp] = useState<PhoneApp>('home');
@@ -359,6 +325,7 @@ export default function GameClient() {
   const [showStartSettings, setShowStartSettings] = useState(false);
   const [confirmNewGame, setConfirmNewGame] = useState(false);
   const [showPauseMenu, setShowPauseMenu] = useState(false);
+  const [sceneCueHold, setSceneCueHold] = useState(false);
 
   const activeCase = cases[activeIndex];
   const activeChat = chats[activeCase.id] ?? initialChat(activeCase);
@@ -372,9 +339,17 @@ export default function GameClient() {
   const groundedCount = results.filter((result) => result.selectedEvidence.length > 0).length;
   const availableCases = cases.slice(0, availableCount);
   const unreadCount = availableCases.filter((item) => !openedCases[item.id]).length;
-  const gameTime = formatGameClock(ARRIVAL_MINUTES[Math.min(availableCount - 1, ARRIVAL_MINUTES.length - 1)] + activeEvidence.length * 6);
   const activeAct = actForIndex(activeIndex);
   const actInfo = dayActs[activeAct];
+  const contactReviewed = Boolean(openedCases[activeCase.id]);
+  const sceneCues = activeCase.sceneCues;
+  const viewedSceneCueIds = new Set(seenSceneCues[activeCase.id] ?? []);
+  const viewedSceneCues = sceneCues.filter((cue) => viewedSceneCueIds.has(cue.id));
+  const nextSceneCue = contactReviewed && !sceneCueHold ? sceneCues.find((cue) => !viewedSceneCueIds.has(cue.id)) ?? null : null;
+  const latestSceneOffset = viewedSceneCues.reduce((latest, cue) => Math.max(latest, cue.minuteOffset), 0);
+  const clockOffset = Math.max(activeEvidence.length * 6, latestSceneOffset);
+  const gameTime = formatGameClock(ARRIVAL_MINUTES[Math.min(availableCount - 1, ARRIVAL_MINUTES.length - 1)] + clockOffset);
+  const sceneStage: SceneStage = nextSceneCue?.stage ?? viewedSceneCues.at(-1)?.stage ?? 'signal';
   const previousResult = activeIndex > 0 ? results.find((result) => result.caseId === cases[activeIndex - 1].id) : undefined;
   const previousCase = activeIndex > 0 ? cases[activeIndex - 1] : undefined;
   const previousConsequence = previousResult && previousCase
@@ -416,11 +391,6 @@ export default function GameClient() {
     { id: 'no-overblock', icon: '○', title: '과잉 차단 방지', detail: '정상 연락을 공식 확인 후 안전하게 처리했습니다.', unlocked: correctNormalCount >= 2 },
   ];
   const earnedBadges = habitBadges.filter((badge) => badge.unlocked);
-  const contactReviewed = Boolean(openedCases[activeCase.id]);
-  const sceneCues = sceneCuesForCase(activeCase);
-  const viewedSceneCueIds = new Set(seenSceneCues[activeCase.id] ?? []);
-  const viewedSceneCues = sceneCues.filter((cue) => viewedSceneCueIds.has(cue.id));
-  const nextSceneCue = contactReviewed ? sceneCues.find((cue) => !viewedSceneCueIds.has(cue.id)) ?? null : null;
   const isAmbientEntry = results.length === 0 && activeIndex === 0 && phoneLocked && !contactReviewed;
   const objectiveStage = activeResult ? 3 : activeEvidence.length ? 2 : contactReviewed ? 1 : 0;
   const objective = [
@@ -517,6 +487,7 @@ export default function GameClient() {
 
   useEffect(() => () => {
     if (objectiveCueTimer.current !== null) window.clearTimeout(objectiveCueTimer.current);
+    if (sceneCueTimer.current !== null) window.clearTimeout(sceneCueTimer.current);
   }, []);
 
   useEffect(() => {
@@ -688,6 +659,8 @@ export default function GameClient() {
     }
     const result = results.find((entry) => entry.caseId === cases[index].id);
     setActiveIndex(index);
+    setSceneCueHold(false);
+    if (sceneCueTimer.current !== null) window.clearTimeout(sceneCueTimer.current);
     setShowDebrief(Boolean(result));
     setPhoneLocked(false);
     setPhoneApp('messages');
@@ -734,6 +707,8 @@ export default function GameClient() {
     await wait(180);
     setAvailableCount(progress.availableCount);
     setActiveIndex(nextIndex);
+    setSceneCueHold(false);
+    if (sceneCueTimer.current !== null) window.clearTimeout(sceneCueTimer.current);
     setPicked(null);
     setConfidence(70);
     setSelectedAction(null);
@@ -871,6 +846,7 @@ export default function GameClient() {
       setOpenedCases(progressToRestore.openedCases);
       setOpenedCues(progressToRestore.openedCues);
       setSeenSceneCues(progressToRestore.seenSceneCues);
+      setSceneCueHold(false);
       setSeenFollowUps(progressToRestore.seenFollowUps);
       setSafetySeenCount(progressToRestore.safetySeenCount);
       setPhoneApp(progressToRestore.phoneApp);
@@ -907,14 +883,19 @@ export default function GameClient() {
     setSelectedEvidence((current) => current.includes(item) ? current.filter((entry) => entry !== item) : [...current, item]);
   }
 
-  function markSceneCueSeen(cue: SceneCue) {
+  function markSceneCueSeen(cue: SceneCueData) {
     setSeenSceneCues((current) => {
       const seen = current[activeCase.id] ?? [];
       if (seen.includes(cue.id)) return current;
       return { ...current, [activeCase.id]: [...seen, cue.id] };
     });
     if (cue.id === 'first-trace') setOpenedCues((current) => ({ ...current, [activeCase.id]: true }));
-    setNotice(`${cue.sender} 알림을 확인했습니다. 다른 앱의 기록도 직접 비교해 보세요.`);
+    setSceneCueHold(true);
+    if (sceneCueTimer.current !== null) window.clearTimeout(sceneCueTimer.current);
+    sceneCueTimer.current = window.setTimeout(() => setSceneCueHold(false), SCENE_GAP_MS[activeAct]);
+    setNotice(cue.interference
+      ? `${cue.sender}의 평범한 알림을 확인했습니다.`
+      : `${cue.sender} 알림을 확인했습니다. 다른 앱의 기록도 직접 비교해 보세요.`);
   }
 
   function selectPhoneApp(target: PhoneApp) {
@@ -956,6 +937,8 @@ export default function GameClient() {
     setOpenedCases({});
     setOpenedCues({});
     setSeenSceneCues({});
+    setSceneCueHold(false);
+    if (sceneCueTimer.current !== null) window.clearTimeout(sceneCueTimer.current);
     setSeenFollowUps({});
     setSafetySeenCount(0);
     setShowDebrief(false);
@@ -997,7 +980,7 @@ export default function GameClient() {
   }
 
   return (
-    <main className={`game-shell phone-only-game act-${activeAct} ${isAmbientEntry ? 'ambient-entry' : ''}`}>
+    <main className={`game-shell phone-only-game act-${activeAct} scene-${sceneStage} ${isAmbientEntry ? 'ambient-entry' : ''}`}>
       {!isAmbientEntry && <header className="game-hud">
         <div className="brand-block"><span className="brand-kicker">투자·도박 사기 판별</span><h1>수익률 24시</h1></div>
         <div className="hud-right">
@@ -1015,7 +998,7 @@ export default function GameClient() {
         <div className="mission-copy"><span>{actInfo.eyebrow} · 현재 목표</span><b>{objective.title}</b><small>{objective.detail}</small></div>
       </section>}
 
-      <section className={`phone-screen phone-os-shell act-${activeAct} ${phoneLocked ? 'is-locked' : ''}`} aria-label="휴대폰 화면">
+      <section className={`phone-screen phone-os-shell act-${activeAct} scene-${sceneStage} ${phoneLocked ? 'is-locked' : ''}`} aria-label="휴대폰 화면">
           <div className="phone-statusbar"><b>{gameTime}</b><span>SIM · Wi-Fi ▮▮▮</span></div>
           {!phoneLocked && <div className="phone-context-banner" aria-live="polite"><span>{notice}</span><b>근거 {activeEvidence.length}</b></div>}
 
@@ -1146,7 +1129,7 @@ export default function GameClient() {
               <ol>
                 <li><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex])}</time><i className="rewind-contact">1</i><span><b>연락 도착</b><small>{activeCase.sender} · {activeCase.channel}</small></span></li>
                 <li className={contactReviewed ? 'completed' : 'missed'}><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + 2)}</time><i>2</i><span><b>{contactReviewed ? '연락 내용 확인' : '내용을 충분히 열어보지 않음'}</b><small>{contactReviewed ? activeCase.preview : '발신 경로와 전체 문맥을 먼저 확인하세요.'}</small></span></li>
-                {rewindScenes.map((cue, index) => <li key={cue.id} className={cue.seen ? 'completed scene-rewind' : 'missed scene-rewind'}><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + cue.minuteOffset)}</time><i>{index + 3}</i><span><b>{cue.seen ? `${cue.sender} · ${cue.title}` : '도착했지만 확인하지 않은 앱 알림'}</b><small>{cue.seen ? cue.detail : '다른 앱에 남은 기록을 열어보고 공식 확인 전의 흐름을 비교하세요.'}</small></span></li>)}
+                {rewindScenes.map((cue, index) => <li key={cue.id} className={cue.seen ? 'completed scene-rewind' : 'missed scene-rewind'}><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + cue.minuteOffset)}</time><i>{index + 3}</i><span><b>{cue.seen ? `${cue.sender} · ${cue.title}` : cue.interference ? '확인하지 않은 일상 알림' : '도착했지만 확인하지 않은 앱 알림'}</b><small>{cue.seen ? `${cue.interference ? '사건과 무관한 일상 알림 · ' : ''}${cue.detail}` : cue.interference ? '사건과 직접 관련 없는 정상 알림도 함께 도착했습니다.' : '다른 앱에 남은 기록을 열어보고 공식 확인 전의 흐름을 비교하세요.'}</small></span></li>)}
                 {rewindHistory.map((event, index) => {
                   const source = verificationActions.find((item) => item.id === event.source);
                   return <li key={event.source} className={event.evidence ? 'completed' : 'missed'}><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + event.minuteOffset)}</time><i>{index + 3 + rewindScenes.length}</i><span><b>{source?.label ?? '공식 경로 확인'}</b><small>{event.evidence ?? '현재 연락과 직접 연결되는 기록을 찾지 못했습니다.'}</small></span></li>;

@@ -94,7 +94,7 @@ async function main() {
   assert(client.includes('isAmbientEntry') && css.includes('.phone-only-game.ambient-entry'), '첫 잠금 화면의 조용한 휴대폰 진입 연출이 없습니다.', errors);
   assert(client.includes('<h1 id="game-title">수익률 24시</h1>') && !client.includes('className="intro-disclaimer"'), '시작 화면에 게임 제목 외의 불필요한 설명이 남아 있습니다.', errors);
   assert(client.includes('showObjectiveCue') && client.includes('setShowObjectiveCue(false), 4200') && css.includes('.mission-strip.objective-toast'), '상황 변화에 따라 나타났다 사라지는 목표 안내가 없습니다.', errors);
-  assert(client.includes('cinematicCues') && client.includes('ambient-notification') && client.includes('이전 선택의 여파'), '사건별 주변 알림 또는 이전 선택의 후속 연출이 없습니다.', errors);
+  assert(client.includes('activeCase.sceneCues') && client.includes('ambient-notification') && client.includes('이전 선택의 여파'), '사건별 주변 알림 또는 이전 선택의 후속 연출이 없습니다.', errors);
   assert(client.includes('verificationHistory') && client.includes('case-rewind') && client.includes('사건 되감기'), '조사 순서 저장 또는 판정 후 되감기 복습이 없습니다.', errors);
   assert(client.includes('openedCues') && client.includes('seenFollowUps') && client.includes('safetySeenCount') && client.includes('!openedCases[item.id]'), '메시지·앱·후속 알림의 읽음 상태가 저장되거나 표시에서 제거되지 않습니다.', errors);
   assert(client.includes('!contactReviewed && <button className="home-notification"') && client.includes('nextSceneCue && <button'), '확인한 홈·잠금 알림을 한 건씩 이어 보여 주는 흐름이 없습니다.', errors);
@@ -145,7 +145,7 @@ async function main() {
   assert(client.includes('followUpCue') && client.includes('habitBadges') && css.includes('.habit-badges') && css.includes('.summary-badges'), '선택 결과 후속 알림 또는 안전 습관 배지가 없습니다.', errors);
   assert(client.includes('showPauseMenu') && client.includes('returnToMainMenu') && client.includes('저장하고 메인 메뉴로'), '게임 중 메뉴 또는 즉시 저장 후 메인 화면 복귀가 없습니다.', errors);
   assert(css.includes('.game-menu-button') && css.includes('.pause-menu-backdrop') && css.includes('.pause-progress'), '게임 중 메뉴의 화면 스타일이 없습니다.', errors);
-  assert(client.includes('cinematicSceneExtras') && client.includes('nextSceneCue') && client.includes('seenSceneCues'), '사건별 순차 앱 흔적 또는 확인 상태 저장이 없습니다.', errors);
+  assert(client.includes('SCENE_GAP_MS') && client.includes('nextSceneCue') && client.includes('seenSceneCues'), '사건별 순차 앱 흔적 또는 확인 상태 저장이 없습니다.', errors);
   assert(client.includes('rewindScenes') && client.includes('도착했지만 확인하지 않은 앱 알림') && css.includes('.scene-rewind'), '사건 되감기에 앱 흔적과 놓친 알림 복기가 없습니다.', errors);
 
   if (errors.length) throw new Error(`출시 전 자동 점검 실패:\n- ${errors.join('\n- ')}`);

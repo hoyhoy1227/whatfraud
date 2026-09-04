@@ -41,6 +41,11 @@
       "default": "첫 체험은 무료입니다. 결과를 먼저 보신 뒤 VIP 데이터가 필요한지 결정하셔도 됩니다."
     }
   },
+  "sceneCues": [
+    { "id": "first-trace", "app": "social", "sender": "모임", "title": "경기 시작 임박 게시물 증가", "detail": "비슷한 적중 인증 이미지가 여러 계정에서 반복됩니다.", "icon": "social", "tone": "warning", "minuteOffset": 4, "stage": "signal", "interference": false },
+    { "id": "group-cheer", "app": "social", "sender": "모임", "title": "단체방 환호가 이어짐", "detail": "비슷한 적중 이미지와 짧은 환호가 연달아 표시됩니다.", "icon": "social", "tone": "social", "minuteOffset": 8, "stage": "pressure", "interference": false },
+    { "id": "recipient-warning", "app": "bank", "sender": "새봄은행", "title": "수취인 확인 안내", "detail": "충전 전 수취인과 운영 주체를 직접 확인하라는 안내가 표시됩니다.", "icon": "bank", "tone": "warning", "minuteOffset": 14, "stage": "decision", "interference": false }
+  ],
   "checks": {
     "library": "제시된 적중률은 전체 예측이 아니라 성공한 일부 기록만 모은 것입니다.",
     "police": "같은 제휴 사이트에서 충전 후 출금이 막혔다는 신고가 있습니다.",

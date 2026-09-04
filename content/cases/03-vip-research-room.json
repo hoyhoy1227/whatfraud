@@ -41,6 +41,11 @@
       "default": "의심하시는 게 당연합니다. 우선 무료 자료만 살펴보시고 판단하셔도 됩니다."
     }
   },
+  "sceneCues": [
+    { "id": "first-trace", "app": "calls", "sender": "전화", "title": "알 수 없는 번호 · 부재중", "detail": "투자방 메시지가 도착한 직후 짧은 전화가 걸려 왔습니다.", "icon": "calls", "tone": "warning", "minuteOffset": 4, "stage": "signal", "interference": false },
+    { "id": "room-invite", "app": "social", "sender": "모임", "title": "비공개 투자방 초대", "detail": "같은 문구를 쓴 계정이 짧은 시간에 여러 초대를 보냈습니다.", "icon": "social", "tone": "warning", "minuteOffset": 9, "stage": "pressure", "interference": false },
+    { "id": "no-disclosure", "app": "stocks", "sender": "채움증권", "title": "공식 공시 확인 필요", "detail": "방에서 언급한 내용과 연결되는 공식 기록은 아직 보이지 않습니다.", "icon": "stocks", "tone": "routine", "minuteOffset": 15, "stage": "decision", "interference": false }
+  ],
   "checks": {
     "library": "소개된 연구소 명칭과 상담원 신원을 독립적으로 확인할 수 없습니다.",
     "bank": "안내된 입금처는 금융회사가 아닌 개인 명의 계좌입니다.",

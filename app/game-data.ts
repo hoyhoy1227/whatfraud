@@ -4,6 +4,22 @@ export type Verdict = 'normal' | 'caution' | 'scam';
 export type LocationId = 'home' | 'bank' | 'cafe' | 'police' | 'library';
 export type ContactMode = 'chat' | 'notice' | 'link';
 export type DialogueTopic = 'source' | 'identity' | 'risk' | 'money' | 'default';
+export type SceneAppId = 'messages' | 'calls' | 'bank' | 'stocks' | 'browser' | 'social' | 'calendar' | 'notes' | 'contacts' | 'safety' | 'settings' | 'photos';
+export type SceneStage = 'signal' | 'pressure' | 'decision';
+export type SceneTone = 'routine' | 'social' | 'warning';
+
+export type SceneCueData = {
+  id: string;
+  app: SceneAppId;
+  sender: string;
+  title: string;
+  detail: string;
+  icon: string;
+  tone: SceneTone;
+  minuteOffset: number;
+  stage: SceneStage;
+  interference: boolean;
+};
 
 export type DialogueProfile = {
   voice: string;
@@ -40,6 +56,7 @@ export type CaseData = {
   role: string;
   npcGoal: string;
   allowedClaims: string[];
+  sceneCues: SceneCueData[];
   fallbackReplies?: string[];
   dialogue?: DialogueProfile;
   checks: Partial<Record<LocationId, string>>;
@@ -77,6 +94,15 @@ export function validateCases(items: CaseData[]) {
     modeCounts[item.mode] += 1;
 
     if (!item.initialMessages.length) errors.push(`${item.id}: 표시할 최초 연락이 없습니다.`);
+    if (!Array.isArray(item.sceneCues) || item.sceneCues.length < 1 || item.sceneCues.length > 3) errors.push(`${item.id}: 영화형 앱 알림이 1~3개 필요합니다.`);
+    const cueIds = new Set<string>();
+    let previousCueOffset = 0;
+    for (const cue of item.sceneCues ?? []) {
+      if (cueIds.has(cue.id)) errors.push(`${item.id}: 중복된 영화형 알림 ID ${cue.id}입니다.`);
+      cueIds.add(cue.id);
+      if (cue.minuteOffset <= previousCueOffset) errors.push(`${item.id}: 영화형 알림 시간은 순서대로 증가해야 합니다.`);
+      previousCueOffset = cue.minuteOffset;
+    }
     if (Object.keys(item.checks).length < 2) errors.push(`${item.id}: 독립 확인 장소가 2곳 이상 필요합니다.`);
     if (item.clueLabels.length < 2) errors.push(`${item.id}: 복기 단서가 2개 이상 필요합니다.`);
     if (!item.review || item.review.sourceBasis.length < 1) errors.push(`${item.id}: 실제 유형 근거가 포함된 콘텐츠 검수표가 필요합니다.`);
