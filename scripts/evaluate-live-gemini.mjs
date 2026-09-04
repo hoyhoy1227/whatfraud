@@ -27,7 +27,7 @@ for (const test of tests) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-whatfraud-session': crypto.randomUUID() },
       body: JSON.stringify({ caseId: test.caseId, messages: test.messages }),
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(30_000),
     });
     const payload = await response.json();
     if (!response.ok) {

@@ -91,7 +91,7 @@ async function main() {
   assert(client.includes('verificationHistory') && client.includes('case-rewind') && client.includes('사건 되감기'), '조사 순서 저장 또는 판정 후 되감기 복습이 없습니다.', errors);
   assert(client.includes('openedCues') && client.includes('seenFollowUps') && client.includes('safetySeenCount') && client.includes('!openedCases[item.id]'), '메시지·앱·후속 알림의 읽음 상태가 저장되거나 표시에서 제거되지 않습니다.', errors);
   assert(client.includes('!contactReviewed && <button className="home-notification"') && client.includes('nextSceneCue && <button'), '확인한 홈·잠금 알림을 한 건씩 이어 보여 주는 흐름이 없습니다.', errors);
-  assert(client.includes('AI_REQUEST_TIMEOUT_MS = 16_000') && client.includes("setTypingPhase('paused')"), '보조 AI의 전체 대기 제한 또는 휴대폰 입력 상태 연출이 올바르지 않습니다.', errors);
+  assert(client.includes('AI_REQUEST_TIMEOUT_MS = 26_000') && client.includes("setTypingPhase('paused')"), '보조 AI의 전체 대기 제한 또는 휴대폰 입력 상태 연출이 올바르지 않습니다.', errors);
   const saveSnapshot = client.match(/const snapshot: SavedProgress = \{([\s\S]*?)\n    \};/);
   assert(client.includes("const PROGRESS_SAVE_KEY = 'profit-24-progress-v1'"), '버전이 있는 진행 저장 키가 없습니다.', errors);
   assert(client.includes('readSavedProgress') && client.includes('calculateCaseScore({ correct, actionCorrect, confidence'), '저장된 판정과 점수를 다시 검증하는 복원 절차가 없습니다.', errors);
@@ -101,7 +101,7 @@ async function main() {
   assert(aiRoute.includes('process.env.GEMINI_API_KEY') && !aiRoute.includes('process.env.NEXT_PUBLIC_GEMINI_API_KEY'), 'Gemini 키가 서버 전용 환경 변수로 격리되지 않았습니다.', errors);
   assert(aiRoute.includes("gameCase.mode !== 'chat'") && aiRoute.includes('value.length > 6'), '서버의 대화형 사건 또는 최근 메시지 제한이 없습니다.', errors);
   assert(aiRoute.includes("GEMINI_MODEL = 'gemini-3.6-flash'") && aiRoute.includes('maxOutputTokens: 120') && aiRoute.includes("thinkingLevel: 'minimal'"), 'Gemini 3.6 Flash의 짧은 응답 설정이 고정되지 않았습니다.', errors);
-  assert(aiRoute.includes('PROVIDER_TIMEOUT_MS = 14_000'), 'Gemini 공급자 대기 시간이 14초로 설정되지 않았습니다.', errors);
+  assert(aiRoute.includes('PROVIDER_TIMEOUT_MS = 24_000'), 'Gemini 공급자 대기 시간이 24초로 설정되지 않았습니다.', errors);
   assert(!aiRoute.includes('temperature:') && !aiRoute.includes('topP:') && !aiRoute.includes('thinkingBudget:'), 'Gemini 3.6 Flash에서 폐기된 생성 옵션이 남아 있습니다.', errors);
   assert(aiRoute.includes('SESSION_MINUTE_LIMIT = 5') && aiRoute.includes('IP_DAY_LIMIT = 120'), '서버의 기본 호출 제한이 없습니다.', errors);
   assert(aiRoute.includes("'Cache-Control': 'no-store'") && aiRoute.includes('sanitizePlayerText'), '보조 AI 응답 캐시 차단 또는 입력 정제가 없습니다.', errors);
