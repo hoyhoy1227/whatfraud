@@ -98,7 +98,7 @@ async function main() {
   assert(client.includes('verificationHistory') && client.includes('case-rewind') && client.includes('사건 되감기'), '조사 순서 저장 또는 판정 후 되감기 복습이 없습니다.', errors);
   assert(client.includes('openedCues') && client.includes('seenFollowUps') && client.includes('safetySeenCount') && client.includes('!openedCases[item.id]'), '메시지·앱·후속 알림의 읽음 상태가 저장되거나 표시에서 제거되지 않습니다.', errors);
   assert(client.includes('!contactReviewed && <button className="home-notification"') && client.includes('nextSceneCue && <button'), '확인한 홈·잠금 알림을 한 건씩 이어 보여 주는 흐름이 없습니다.', errors);
-  assert(client.includes('AI_REQUEST_TIMEOUT_MS = 16_000') && client.includes('AI_SLOW_NOTICE_MS = 10_000'), '보조 AI의 전체 대기 시간 또는 지연 안내 기준이 올바르지 않습니다.', errors);
+  assert(client.includes('AI_REQUEST_TIMEOUT_MS = 16_000') && client.includes("setTypingPhase('paused')"), '보조 AI의 전체 대기 제한 또는 휴대폰 입력 상태 연출이 올바르지 않습니다.', errors);
   const saveSnapshot = client.match(/const snapshot: SavedProgress = \{([\s\S]*?)\n    \};/);
   assert(client.includes("const PROGRESS_SAVE_KEY = 'profit-24-progress-v1'"), '버전이 있는 진행 저장 키가 없습니다.', errors);
   assert(client.includes('readSavedProgress') && client.includes('calculateCaseScore({ correct, actionCorrect, confidence'), '저장된 판정과 점수를 다시 검증하는 복원 절차가 없습니다.', errors);
@@ -128,13 +128,13 @@ async function main() {
   assert(client.includes("import AppIcon from './app-icon'") && loading.includes("import AppIcon from './app-icon'"), '홈 화면과 로딩 화면이 공통 앱 아이콘을 사용하지 않습니다.', errors);
   assert(['messages', 'calls', 'bank', 'stocks', 'browser', 'social', 'calendar', 'notes', 'contacts', 'safety', 'settings', 'photos'].every((name) => appIcon.includes(`case '${name}'`)), '앱 기능별 벡터 아이콘이 모두 구현되지 않았습니다.', errors);
   assert(appIcon.includes('<svg') && appIcon.includes('strokeLinecap="round"') && css.includes('.app-icon svg, .mini-icon svg'), '확대 가능한 벡터 아이콘 또는 크기별 표시 규칙이 없습니다.', errors);
-  assert(css.includes('@keyframes phoneTyping') && css.includes('.ai-wait-card .model-pulse::before'), '메신저 입력 중 말풍선 애니메이션이 없습니다.', errors);
+  assert(css.includes('@keyframes phoneTyping') && css.includes('.message-typing-indicator'), '메신저 입력 중 말풍선 애니메이션이 없습니다.', errors);
   assert(client.includes('aria-labelledby="debrief-title"'), '판정 결과 대화상자에 접근 가능한 제목이 없습니다.', errors);
   assert(client.includes('aria-labelledby="summary-title"'), '최종 결과 대화상자에 접근 가능한 제목이 없습니다.', errors);
   assert(!client.includes('role="button" tabIndex={0}'), '키보드 실행 처리가 없는 가상 버튼이 남아 있습니다.', errors);
   assert(css.includes(':focus-visible'), '키보드 초점 표시 규칙이 없습니다.', errors);
   assert(css.includes('prefers-reduced-motion'), '동작 감소 접근성 규칙이 없습니다.', errors);
-  assert(css.includes('.game-loading-screen') && css.includes('.ai-wait-card'), '전체 화면과 보조 AI 부분 로딩 스타일이 없습니다.', errors);
+  assert(css.includes('.game-loading-screen') && css.includes('.message-typing-indicator'), '전체 화면과 메신저 응답 대기 스타일이 없습니다.', errors);
   assert(css.includes('.chapter-card') && css.includes('.ambient-notification') && css.includes('.case-rewind'), '3막·주변 알림·사건 되감기 스타일이 없습니다.', errors);
   assert(css.includes('@media (max-width: 680px)') && css.includes('@media (max-width: 430px)'), '모바일 대응 구간이 부족합니다.', errors);
   assert(css.includes('overflow-wrap: anywhere'), '긴 한글 문구와 가상 주소의 화면 이탈 방어가 없습니다.', errors);
@@ -147,6 +147,7 @@ async function main() {
   assert(css.includes('.game-menu-button') && css.includes('.pause-menu-backdrop') && css.includes('.pause-progress'), '게임 중 메뉴의 화면 스타일이 없습니다.', errors);
   assert(client.includes('SCENE_GAP_MS') && client.includes('nextSceneCue') && client.includes('seenSceneCues'), '사건별 순차 앱 흔적 또는 확인 상태 저장이 없습니다.', errors);
   assert(client.includes('incoming-call-screen') && client.includes('bank-interruption-banner') && client.includes('message-status-event'), '수신 전화·은행 겹침·메시지 상태 변화 연출이 없습니다.', errors);
+  assert(client.includes('anyRiskExposure') && cases.some((item) => item.sceneCues.some((cue) => cue.condition === 'any-risk-exposure')), '플레이어 행동에 따른 조건부 후속 연락이 없습니다.', errors);
   assert(client.includes('rewindScenes') && client.includes('도착했지만 확인하지 않은 앱 알림') && css.includes('.scene-rewind'), '사건 되감기에 앱 흔적과 놓친 알림 복기가 없습니다.', errors);
 
   if (errors.length) throw new Error(`출시 전 자동 점검 실패:\n- ${errors.join('\n- ')}`);

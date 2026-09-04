@@ -703,6 +703,19 @@
     ],
     "sceneCues": [
       {
+        "id": "prior-exposure",
+        "app": "messages",
+        "sender": "낯선 상담 계정",
+        "title": "이전 이용 기록을 언급",
+        "detail": "앞서 열어 본 링크나 이어간 대화를 알고 있는 듯한 회수 상담이 도착했습니다.",
+        "icon": "messages",
+        "tone": "warning",
+        "minuteOffset": 2,
+        "stage": "signal",
+        "interference": false,
+        "condition": "any-risk-exposure"
+      },
+      {
         "id": "first-trace",
         "app": "calls",
         "sender": "회수 상담",

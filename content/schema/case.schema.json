@@ -25,7 +25,7 @@
     "sceneCues": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 4,
+      "maxItems": 5,
       "items": { "$ref": "#/$defs/sceneCue" }
     },
     "fallbackReplies": { "$ref": "#/$defs/nonEmptyStringArray" },
@@ -89,7 +89,8 @@
             "kind": { "enum": ["edited", "deleted"] },
             "text": { "type": "string", "minLength": 1 }
           }
-        }
+        },
+        "condition": { "enum": ["opened-link-before", "prolonged-chat-before", "unsafe-action-before", "any-risk-exposure"] }
       }
     },
     "nonEmptyStringArray": {

@@ -15,6 +15,7 @@ const sceneApps = new Set(['messages', 'calls', 'bank', 'stocks', 'browser', 'so
 const sceneTones = new Set(['routine', 'social', 'warning']);
 const sceneStages = new Set(['signal', 'pressure', 'decision']);
 const scenePresentations = new Set(['notification', 'incoming-call', 'bank-overlay', 'message-status']);
+const sceneConditions = new Set(['opened-link-before', 'prolonged-chat-before', 'unsafe-action-before', 'any-risk-exposure']);
 const dialogueTopics = ['source', 'identity', 'risk', 'money', 'default'];
 const commonKeys = new Set([
   'id', 'sender', 'handle', 'channel', 'mode', 'preview', 'verdict', 'category',
@@ -58,8 +59,8 @@ function validateCase(data, file, errors) {
   requireStringArray(data, 'allowedClaims', 1, errors, file);
   requireStringArray(data, 'clueLabels', 2, errors, file);
 
-  if (!Array.isArray(data.sceneCues) || data.sceneCues.length < 1 || data.sceneCues.length > 4) {
-    addError(errors, file, 'sceneCues에는 영화형 앱 알림이 1~4개 필요합니다.');
+  if (!Array.isArray(data.sceneCues) || data.sceneCues.length < 1 || data.sceneCues.length > 5) {
+    addError(errors, file, 'sceneCues에는 영화형 앱 알림이 1~5개 필요합니다.');
   } else {
     const cueIds = new Set();
     let previousOffset = 0;
@@ -88,6 +89,7 @@ function validateCase(data, file, errors) {
         if (cue.presentation !== 'message-status' || cue.app !== 'messages') addError(errors, file, 'messageState는 messages 앱의 message-status 표시에서만 사용할 수 있습니다.');
       }
       if (cue.presentation === 'message-status' && cue.messageState === undefined) addError(errors, file, 'message-status 표시에는 messageState가 필요합니다.');
+      if (cue.condition !== undefined && !sceneConditions.has(cue.condition)) addError(errors, file, `sceneCues의 등장 조건 ${cue.condition}은 지원하지 않습니다.`);
     }
   }
 
