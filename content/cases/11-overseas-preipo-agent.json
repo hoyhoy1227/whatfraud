@@ -42,8 +42,8 @@
     }
   },
   "sceneCues": [
-    { "id": "first-trace", "app": "calls", "sender": "전화", "title": "국제 번호 · 다시 걸기 요청", "detail": "메신저 상담원이 통화로만 배정 절차를 설명하겠다고 합니다.", "icon": "calls", "tone": "warning", "minuteOffset": 4, "stage": "signal", "interference": false },
-    { "id": "call-only", "app": "calls", "sender": "전화", "title": "통화로만 설명 요구", "detail": "상담원이 기록을 남기지 않는 통화로 절차를 안내하겠다고 합니다.", "icon": "calls", "tone": "warning", "minuteOffset": 9, "stage": "pressure", "interference": false },
+    { "id": "first-trace", "app": "calls", "sender": "국제 번호", "title": "수신 전화", "detail": "메신저 상담원이 통화로만 배정 절차를 설명하겠다며 전화를 걸었습니다.", "icon": "calls", "tone": "warning", "minuteOffset": 4, "stage": "signal", "interference": false, "presentation": "incoming-call" },
+    { "id": "call-only", "app": "calls", "sender": "전화", "title": "통화로만 설명 요구", "detail": "상담원이 기록을 남기지 않는 통화로 절차를 안내하겠다고 합니다.", "icon": "calls", "tone": "warning", "minuteOffset": 9, "stage": "pressure", "interference": false, "silenceMs": 1800 },
     { "id": "issuer-gap", "app": "stocks", "sender": "채움증권", "title": "공식 배정 기록 없음", "detail": "청약·배정 절차와 연결되는 공식 기록은 확인되지 않습니다.", "icon": "stocks", "tone": "routine", "minuteOffset": 15, "stage": "decision", "interference": false }
   ],
   "checks": {

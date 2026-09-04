@@ -17,7 +17,7 @@
   "sceneCues": [
     { "id": "first-trace", "app": "calendar", "sender": "달력", "title": "경기 시작까지 35분", "detail": "시간 제한을 강조하는 이벤트 문자가 경기 직전에 도착했습니다.", "icon": "calendar", "tone": "warning", "minuteOffset": 4, "stage": "signal", "interference": false },
     { "id": "countdown-room", "app": "social", "sender": "모임", "title": "경기 전 적중 인증 증가", "detail": "시작 시간이 가까워지자 단체방의 짧은 인증 게시물이 늘어납니다.", "icon": "social", "tone": "warning", "minuteOffset": 8, "stage": "pressure", "interference": false },
-    { "id": "payment-condition", "app": "bank", "sender": "새봄은행", "title": "결제 전 추가 조건 표시", "detail": "결제 직전 수취인과 출금 조건을 다시 확인하라는 안내가 나타납니다.", "icon": "bank", "tone": "warning", "minuteOffset": 14, "stage": "decision", "interference": false }
+    { "id": "payment-condition", "app": "bank", "sender": "새봄은행", "title": "결제 전 추가 조건 표시", "detail": "결제 직전 수취인과 출금 조건을 다시 확인하라는 안내가 나타납니다.", "icon": "bank", "tone": "warning", "minuteOffset": 14, "stage": "decision", "interference": false, "presentation": "bank-overlay" }
   ],
   "checks": {
     "police": "해당 주소는 불법도박사이트 신고 대상과 같은 형태이며 운영 주체를 확인할 수 없습니다.",

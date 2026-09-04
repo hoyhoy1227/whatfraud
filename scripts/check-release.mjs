@@ -146,6 +146,7 @@ async function main() {
   assert(client.includes('showPauseMenu') && client.includes('returnToMainMenu') && client.includes('저장하고 메인 메뉴로'), '게임 중 메뉴 또는 즉시 저장 후 메인 화면 복귀가 없습니다.', errors);
   assert(css.includes('.game-menu-button') && css.includes('.pause-menu-backdrop') && css.includes('.pause-progress'), '게임 중 메뉴의 화면 스타일이 없습니다.', errors);
   assert(client.includes('SCENE_GAP_MS') && client.includes('nextSceneCue') && client.includes('seenSceneCues'), '사건별 순차 앱 흔적 또는 확인 상태 저장이 없습니다.', errors);
+  assert(client.includes('incoming-call-screen') && client.includes('bank-interruption-banner') && client.includes('message-status-event'), '수신 전화·은행 겹침·메시지 상태 변화 연출이 없습니다.', errors);
   assert(client.includes('rewindScenes') && client.includes('도착했지만 확인하지 않은 앱 알림') && css.includes('.scene-rewind'), '사건 되감기에 앱 흔적과 놓친 알림 복기가 없습니다.', errors);
 
   if (errors.length) throw new Error(`출시 전 자동 점검 실패:\n- ${errors.join('\n- ')}`);

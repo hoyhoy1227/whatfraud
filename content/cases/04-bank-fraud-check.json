@@ -16,7 +16,7 @@
   "allowedClaims": ["공식 앱 안에서만 확인", "인증번호와 비밀번호를 요구하지 않음"],
   "sceneCues": [
     { "id": "first-trace", "app": "bank", "sender": "새봄은행", "title": "보안 알림 확인 가능", "detail": "문자 링크가 아닌 설치된 은행 앱에서도 확인할 수 있습니다.", "icon": "bank", "tone": "routine", "minuteOffset": 4, "stage": "signal", "interference": false },
-    { "id": "official-record", "app": "bank", "sender": "새봄은행", "title": "공식 보안 안내 일치", "detail": "문자가 아닌 설치된 은행 앱에도 같은 점검 안내가 등록되어 있습니다.", "icon": "bank", "tone": "routine", "minuteOffset": 8, "stage": "signal", "interference": false }
+    { "id": "official-record", "app": "bank", "sender": "새봄은행", "title": "공식 보안 안내 일치", "detail": "문자가 아닌 설치된 은행 앱에도 같은 점검 안내가 등록되어 있습니다.", "icon": "bank", "tone": "routine", "minuteOffset": 8, "stage": "signal", "interference": false, "presentation": "bank-overlay" }
   ],
   "checks": {
     "bank": "은행 직원이 공식 시스템에서 동일한 이상거래 확인 요청을 찾았습니다.",

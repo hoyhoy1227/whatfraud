@@ -42,9 +42,10 @@
     }
   },
   "sceneCues": [
-    { "id": "first-trace", "app": "calls", "sender": "전화", "title": "알 수 없는 번호 · 부재중", "detail": "투자방 메시지가 도착한 직후 짧은 전화가 걸려 왔습니다.", "icon": "calls", "tone": "warning", "minuteOffset": 4, "stage": "signal", "interference": false },
+    { "id": "first-trace", "app": "calls", "sender": "알 수 없는 번호", "title": "수신 전화", "detail": "투자방 메시지가 도착한 직후 전화가 걸려 왔습니다.", "icon": "calls", "tone": "warning", "minuteOffset": 4, "stage": "signal", "interference": false, "presentation": "incoming-call" },
     { "id": "room-invite", "app": "social", "sender": "모임", "title": "비공개 투자방 초대", "detail": "같은 문구를 쓴 계정이 짧은 시간에 여러 초대를 보냈습니다.", "icon": "social", "tone": "warning", "minuteOffset": 9, "stage": "pressure", "interference": false },
-    { "id": "no-disclosure", "app": "stocks", "sender": "채움증권", "title": "공식 공시 확인 필요", "detail": "방에서 언급한 내용과 연결되는 공식 기록은 아직 보이지 않습니다.", "icon": "stocks", "tone": "routine", "minuteOffset": 15, "stage": "decision", "interference": false }
+    { "id": "message-deleted", "app": "messages", "sender": "VIP 종목 연구소", "title": "메시지가 삭제됨", "detail": "수익 보장처럼 보이던 문장이 전송 취소되었습니다.", "icon": "messages", "tone": "warning", "minuteOffset": 12, "stage": "pressure", "interference": false, "presentation": "message-status", "silenceMs": 1800, "messageState": { "kind": "deleted", "text": "상대방이 메시지를 삭제했습니다." } },
+    { "id": "no-disclosure", "app": "stocks", "sender": "채움증권", "title": "공식 공시 확인 필요", "detail": "방에서 언급한 내용과 연결되는 공식 기록은 아직 보이지 않습니다.", "icon": "stocks", "tone": "routine", "minuteOffset": 16, "stage": "decision", "interference": false }
   ],
   "checks": {
     "library": "소개된 연구소 명칭과 상담원 신원을 독립적으로 확인할 수 없습니다.",

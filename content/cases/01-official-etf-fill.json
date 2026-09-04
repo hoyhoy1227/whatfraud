@@ -16,7 +16,7 @@
   "allowedClaims": ["공식 앱 내부 조회만 안내", "비밀번호나 송금을 요구하지 않음"],
   "sceneCues": [
     { "id": "first-trace", "app": "stocks", "sender": "채움증권", "title": "주문 내역이 갱신됨", "detail": "오늘 체결 내역이 증권 앱에도 기록되었습니다.", "icon": "stocks", "tone": "routine", "minuteOffset": 4, "stage": "signal", "interference": false },
-    { "id": "payday", "app": "bank", "sender": "새봄은행", "title": "월급 입금 완료", "detail": "평소처럼 월급 입금 알림이 도착했습니다.", "icon": "bank", "tone": "routine", "minuteOffset": 9, "stage": "signal", "interference": true }
+    { "id": "payday", "app": "bank", "sender": "새봄은행", "title": "월급 입금 완료", "detail": "평소처럼 월급 입금 알림이 도착했습니다.", "icon": "bank", "tone": "routine", "minuteOffset": 9, "stage": "signal", "interference": true, "presentation": "bank-overlay" }
   ],
   "checks": {
     "home": "설치된 공식 앱 안에서 동일한 체결 내역이 확인됩니다.",

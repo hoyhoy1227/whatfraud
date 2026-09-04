@@ -7,6 +7,7 @@ export type DialogueTopic = 'source' | 'identity' | 'risk' | 'money' | 'default'
 export type SceneAppId = 'messages' | 'calls' | 'bank' | 'stocks' | 'browser' | 'social' | 'calendar' | 'notes' | 'contacts' | 'safety' | 'settings' | 'photos';
 export type SceneStage = 'signal' | 'pressure' | 'decision';
 export type SceneTone = 'routine' | 'social' | 'warning';
+export type ScenePresentation = 'notification' | 'incoming-call' | 'bank-overlay' | 'message-status';
 
 export type SceneCueData = {
   id: string;
@@ -19,6 +20,12 @@ export type SceneCueData = {
   minuteOffset: number;
   stage: SceneStage;
   interference: boolean;
+  presentation?: ScenePresentation;
+  silenceMs?: number;
+  messageState?: {
+    kind: 'edited' | 'deleted';
+    text: string;
+  };
 };
 
 export type DialogueProfile = {
@@ -94,7 +101,7 @@ export function validateCases(items: CaseData[]) {
     modeCounts[item.mode] += 1;
 
     if (!item.initialMessages.length) errors.push(`${item.id}: 표시할 최초 연락이 없습니다.`);
-    if (!Array.isArray(item.sceneCues) || item.sceneCues.length < 1 || item.sceneCues.length > 3) errors.push(`${item.id}: 영화형 앱 알림이 1~3개 필요합니다.`);
+    if (!Array.isArray(item.sceneCues) || item.sceneCues.length < 1 || item.sceneCues.length > 4) errors.push(`${item.id}: 영화형 앱 알림이 1~4개 필요합니다.`);
     const cueIds = new Set<string>();
     let previousCueOffset = 0;
     for (const cue of item.sceneCues ?? []) {

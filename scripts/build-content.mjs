@@ -14,6 +14,7 @@ const locations = new Set(['home', 'bank', 'cafe', 'police', 'library']);
 const sceneApps = new Set(['messages', 'calls', 'bank', 'stocks', 'browser', 'social', 'calendar', 'notes', 'contacts', 'safety', 'settings', 'photos']);
 const sceneTones = new Set(['routine', 'social', 'warning']);
 const sceneStages = new Set(['signal', 'pressure', 'decision']);
+const scenePresentations = new Set(['notification', 'incoming-call', 'bank-overlay', 'message-status']);
 const dialogueTopics = ['source', 'identity', 'risk', 'money', 'default'];
 const commonKeys = new Set([
   'id', 'sender', 'handle', 'channel', 'mode', 'preview', 'verdict', 'category',
@@ -57,8 +58,8 @@ function validateCase(data, file, errors) {
   requireStringArray(data, 'allowedClaims', 1, errors, file);
   requireStringArray(data, 'clueLabels', 2, errors, file);
 
-  if (!Array.isArray(data.sceneCues) || data.sceneCues.length < 1 || data.sceneCues.length > 3) {
-    addError(errors, file, 'sceneCues에는 영화형 앱 알림이 1~3개 필요합니다.');
+  if (!Array.isArray(data.sceneCues) || data.sceneCues.length < 1 || data.sceneCues.length > 4) {
+    addError(errors, file, 'sceneCues에는 영화형 앱 알림이 1~4개 필요합니다.');
   } else {
     const cueIds = new Set();
     let previousOffset = 0;
@@ -78,6 +79,15 @@ function validateCase(data, file, errors) {
       if (Number.isInteger(cue.minuteOffset) && cue.minuteOffset <= previousOffset) addError(errors, file, 'sceneCues.minuteOffset은 앞 알림보다 커야 합니다.');
       if (Number.isInteger(cue.minuteOffset)) previousOffset = cue.minuteOffset;
       if (typeof cue.interference !== 'boolean') addError(errors, file, 'sceneCues.interference는 불리언이어야 합니다.');
+      if (cue.presentation !== undefined && !scenePresentations.has(cue.presentation)) addError(errors, file, `sceneCues의 표시 방식 ${cue.presentation}은 지원하지 않습니다.`);
+      if (cue.silenceMs !== undefined && (!Number.isInteger(cue.silenceMs) || cue.silenceMs < 0 || cue.silenceMs > 3000)) addError(errors, file, 'sceneCues.silenceMs는 0~3000 사이의 정수여야 합니다.');
+      if (cue.messageState !== undefined) {
+        if (!isRecord(cue.messageState) || !['edited', 'deleted'].includes(cue.messageState.kind) || typeof cue.messageState.text !== 'string' || !cue.messageState.text.trim()) {
+          addError(errors, file, 'sceneCues.messageState에는 edited 또는 deleted 상태와 표시 문구가 필요합니다.');
+        }
+        if (cue.presentation !== 'message-status' || cue.app !== 'messages') addError(errors, file, 'messageState는 messages 앱의 message-status 표시에서만 사용할 수 있습니다.');
+      }
+      if (cue.presentation === 'message-status' && cue.messageState === undefined) addError(errors, file, 'message-status 표시에는 messageState가 필요합니다.');
     }
   }
 
