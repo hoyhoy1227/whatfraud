@@ -300,9 +300,11 @@ function classifyDialogueTopic(text: string): DialogueTopic {
 function fallbackReply(gameCase: CaseData, userText: string, messages: ChatMessage[]) {
   const topic = classifyDialogueTopic(userText);
   const emotion = inferDialogueEmotion(messages);
+  const emotionFirst = emotion === 'pressuring' || emotion === 'disappointed' || emotion === 'closed';
+  const topicReply = gameCase.dialogue && topic !== 'default' ? gameCase.dialogue.fallbackByTopic[topic] : null;
+  const emotionReply = gameCase.dialogue?.fallbackByEmotion[emotion] ?? null;
   const replies = [
-    ...(gameCase.dialogue ? [gameCase.dialogue.fallbackByEmotion[emotion]] : []),
-    ...(gameCase.dialogue ? [gameCase.dialogue.fallbackByTopic[topic]] : []),
+    ...(emotionFirst ? [emotionReply, topicReply] : [topicReply, emotionReply]).filter((reply): reply is string => Boolean(reply)),
     ...(gameCase.fallbackReplies ?? []),
     '그 질문은 조금 더 확인해 보고 답할게.',
   ];
