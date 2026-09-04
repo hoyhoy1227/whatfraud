@@ -983,7 +983,7 @@ export default function GameClient() {
         </div>
         <div className="intro-shade" />
         <section className="intro-panel" aria-labelledby="game-title">
-          <h1 id="game-title">휴대폰을 확인해 보세요</h1>
+          <h1 id="game-title">수익률 24시</h1>
           <nav className="start-menu" aria-label="게임 시작 메뉴">
             {savedProgress && <button className="start-menu-item resume" onClick={() => startSimulation(false, true)}><span><b>이어하기</b><small>사건 {Math.min(savedProgress.results.length + 1, cases.length)}/{cases.length} · {formatSavedTime(savedProgress.savedAt)} 저장</small></span><i>›</i></button>}
             <button className={`start-menu-item new ${savedProgress ? '' : 'primary'}`} onClick={requestNewGame}><span><b>새로 시작</b><small>{savedProgress ? '현재 기록을 지우고 처음부터 시작' : '새로운 하루를 처음부터 시작'}</small></span><i>＋</i></button>

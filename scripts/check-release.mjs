@@ -92,7 +92,7 @@ async function main() {
   assert(client.includes('actForIndex') && client.includes('1막 · 평범한 오전') && client.includes('3막 · 압박의 밤'), '오전·오후·밤의 3막 진행 연출이 없습니다.', errors);
   assert(client.includes('setTutorialStep(forceGuide ? 0 : null)') && client.includes('게임 방법부터 보기'), '기본 진입에서 긴 안내를 건너뛰거나 선택형 안내를 여는 흐름이 없습니다.', errors);
   assert(client.includes('isAmbientEntry') && css.includes('.phone-only-game.ambient-entry'), '첫 잠금 화면의 조용한 휴대폰 진입 연출이 없습니다.', errors);
-  assert(client.includes('<h1 id="game-title">휴대폰을 확인해 보세요</h1>') && !client.includes('className="intro-disclaimer"'), '시작 화면에 핵심 문장 외의 불필요한 설명이 남아 있습니다.', errors);
+  assert(client.includes('<h1 id="game-title">수익률 24시</h1>') && !client.includes('className="intro-disclaimer"'), '시작 화면에 게임 제목 외의 불필요한 설명이 남아 있습니다.', errors);
   assert(client.includes('showObjectiveCue') && client.includes('setShowObjectiveCue(false), 4200') && css.includes('.mission-strip.objective-toast'), '상황 변화에 따라 나타났다 사라지는 목표 안내가 없습니다.', errors);
   assert(client.includes('cinematicCues') && client.includes('ambient-notification') && client.includes('이전 선택의 여파'), '사건별 주변 알림 또는 이전 선택의 후속 연출이 없습니다.', errors);
   assert(client.includes('verificationHistory') && client.includes('case-rewind') && client.includes('사건 되감기'), '조사 순서 저장 또는 판정 후 되감기 복습이 없습니다.', errors);
