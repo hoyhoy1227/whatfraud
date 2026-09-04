@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { CaseData, cases, DialogueTopic, LocationId, SceneCueData, SceneStage, Verdict, verdictLabels } from './game-data';
-import { validateAiReply } from './ai-dialogue';
+import { inferDialogueEmotion, validateAiReply } from './ai-dialogue';
 import { ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore, formatGameClock } from './game-rules';
 import GameLoadingScreen from './game-loading';
 import AppIcon from './app-icon';
@@ -31,7 +31,7 @@ type LoadingTask = { kind: 'startup' | 'case'; progress: number };
 type InvestigationEvent = { source: LocationId; evidence: string | null; minuteOffset: number };
 type CinematicCue = { app: AppId; sender: string; title: string; detail: string; icon: string; tone: 'routine' | 'social' | 'warning' };
 type HabitBadge = { id: string; icon: string; title: string; detail: string; unlocked: boolean };
-type PlayerPreferences = { reduceMotion: boolean; guideOnNewGame: boolean };
+type PlayerPreferences = { reduceMotion: boolean; guideOnNewGame: boolean; soundEnabled: boolean; vibrationEnabled: boolean };
 type SavedProgress = {
   version: 1;
   savedAt: number;
@@ -78,6 +78,34 @@ const startupAssets = [
 ];
 function wait(milliseconds: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+function playPhoneFeedback(kind: 'notification' | 'call' | 'message', preferences: PlayerPreferences) {
+  if (preferences.vibrationEnabled && 'vibrate' in navigator) {
+    navigator.vibrate(kind === 'call' ? [110, 70, 110] : kind === 'notification' ? 45 : 25);
+  }
+  if (!preferences.soundEnabled) return;
+  try {
+    const context = new AudioContext();
+    const gain = context.createGain();
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.035, context.currentTime + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + (kind === 'call' ? 0.42 : 0.2));
+    gain.connect(context.destination);
+    const frequencies = kind === 'call' ? [440, 554] : kind === 'message' ? [720] : [660, 880];
+    frequencies.forEach((frequency, index) => {
+      const oscillator = context.createOscillator();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = frequency;
+      oscillator.connect(gain);
+      const start = context.currentTime + index * 0.11;
+      oscillator.start(start);
+      oscillator.stop(start + 0.12);
+    });
+    window.setTimeout(() => void context.close(), 600);
+  } catch {
+    // 자동 재생이 제한된 환경에서는 화면 연출만 유지한다.
+  }
 }
 
 function preloadAsset(source: string) {
@@ -269,7 +297,9 @@ function classifyDialogueTopic(text: string): DialogueTopic {
 
 function fallbackReply(gameCase: CaseData, userText: string, messages: ChatMessage[]) {
   const topic = classifyDialogueTopic(userText);
+  const emotion = inferDialogueEmotion(messages);
   const replies = [
+    ...(gameCase.dialogue ? [gameCase.dialogue.fallbackByEmotion[emotion]] : []),
     ...(gameCase.dialogue ? [gameCase.dialogue.fallbackByTopic[topic]] : []),
     ...(gameCase.fallbackReplies ?? []),
     '그 질문은 조금 더 확인해 보고 답할게.',
@@ -283,6 +313,7 @@ export default function GameClient() {
   const objectiveCueTimer = useRef<number | null>(null);
   const sceneCueTimer = useRef<number | null>(null);
   const typingCueTimers = useRef<number[]>([]);
+  const feedbackCueRef = useRef<string | null>(null);
   const [started, setStarted] = useState(false);
   const [loadingTask, setLoadingTask] = useState<LoadingTask | null>(null);
   const [phoneApp, setPhoneApp] = useState<PhoneApp>('home');
@@ -322,7 +353,7 @@ export default function GameClient() {
   const [aiSessionId] = useState(() => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `session-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const [bestScore, setBestScore] = useState(0);
   const [savedProgress, setSavedProgress] = useState<SavedProgress | null>(null);
-  const [preferences, setPreferences] = useState<PlayerPreferences>({ reduceMotion: false, guideOnNewGame: false });
+  const [preferences, setPreferences] = useState<PlayerPreferences>({ reduceMotion: false, guideOnNewGame: false, soundEnabled: true, vibrationEnabled: true });
   const [showStartSettings, setShowStartSettings] = useState(false);
   const [confirmNewGame, setConfirmNewGame] = useState(false);
   const [showPauseMenu, setShowPauseMenu] = useState(false);
@@ -425,12 +456,12 @@ export default function GameClient() {
   useEffect(() => {
     let storedBest = 0;
     let storedProgress: SavedProgress | null = null;
-    let storedPreferences: PlayerPreferences = { reduceMotion: false, guideOnNewGame: false };
+    let storedPreferences: PlayerPreferences = { reduceMotion: false, guideOnNewGame: false, soundEnabled: true, vibrationEnabled: true };
     try {
       storedBest = Number(window.localStorage.getItem('profit-24-best-score') ?? 0);
       storedProgress = readSavedProgress(window.localStorage.getItem(PROGRESS_SAVE_KEY));
       const rawPreferences = JSON.parse(window.localStorage.getItem(PREFERENCES_KEY) ?? '{}') as Partial<PlayerPreferences>;
-      storedPreferences = { reduceMotion: rawPreferences.reduceMotion === true, guideOnNewGame: rawPreferences.guideOnNewGame === true };
+      storedPreferences = { reduceMotion: rawPreferences.reduceMotion === true, guideOnNewGame: rawPreferences.guideOnNewGame === true, soundEnabled: rawPreferences.soundEnabled !== false, vibrationEnabled: rawPreferences.vibrationEnabled !== false };
     } catch {
       storedBest = 0;
       storedProgress = null;
@@ -446,6 +477,14 @@ export default function GameClient() {
     document.documentElement.classList.toggle('whatfraud-reduce-motion', preferences.reduceMotion);
     return () => document.documentElement.classList.remove('whatfraud-reduce-motion');
   }, [preferences.reduceMotion]);
+
+  useEffect(() => {
+    if (!started || !nextSceneCue) return;
+    const cueKey = `${activeCase.id}:${nextSceneCue.id}`;
+    if (feedbackCueRef.current === cueKey) return;
+    feedbackCueRef.current = cueKey;
+    playPhoneFeedback(nextSceneCue.presentation === 'incoming-call' ? 'call' : 'notification', preferences);
+  }, [activeCase.id, nextSceneCue, preferences, started]);
 
   useEffect(() => {
     if (complete && score > bestScore) {
@@ -627,6 +666,7 @@ export default function GameClient() {
         ...current,
         [activeCase.id]: [...(current[activeCase.id] ?? nextMessages), { role: 'assistant', content: reply }],
       }));
+      playPhoneFeedback('message', preferences);
     } catch (error) {
       setLastResponseMs(Math.round(performance.now() - responseStartedAt));
       setFallbackReason(explainFallback(error));
@@ -635,6 +675,7 @@ export default function GameClient() {
         ...current,
         [activeCase.id]: [...(current[activeCase.id] ?? nextMessages), { role: 'assistant', content: fallbackReply(activeCase, content, current[activeCase.id] ?? nextMessages) }],
       }));
+      playPhoneFeedback('message', preferences);
     } finally {
       clearTypingCueTimers();
       setTypingPhase(null);
@@ -983,10 +1024,10 @@ export default function GameClient() {
           <nav className="start-menu" aria-label="게임 시작 메뉴">
             {savedProgress && <button className="start-menu-item resume" onClick={() => startSimulation(false, true)}><span><b>이어하기</b><small>사건 {Math.min(savedProgress.results.length + 1, cases.length)}/{cases.length} · {formatSavedTime(savedProgress.savedAt)} 저장</small></span><i>›</i></button>}
             <button className={`start-menu-item new ${savedProgress ? '' : 'primary'}`} onClick={requestNewGame}><span><b>새로 시작</b><small>{savedProgress ? '현재 기록을 지우고 처음부터 시작' : '새로운 하루를 처음부터 시작'}</small></span><i>＋</i></button>
-            <button className="start-menu-item settings" onClick={() => setShowStartSettings(true)}><span><b>설정</b><small>안내와 화면 움직임 조정</small></span><AppIcon name="settings" size="mini"/></button>
+            <button className="start-menu-item settings" onClick={() => setShowStartSettings(true)}><span><b>설정</b><small>안내·소리·진동·화면 움직임</small></span><AppIcon name="settings" size="mini"/></button>
           </nav>
         </section>
-        {showStartSettings && <div className="start-dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="start-settings-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowStartSettings(false); }}><section className="start-dialog settings-dialog"><header><div><small>게임 설정</small><h2 id="start-settings-title">시작 전 설정</h2></div><button onClick={() => setShowStartSettings(false)} aria-label="설정 닫기">×</button></header><div className="start-setting-list"><button role="switch" aria-checked={preferences.reduceMotion} onClick={() => updatePreference('reduceMotion', !preferences.reduceMotion)}><span><b>화면 움직임 줄이기</b><small>알림과 화면 전환 애니메이션을 최소화합니다.</small></span><i>{preferences.reduceMotion ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.guideOnNewGame} onClick={() => updatePreference('guideOnNewGame', !preferences.guideOnNewGame)}><span><b>새 게임에서 안내 먼저 보기</b><small>새로 시작할 때 조작 방법을 먼저 보여줍니다.</small></span><i>{preferences.guideOnNewGame ? '켜짐' : '꺼짐'}</i></button></div><div className="start-save-note"><AppIcon name="settings" size="mini"/><span><b>진행 기록은 이 기기에 자동 저장됩니다</b><small>직접 입력한 대화와 AI 답변은 저장하지 않습니다.</small></span></div><button className="start-dialog-guide" onClick={() => { setShowStartSettings(false); void startSimulation(true, Boolean(savedProgress)); }}>게임 방법부터 보기</button><button className="start-dialog-close" onClick={() => setShowStartSettings(false)}>완료</button></section></div>}
+        {showStartSettings && <div className="start-dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="start-settings-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowStartSettings(false); }}><section className="start-dialog settings-dialog"><header><div><small>게임 설정</small><h2 id="start-settings-title">시작 전 설정</h2></div><button onClick={() => setShowStartSettings(false)} aria-label="설정 닫기">×</button></header><div className="start-setting-list"><button role="switch" aria-checked={preferences.soundEnabled} onClick={() => updatePreference('soundEnabled', !preferences.soundEnabled)}><span><b>알림음·통화음</b><small>새 알림과 전화에 짧고 조용한 소리를 냅니다.</small></span><i>{preferences.soundEnabled ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.vibrationEnabled} onClick={() => updatePreference('vibrationEnabled', !preferences.vibrationEnabled)}><span><b>진동</b><small>지원하는 휴대폰에서 짧은 진동을 사용합니다.</small></span><i>{preferences.vibrationEnabled ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.reduceMotion} onClick={() => updatePreference('reduceMotion', !preferences.reduceMotion)}><span><b>화면 움직임 줄이기</b><small>알림과 화면 전환 애니메이션을 최소화합니다.</small></span><i>{preferences.reduceMotion ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.guideOnNewGame} onClick={() => updatePreference('guideOnNewGame', !preferences.guideOnNewGame)}><span><b>새 게임에서 안내 먼저 보기</b><small>새로 시작할 때 조작 방법을 먼저 보여줍니다.</small></span><i>{preferences.guideOnNewGame ? '켜짐' : '꺼짐'}</i></button></div><div className="start-save-note"><AppIcon name="settings" size="mini"/><span><b>진행 기록은 이 기기에 자동 저장됩니다</b><small>직접 입력한 대화와 AI 답변은 저장하지 않습니다.</small></span></div><button className="start-dialog-guide" onClick={() => { setShowStartSettings(false); void startSimulation(true, Boolean(savedProgress)); }}>게임 방법부터 보기</button><button className="start-dialog-close" onClick={() => setShowStartSettings(false)}>완료</button></section></div>}
         {confirmNewGame && <div className="start-dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="new-game-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmNewGame(false); }}><section className="start-dialog confirm-dialog"><header><div><small>새 게임</small><h2 id="new-game-title">처음부터 시작할까요?</h2></div><button onClick={() => setConfirmNewGame(false)} aria-label="확인창 닫기">×</button></header><p>현재 저장된 사건 진행과 판정 기록이 지워집니다.</p><div><button onClick={() => setConfirmNewGame(false)}>취소</button><button className="danger" onClick={startNewGame}>기록을 지우고 시작</button></div></section></div>}
       </main>
     );
@@ -1103,7 +1144,7 @@ export default function GameClient() {
                 </div>
               )}
 
-              {phoneApp === 'settings' && <div className="settings-screen phone-app-body"><span className="pixel-label">GAME GUIDE</span><h2>게임 방법</h2><p>연락 확인 → 공식 조사 → 근거·판정·대응 선택의 순서로 진행합니다. 사건은 판정을 마칠 때마다 하나씩 도착합니다.</p><button className="guide-replay" onClick={() => setTutorialStep(0)}>게임 방법 다시 보기</button><span className="pixel-label settings-section-label">LOCAL AUTO SAVE</span><h2>기기 내 자동 저장</h2><p>사건 진행, 조사 근거와 판정 결과만 이 브라우저에 저장해 다음 방문에 이어갈 수 있습니다. 직접 입력한 대화와 AI 답변은 저장하지 않습니다.</p><div className="save-status-card" aria-live="polite"><i>✓</i><span><b>현재 진행 자동 저장 중</b><small>{savedProgress ? `${formatSavedTime(savedProgress.savedAt)} 저장 · 판정 ${savedProgress.results.length}/${cases.length}` : '첫 진행 상태를 준비 중입니다.'}</small></span></div><span className="pixel-label settings-section-label">GEMINI ASSIST AI</span><h2>Gemini 보조 AI</h2><p>대화형 사건에서만 Gemini 3.6 Flash가 최소 생각 수준으로 한국어 1~2문장을 답합니다. 키가 없거나 무료 한도·16초 제한을 넘으면 검수된 대사로 자동 전환합니다.</p><button className={`model-test ${modelState}`} onClick={checkModel} disabled={modelState === 'checking'}>{modelLabel} · 연결 시험</button><div className="ai-runtime-summary" aria-live="polite"><span><b>실행 범위</b><small>대화형 사건 {chatCaseCount}건만 보조 AI 사용</small></span><span><b>준비 상태</b><small>{modelLabel}</small></span><span><b>측정값</b><small>{lastResponseMs !== null ? `최근 답변 ${lastResponseMs}ms` : modelLoadMs !== null ? `연결 확인 ${modelLoadMs}ms` : '아직 측정 전'}</small></span>{fallbackReason && <p>{fallbackReason}</p>}</div><div className="privacy-note"><b>개인정보를 입력하지 마세요</b><span>질문은 게임 서버를 거쳐 Gemini로 전송됩니다. 링크·이메일·전화번호 형태는 서버에서 제거하며, 직접 입력한 대화와 AI 답변은 게임 진행 기록에 저장하지 않습니다.</span></div></div>}
+              {phoneApp === 'settings' && <div className="settings-screen phone-app-body"><span className="pixel-label">PHONE FEEDBACK</span><h2>소리와 진동</h2><div className="start-setting-list phone-feedback-settings"><button role="switch" aria-checked={preferences.soundEnabled} onClick={() => updatePreference('soundEnabled', !preferences.soundEnabled)}><span><b>알림음·통화음</b><small>알림과 전화가 올 때 짧게 재생됩니다.</small></span><i>{preferences.soundEnabled ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.vibrationEnabled} onClick={() => updatePreference('vibrationEnabled', !preferences.vibrationEnabled)}><span><b>진동</b><small>기기와 브라우저가 지원할 때 작동합니다.</small></span><i>{preferences.vibrationEnabled ? '켜짐' : '꺼짐'}</i></button></div><span className="pixel-label settings-section-label">GAME GUIDE</span><h2>게임 방법</h2><p>연락 확인 → 공식 조사 → 근거·판정·대응 선택의 순서로 진행합니다. 사건은 판정을 마칠 때마다 하나씩 도착합니다.</p><button className="guide-replay" onClick={() => setTutorialStep(0)}>게임 방법 다시 보기</button><span className="pixel-label settings-section-label">LOCAL AUTO SAVE</span><h2>기기 내 자동 저장</h2><p>사건 진행, 조사 근거와 판정 결과만 이 브라우저에 저장해 다음 방문에 이어갈 수 있습니다. 직접 입력한 대화와 AI 답변은 저장하지 않습니다.</p><div className="save-status-card" aria-live="polite"><i>✓</i><span><b>현재 진행 자동 저장 중</b><small>{savedProgress ? `${formatSavedTime(savedProgress.savedAt)} 저장 · 판정 ${savedProgress.results.length}/${cases.length}` : '첫 진행 상태를 준비 중입니다.'}</small></span></div><span className="pixel-label settings-section-label">GEMINI ASSIST AI</span><h2>Gemini 보조 AI</h2><p>대화형 사건에서만 Gemini 3.6 Flash가 최소 생각 수준으로 한국어 1~2문장을 답합니다. 키가 없거나 무료 한도·16초 제한을 넘으면 검수된 대사로 자동 전환합니다.</p><button className={`model-test ${modelState}`} onClick={checkModel} disabled={modelState === 'checking'}>{modelLabel} · 연결 시험</button><div className="ai-runtime-summary" aria-live="polite"><span><b>실행 범위</b><small>대화형 사건 {chatCaseCount}건만 보조 AI 사용</small></span><span><b>준비 상태</b><small>{modelLabel}</small></span><span><b>측정값</b><small>{lastResponseMs !== null ? `최근 답변 ${lastResponseMs}ms` : modelLoadMs !== null ? `연결 확인 ${modelLoadMs}ms` : '아직 측정 전'}</small></span>{fallbackReason && <p>{fallbackReason}</p>}</div><div className="privacy-note"><b>개인정보를 입력하지 마세요</b><span>질문은 게임 서버를 거쳐 Gemini로 전송됩니다. 링크·이메일·전화번호 형태는 서버에서 제거하며, 직접 입력한 대화와 AI 답변은 게임 진행 기록에 저장하지 않습니다.</span></div></div>}
 
               {phoneApp === 'photos' && <div className="native-app phone-app-body photos-app"><h2>캡처 보관함</h2><p className="app-lead">시뮬레이션 기록은 실제 개인정보를 포함하지 않습니다.</p><div className="capture-guide"><article><i>1</i><b>대화 전체 화면</b><span>발신자·시간·내용이 함께 보이게 저장</span></article><article><i>2</i><b>링크와 주소</b><span>접속하지 말고 표시된 주소를 함께 기록</span></article><article><i>3</i><b>송금·결제 기록</b><span>원본 거래 내역을 공식 앱에서 보관</span></article></div><div className="empty-photo">+<span>실제 신고에서는 원본 링크와 시간 정보도 함께 보관하세요.</span></div></div>}
 
@@ -1123,7 +1164,7 @@ export default function GameClient() {
           <header><div><small>진행 자동 저장됨</small><h2 id="pause-menu-title">게임 메뉴</h2></div><button onClick={() => setShowPauseMenu(false)} aria-label="게임 메뉴 닫기">×</button></header>
           <div className="pause-progress"><span><small>현재 시간</small><b>{gameTime}</b></span><span><small>진행 사건</small><b>{Math.min(results.length + 1, cases.length)}/{cases.length}</b></span><span><small>현재 점수</small><b>{score}</b></span></div>
           <button className="pause-continue" onClick={() => setShowPauseMenu(false)}>계속하기</button>
-          <section className="pause-settings" aria-labelledby="pause-settings-title"><h3 id="pause-settings-title">화면 설정</h3><div className="start-setting-list"><button role="switch" aria-checked={preferences.reduceMotion} onClick={() => updatePreference('reduceMotion', !preferences.reduceMotion)}><span><b>화면 움직임 줄이기</b><small>알림과 화면 전환 움직임을 최소화합니다.</small></span><i>{preferences.reduceMotion ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.guideOnNewGame} onClick={() => updatePreference('guideOnNewGame', !preferences.guideOnNewGame)}><span><b>새 게임에서 안내 먼저 보기</b><small>다음 새 게임부터 조작 안내를 먼저 표시합니다.</small></span><i>{preferences.guideOnNewGame ? '켜짐' : '꺼짐'}</i></button></div></section>
+          <section className="pause-settings" aria-labelledby="pause-settings-title"><h3 id="pause-settings-title">휴대폰 설정</h3><div className="start-setting-list"><button role="switch" aria-checked={preferences.soundEnabled} onClick={() => updatePreference('soundEnabled', !preferences.soundEnabled)}><span><b>알림음·통화음</b><small>짧은 휴대폰 소리를 사용합니다.</small></span><i>{preferences.soundEnabled ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.vibrationEnabled} onClick={() => updatePreference('vibrationEnabled', !preferences.vibrationEnabled)}><span><b>진동</b><small>지원하는 기기에서만 작동합니다.</small></span><i>{preferences.vibrationEnabled ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.reduceMotion} onClick={() => updatePreference('reduceMotion', !preferences.reduceMotion)}><span><b>화면 움직임 줄이기</b><small>알림과 화면 전환 움직임을 최소화합니다.</small></span><i>{preferences.reduceMotion ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.guideOnNewGame} onClick={() => updatePreference('guideOnNewGame', !preferences.guideOnNewGame)}><span><b>새 게임에서 안내 먼저 보기</b><small>다음 새 게임부터 조작 안내를 먼저 표시합니다.</small></span><i>{preferences.guideOnNewGame ? '켜짐' : '꺼짐'}</i></button></div></section>
           <div className="pause-secondary-actions"><button onClick={() => { setShowPauseMenu(false); setTutorialStep(0); }}>게임 방법 다시 보기</button><button onClick={returnToMainMenu}>저장하고 메인 메뉴로</button></div>
         </section>
       </div>}

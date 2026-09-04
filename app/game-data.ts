@@ -4,6 +4,7 @@ export type Verdict = 'normal' | 'caution' | 'scam';
 export type LocationId = 'home' | 'bank' | 'cafe' | 'police' | 'library';
 export type ContactMode = 'chat' | 'notice' | 'link';
 export type DialogueTopic = 'source' | 'identity' | 'risk' | 'money' | 'default';
+export type DialogueEmotion = 'friendly' | 'evasive' | 'deflecting' | 'pressuring' | 'disappointed' | 'closed';
 export type SceneAppId = 'messages' | 'calls' | 'bank' | 'stocks' | 'browser' | 'social' | 'calendar' | 'notes' | 'contacts' | 'safety' | 'settings' | 'photos';
 export type SceneStage = 'signal' | 'pressure' | 'decision';
 export type SceneTone = 'routine' | 'social' | 'warning';
@@ -36,6 +37,7 @@ export type DialogueProfile = {
   boundaries: string[];
   quickQuestions: string[];
   fallbackByTopic: Record<DialogueTopic, string>;
+  fallbackByEmotion: Record<DialogueEmotion, string>;
 };
 
 export type ContentReview = {
@@ -123,6 +125,7 @@ export function validateCases(items: CaseData[]) {
       if (!item.dialogue) errors.push(`${item.id}: 대화형 사건에 dialogue 설정이 없습니다.`);
       if (!item.fallbackReplies?.length) errors.push(`${item.id}: 대체 대사가 없습니다.`);
       if ((item.dialogue?.quickQuestions.length ?? 0) < 3) errors.push(`${item.id}: 추천 질문이 3개 이상 필요합니다.`);
+      if ((Object.keys(item.dialogue?.fallbackByEmotion ?? {}).length) !== 6) errors.push(`${item.id}: 감정 단계별 대체 대사 6개가 필요합니다.`);
     } else if (item.dialogue || item.fallbackReplies?.length) {
       errors.push(`${item.id}: 읽기 전용 사건에는 LLM 대화 설정을 둘 수 없습니다.`);
     }

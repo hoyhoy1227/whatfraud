@@ -109,7 +109,6 @@ export async function POST(request: Request) {
 
   const firstUser = messages.findIndex((message) => message.role === 'user');
   const conversation = messages.slice(Math.max(firstUser, 0));
-  const userTurns = conversation.filter((message) => message.role === 'user').length;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
 
@@ -122,7 +121,7 @@ export async function POST(request: Request) {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: buildSystemPrompt(gameCase, userTurns) }] },
+        systemInstruction: { parts: [{ text: buildSystemPrompt(gameCase, conversation) }] },
         contents: conversation.map((message) => ({
           role: message.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: message.content }],

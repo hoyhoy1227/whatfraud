@@ -17,6 +17,7 @@ const sceneStages = new Set(['signal', 'pressure', 'decision']);
 const scenePresentations = new Set(['notification', 'incoming-call', 'bank-overlay', 'message-status']);
 const sceneConditions = new Set(['opened-link-before', 'prolonged-chat-before', 'unsafe-action-before', 'any-risk-exposure']);
 const dialogueTopics = ['source', 'identity', 'risk', 'money', 'default'];
+const dialogueEmotions = ['friendly', 'evasive', 'deflecting', 'pressuring', 'disappointed', 'closed'];
 const commonKeys = new Set([
   'id', 'sender', 'handle', 'channel', 'mode', 'preview', 'verdict', 'category',
   'initialMessages', 'role', 'npcGoal', 'allowedClaims', 'sceneCues', 'fallbackReplies', 'dialogue',
@@ -143,6 +144,11 @@ function validateCase(data, file, errors) {
         addError(errors, file, 'dialogue.fallbackByTopic 객체가 필요합니다.');
       } else {
         for (const topic of dialogueTopics) requireString(data.dialogue.fallbackByTopic, topic, errors, file);
+      }
+      if (!isRecord(data.dialogue.fallbackByEmotion)) {
+        addError(errors, file, 'dialogue.fallbackByEmotion 객체가 필요합니다.');
+      } else {
+        for (const emotion of dialogueEmotions) requireString(data.dialogue.fallbackByEmotion, emotion, errors, file);
       }
     }
   } else if (data.dialogue !== undefined || data.fallbackReplies !== undefined) {

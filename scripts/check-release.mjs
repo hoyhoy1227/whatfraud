@@ -73,6 +73,7 @@ async function main() {
     assert(item.review?.learningObjectives.length >= 2, `${item.id}: 학습 목표가 2개 미만입니다.`, errors);
     assert(item.review && Object.values(item.review.safetyAudit).every((value) => value === false), `${item.id}: 안전 검수표를 통과하지 못했습니다.`, errors);
     if (item.mode !== 'chat') assert(!item.dialogue && !item.fallbackReplies, `${item.id}: 읽기 전용 연락이 보조 AI 데이터를 포함합니다.`, errors);
+    if (item.mode === 'chat') assert(Object.keys(item.dialogue?.fallbackByEmotion ?? {}).length === 6, `${item.id}: 감정 단계별 검수 대사가 부족합니다.`, errors);
     if (item.mode === 'link') assert(item.displayUrl.includes('.invalid'), `${item.id}: 링크가 가상 도메인이 아닙니다.`, errors);
   }
 
@@ -114,7 +115,7 @@ async function main() {
   assert(aiRoute.includes('SESSION_MINUTE_LIMIT = 5') && aiRoute.includes('IP_DAY_LIMIT = 120'), '서버의 기본 호출 제한이 없습니다.', errors);
   assert(aiRoute.includes("'Cache-Control': 'no-store'") && aiRoute.includes('sanitizePlayerText'), '보조 AI 응답 캐시 차단 또는 입력 정제가 없습니다.', errors);
   assert(aiDialogue.includes('[링크 제거]') && aiDialogue.includes('[전화번호 제거]') && aiDialogue.includes('validateAiReply'), '입력 개인정보 제거 또는 AI 답변 검사가 없습니다.', errors);
-  assert(aiDialogue.includes('현재 정서적 흐름') && aiDialogue.includes('플레이어가 계속 의심하고 있다'), '대화 진행에 따른 NPC 정서 변화가 없습니다.', errors);
+  assert(aiDialogue.includes('inferDialogueEmotion') && aiDialogue.includes('현재 정서적 흐름') && aiDialogue.includes('감정 단계는 말투만 바꾸며'), '코드가 제한하는 NPC 감정 단계가 없습니다.', errors);
   assert(envExample.includes('GEMINI_API_KEY=') && !envExample.includes('NEXT_PUBLIC_GEMINI_API_KEY='), '서버 전용 Gemini 환경 변수 예제가 올바르지 않습니다.', errors);
   assert(apiKeyGuide.includes('Sites Secret') && apiKeyGuide.includes('NEXT_PUBLIC_GEMINI_API_KEY') && apiKeyGuide.includes('키가 유출됐을 때'), 'API 키 등록·노출 방지·교체 안내가 부족합니다.', errors);
   assert(trainingBuilder.includes('contains_player_messages') && trainingBuilder.includes('case.get("mode") == "chat"'), '튜닝 데이터의 대화형 사건 제한 또는 개인정보 비저장 표기가 없습니다.', errors);
@@ -147,6 +148,8 @@ async function main() {
   assert(css.includes('.game-menu-button') && css.includes('.pause-menu-backdrop') && css.includes('.pause-progress'), '게임 중 메뉴의 화면 스타일이 없습니다.', errors);
   assert(client.includes('SCENE_GAP_MS') && client.includes('nextSceneCue') && client.includes('seenSceneCues'), '사건별 순차 앱 흔적 또는 확인 상태 저장이 없습니다.', errors);
   assert(client.includes('incoming-call-screen') && client.includes('bank-interruption-banner') && client.includes('message-status-event'), '수신 전화·은행 겹침·메시지 상태 변화 연출이 없습니다.', errors);
+  assert(client.includes('playPhoneFeedback') && client.includes('navigator.vibrate') && client.includes('soundEnabled') && client.includes('vibrationEnabled'), '선택 가능한 휴대폰 알림음·진동이 없습니다.', errors);
+  assert(client.includes('fallbackByEmotion[emotion]'), 'Gemini 실패 시 동일 감정 단계의 검수 대사를 사용하지 않습니다.', errors);
   assert(client.includes('anyRiskExposure') && cases.some((item) => item.sceneCues.some((cue) => cue.condition === 'any-risk-exposure')), '플레이어 행동에 따른 조건부 후속 연락이 없습니다.', errors);
   assert(client.includes('rewindScenes') && client.includes('도착했지만 확인하지 않은 앱 알림') && css.includes('.scene-rewind'), '사건 되감기에 앱 흔적과 놓친 알림 복기가 없습니다.', errors);
 
