@@ -6,7 +6,7 @@ GitHub가 유일한 편집·검사 원본입니다. OneDrive 외 로컬 폴더�
 
 ## 반복 가능한 출시 검사
 
-Validate game / validate는 고정 lockfile 설치, 운영 의존성 audit, 추적 파일 비밀 검사, 내장 대사·콘텐츠 검사, AI 방어 회귀, 실제 SQLite 원자적 공용 예산 시험, 6사건 채점·분기 시험, 린트·빌드·출시 검사를 수행합니다. 빌드 dist/ Artifact는 3일 보관합니다. Actions는 커밋 SHA 고정, contents: read, checkout 자격정보 비보존입니다. 빌드에는 실제 API 키를 전달하지 않습니다.
+Validate game / validate는 고정 lockfile 설치, 전체 의존성 audit(이미지 파서의 자체 패치 두 건은 SECURITY.md의 검증된 예외), 추적 파일 비밀 검사, 내장 대사·콘텐츠 검사, AI 방어 회귀, 실제 SQLite 원자적 공용 예산 시험, 6사건 채점·분기 시험, 린트·빌드·출시 검사를 수행합니다. 빌드 dist/ Artifact는 3일 보관합니다. Actions는 커밋 SHA 고정, contents: read, checkout 자격정보 비보존입니다. 빌드에는 실제 API 키를 전달하지 않습니다.
 
 저장소 소유자가 main 브랜치 보호에 PR 필수, 상태 검사 validate 필수, 최신 브랜치 요구, force push/삭제 금지를 설정해야 합니다. GitHub 연결 도구에는 administration 권한이 없어 소스 변경만으로 이 설정을 완료할 수 없습니다. 활성화를 별도 확인해야 합니다.
 

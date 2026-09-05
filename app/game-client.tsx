@@ -418,14 +418,14 @@ export default function GameClient() {
   const previousConsequence = previousResult && previousCase
     ? previousCase.verdict === 'scam'
       ? previousResult.actionCorrect
-        ? '의심 연락을 차단해 추가 결제 요청이 중단되었습니다.'
+        ? previousResult.action === 'report' ? '공식 신고를 위한 기록 보관을 선택했습니다. 새 회복 연락도 별도로 확인하세요.' : '더 응답하지 않기로 했습니다. 다른 계정의 재접근도 경계하세요.'
         : '연락을 완전히 끊지 않아 비슷한 계정의 후속 접근이 감지되었습니다.'
       : previousCase.verdict === 'caution'
         ? previousResult.actionCorrect
           ? '결정을 보류해 추가 확인 시간을 확보했습니다.'
           : '서둘러 반응한 기록 때문에 유사 광고가 더 자주 노출됩니다.'
         : previousResult.actionCorrect
-          ? '공식 경로 확인 후 정상 안내를 안전하게 처리했습니다.'
+          ? previousResult.northStar ? '공식 기록을 확인하고 정상 안내에 맞는 대응을 선택했습니다.' : '공식 확인을 선택했습니다. 다음에는 핵심 기록도 직접 확인해 보세요.'
           : '정상 안내를 놓쳤을 수 있습니다. 차단 여부와 관계없이 공식 앱에서 필요한 보안·거래 안내를 확인하세요.'
     : null;
   const followUpCue: CinematicCue | null = previousResult && previousCase && activeIndex === availableCount - 1
@@ -438,11 +438,11 @@ export default function GameClient() {
           ? { app: 'calendar', sender: '달력', title: '재검토 일정이 저장됨', detail: `${previousCase.sender}의 제안을 바로 결정하지 않고 확인 시간을 확보했습니다.`, icon: 'calendar', tone: 'routine' }
           : { app: 'social', sender: '모임', title: '비슷한 추천 게시물 증가', detail: '빠르게 반응한 주제와 유사한 광고가 피드에 더 많이 보입니다.', icon: 'social', tone: 'warning' }
         : previousResult.actionCorrect
-          ? { app: 'bank', sender: '공식 기록', title: '정상 안내 확인 완료', detail: `${previousCase.sender}의 내용이 설치된 공식 앱 기록과 일치했습니다.`, icon: 'bank', tone: 'routine' }
+          ? { app: 'bank', sender: '공식 기록', title: '공식 경로 재확인 선택', detail: `${previousCase.sender}의 안내를 공식 기록과 비교하기로 했습니다.`, icon: 'bank', tone: 'routine' }
           : { app: 'safety', sender: '안전센터', title: '정상 알림 처리 복습', detail: '정상 연락도 발신자 표시만 믿지 말고 공식 기록과 비교해야 합니다.', icon: 'safety', tone: 'social' }
     : null;
   const activeAppInfo = infoApp ? phoneApps.find((app) => app.id === infoApp) : undefined;
-  const playerTitle = accuracy >= 80 && actionAccuracy >= 80 ? '근거 중심 안전 탐정' : actionAccuracy >= accuracy ? '신중한 안전 행동가' : groundedCount >= Math.ceil(Math.max(results.length, 1) / 2) ? '공식 확인 습관가' : '성장 중인 디지털 시민';
+  const playerTitle = trainingStats.groundedSafety >= 80 ? '근거 중심 안전 탐정' : actionAccuracy >= accuracy ? '신중한 안전 행동가' : groundedCount >= Math.ceil(Math.max(results.length, 1) / 2) ? '공식 확인 습관가' : '성장 중인 디지털 시민';
   const correctNormalCount = results.filter((result) => result.correct && cases.find((item) => item.id === result.caseId)?.verdict === 'normal').length;
   const correctScamCount = results.filter((result) => result.correct && cases.find((item) => item.id === result.caseId)?.verdict === 'scam').length;
   const correctActionCount = results.filter((result) => result.actionCorrect).length;
@@ -451,7 +451,7 @@ export default function GameClient() {
     { id: 'steady-check', icon: '3', title: '확인 습관', detail: '서로 다른 사건 3건 이상에서 근거를 확인했습니다.', unlocked: groundedCount >= 3 },
     { id: 'calm-action', icon: 'Ⅱ', title: '침착한 대응', detail: '안전한 대응 행동을 3번 이상 선택했습니다.', unlocked: correctActionCount >= 3 },
     { id: 'balanced-eye', icon: '↔', title: '균형 잡힌 판단', detail: '정상 연락과 사기 연락을 모두 정확히 구분했습니다.', unlocked: correctNormalCount >= 1 && correctScamCount >= 1 },
-    { id: 'no-overblock', icon: '○', title: '과잉 차단 방지', detail: '정상 연락을 공식 확인 후 안전하게 처리했습니다.', unlocked: correctNormalCount >= 2 },
+    { id: 'no-overblock', icon: '○', title: '과잉 차단 방지', detail: '정상 연락을 공식 확인 후 안전하게 처리했습니다.', unlocked: results.filter(result=>result.northStar && cases.find(item=>item.id===result.caseId)?.verdict==='normal').length >= 2 },
   ];
   const earnedBadges = habitBadges.filter((badge) => badge.unlocked);
   const isAmbientEntry = results.length === 0 && activeIndex === 0 && phoneLocked && !contactReviewed;
