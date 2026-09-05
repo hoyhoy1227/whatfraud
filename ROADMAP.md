@@ -6,7 +6,8 @@
 
 ### 0. 운영·보안
 
-- [x] Next 보안 패치 및 취약한 전이 의존성 갱신, 고정 lockfile
+- [x] Next·React 서버 모듈·Vite 및 전이 의존성 보안 갱신, 고정 lockfile
+- [x] 공식 수정판 없는 image-size는 설치 시 적용되는 패치와 악성 입력 종료 검증(SECURITY.md의 한시적 예외)
 - [x] 키 문서, 운영·보안 지침, 읽기 전용·SHA 고정 CI와 빌드 Artifact
 - [x] 기본 CI에서 실제 Gemini 호출 금지, 비용 동의 수동 workflow 분리
 - [x] D1 원자적 공용 요청 예산 소스·migration·실패 시 내장 전환

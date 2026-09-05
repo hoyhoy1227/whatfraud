@@ -38,3 +38,8 @@ assert.deepEqual(replay.map(c=>c.training),cases.map(c=>c.training));
 assert.deepEqual(replay.map(c=>c.checks),cases.map(c=>c.checks));
 assert.equal(summarizeTraining(allResults,cases,[{changed:true}]).changedAfterReview,100);
 console.log('Six-case training tests passed: selected-only evidence, contradictions, calibration, efficiency, branching, metrics, stable replay facts.');
+
+const confirmedButUnselected=evaluateDecision(cases[0],{picked:'normal',action:'verify',confidence:70,evidence:cases[0].training.evidence.filter(clue=>clue.key).map(clue=>clue.text),selectedEvidence:[],history:[]});
+assert.equal(confirmedButUnselected.collectedKeyCount,2);
+assert.equal(confirmedButUnselected.keyCount,0);
+assert.equal(confirmedButUnselected.northStar,false);

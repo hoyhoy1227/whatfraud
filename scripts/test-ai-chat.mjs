@@ -167,6 +167,7 @@ async function testClientCancellation() {
       let chats={}, blocked={}, sending=false, feedback=0, requests=0;
       const preferences={};
       const window={setTimeout:()=>0,clearTimeout:()=>{}};
+      const wait=async()=>{};
       const setChats=fn=>{chats=fn(chats)}, setBlockedContacts=fn=>{blocked=fn(blocked)};
       const setDraft=v=>{draft=v}, setSending=v=>{sending=v};
       const clearTypingCueTimers=()=>{},setTypingPhase=()=>{},setLastResponseMs=()=>{},setFallbackReason=()=>{},setModelState=()=>{};

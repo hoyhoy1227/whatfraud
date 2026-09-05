@@ -28,7 +28,7 @@ export function evaluateDecision(gameCase, decision) {
     ...(!correct && confidence === 90 ? ['90% 확신한 오답입니다. 놓친 반대 단서를 먼저 확인해 보세요.'] : []),
     ...(decision.riskBeforeEvidence ? ['핵심 확인 전 링크를 열었습니다. 다음에는 확인 순서를 바꿔 보세요.'] : []),
   ];
-  return { correct, actionCorrect, score: Object.values(breakdown).reduce((a,b)=>a+b,0), breakdown, feedback, keyCount,
+  return { collectedKeyCount: keyClues.filter(clue=>found.has(clue.text)).length, correct, actionCorrect, score: Object.values(breakdown).reduce((a,b)=>a+b,0), breakdown, feedback, keyCount,
     northStar: keyCount === keyClues.length && supported.length === keyClues.length && actionCorrect };
 }
 
@@ -57,7 +57,8 @@ export function summarizeTraining(results, cases, practice = []) {
   return {
     firstAccuracy: percent(results.filter(r=>r.correct).length),
     groundedSafety: percent(results.filter(r=>r.northStar).length),
-    keyCoverage: percent(results.filter(r=>r.keyCount >= 2).length),
+    keyCoverage: percent(results.filter(r=>r.collectedKeyCount >= 2).length),
+    selectedKeyCoverage: percent(results.filter(r=>r.keyCount >= 2).length),
     noEvidence: percent(results.filter(r=>r.selectedEvidence.length === 0).length),
     overconfidentErrors: percent(results.filter(r=>!r.correct && r.confidence === 90).length),
     safeActions: percent(results.filter(r=>r.actionCorrect).length),
