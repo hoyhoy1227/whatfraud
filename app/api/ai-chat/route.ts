@@ -1,4 +1,4 @@
-import { buildSystemPrompt, inferDialogueEmotion, inferDialogueReplyMode, sanitizePlayerText, validateAiReply, type AiChatMessage } from '../../ai-dialogue';
+import { buildSystemPrompt, inferDialogueEmotion, inferDialogueReplyMode, sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
 import { cases } from '../../game-data';
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite';
@@ -153,18 +153,6 @@ export async function POST(request: Request) {
 }
 
 async function handleChat(request: Request, body: ChatBody) {
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-  if (!apiKey) return json({ code: 'ai_unconfigured' }, 503);
-
-  if (Date.now() < providerPausedUntil) {
-    return json({ code: 'provider_cooldown' }, 503, { 'Retry-After': String(Math.ceil((providerPausedUntil - Date.now()) / 1000)) });
-  }
-  const { ip, session } = requestIdentity(request);
-  if (!consumeRateLimit(`ip:${ip}`, IP_MINUTE_LIMIT, IP_DAY_LIMIT)
-    || !consumeRateLimit(`session:${ip}:${session}`, SESSION_MINUTE_LIMIT, SESSION_DAY_LIMIT)) {
-    return json({ code: 'rate_limit' }, 429, { 'Retry-After': '60' });
-  }
-
   if (typeof body.caseId !== 'string') return json({ code: 'invalid_request' }, 400);
   const gameCase = cases.find((item) => item.id === body.caseId);
   if (!gameCase || gameCase.mode !== 'chat' || !gameCase.dialogue) return json({ code: 'invalid_case' }, 400);
@@ -178,8 +166,27 @@ async function handleChat(request: Request, body: ChatBody) {
     return json({ code: 'invalid_turn_count' }, 400);
   }
   const userTurnCount = Number(body.userTurnCount);
+  const scripted = getScriptedReply(gameCase, conversation);
+  if (scripted !== null) return json({ reply: scripted, provider: 'scripted', model: null });
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) return json({ code: 'ai_unconfigured' }, 503);
+
+  if (Date.now() < providerPausedUntil) {
+    return json({ code: 'provider_cooldown' }, 503, { 'Retry-After': String(Math.ceil((providerPausedUntil - Date.now()) / 1000)) });
+  }
+
+  const { ip, session } = requestIdentity(request);
+  const lastRequest = rateBuckets.get(`session:${ip}:${session}`)?.minute.at(-1);
+  if (lastRequest !== undefined && Date.now() - lastRequest < 12_000) return json({ code: 'rate_limit' }, 429, { 'Retry-After': String(Math.ceil((12_000 - (Date.now() - lastRequest)) / 1000)) });
+  if (!consumeRateLimit(`ip:${ip}`, IP_MINUTE_LIMIT, IP_DAY_LIMIT)
+    || !consumeRateLimit(`session:${ip}:${session}`, SESSION_MINUTE_LIMIT, SESSION_DAY_LIMIT)) {
+    return json({ code: 'rate_limit' }, 429, { 'Retry-After': '60' });
+  }
+
+
+  const caseKey = `case:${ip}:${session}:${gameCase.id}`;
   // Supplemental isolate-local throttle; not a project-wide quota or billing cap.
-  if (!consumeRateLimit(`case:${ip}:${session}:${gameCase.id}`, 5, 8)) {
+  if (!consumeRateLimit(caseKey, 5, 4)) {
     return json({ code: 'rate_limit' }, 429, { 'Retry-After': '60' });
   }
   const emotion = inferDialogueEmotion(conversation, userTurnCount);

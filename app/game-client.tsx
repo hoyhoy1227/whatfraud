@@ -1,8 +1,8 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { CaseData, cases, DialogueTopic, LocationId, SceneCueData, SceneStage, Verdict, verdictLabels } from './game-data';
-import { inferDialogueEmotion, inferDialogueReplyMode, validateAiReply } from './ai-dialogue';
+import { CaseData, cases, LocationId, SceneCueData, SceneStage, Verdict, verdictLabels } from './game-data';
+import { inferDialogueEmotion, inferDialogueReplyMode, validateAiReply, buildFallbackReply, getScriptedReply } from './ai-dialogue';
 import { ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore, formatGameClock } from './game-rules';
 import GameLoadingScreen from './game-loading';
 import AppIcon from './app-icon';
@@ -289,35 +289,17 @@ function initialChat(gameCase: CaseData): ChatMessage[] {
   return gameCase.initialMessages.map((content) => ({ role: 'assistant', content }));
 }
 
-function classifyDialogueTopic(text: string): DialogueTopic {
-  if (/돈|입금|계좌|송금|출금|충전|비용|결제|제휴/.test(text)) return 'money';
-  if (/위험|손실|틀리|보장|실패|잃/.test(text)) return 'risk';
-  if (/소속|누구|회사|신원|등록|자격/.test(text)) return 'identity';
-  if (/어디서|어디에서|출처|자료|공시|성과|적중률|기록|근거|계약/.test(text)) return 'source';
-  return 'default';
-}
-
 function fallbackReply(gameCase: CaseData, userText: string, messages: ChatMessage[]) {
-  const topic = classifyDialogueTopic(userText);
-  const emotion = inferDialogueEmotion(messages);
-  const emotionFirst = emotion === 'disappointed' || emotion === 'closed' || (topic === 'default' && emotion === 'pressuring');
-  const topicReply = gameCase.dialogue && (topic !== 'default' || gameCase.dialogue.quickQuestions.includes(userText.trim())) ? gameCase.dialogue.fallbackByTopic[topic] : null;
-  const emotionReply = gameCase.dialogue?.fallbackByEmotion[emotion] ?? null;
-  const replies = [
-    ...(emotionFirst ? [emotionReply, topicReply] : [topicReply, emotionReply]).filter((reply): reply is string => Boolean(reply)),
-    ...(gameCase.fallbackReplies ?? []),
-    '그 질문은 조금 더 확인해 보고 답할게.',
-  ];
-  const used = new Set(messages.filter((message) => message.role === 'assistant').map((message) => message.content));
-  // Keep a direct answer on-topic even if the player asks it again.
-  // Unrelated unused lines are not a substitute for answering the question.
-  if (topicReply && !emotionFirst) return topicReply;
-  return replies.find((reply) => !used.has(reply)) ?? replies[0];
+  return buildFallbackReply(gameCase, userText, messages);
 }
 
 export default function GameClient() {
   const aiPausedUntil = useRef(0);
   const sendingRef = useRef(false);
+  const activeRequest = useRef<AbortController | null>(null);
+  const requestSequence = useRef(0);
+  const lastAiRequestAt = useRef(0);
+  const aiCallsByCase = useRef<Record<string, number>>({});
   const dialogReturnFocus = useRef<HTMLElement | null>(null);
   const objectiveCueTimer = useRef<number | null>(null);
   const sceneCueTimer = useRef<number | null>(null);
@@ -538,6 +520,8 @@ export default function GameClient() {
   }, [activeIndex, availableCount, blockedContacts, evidence, loadingTask, openedCases, openedCues, openedLinks, phoneApp, phoneLocked, results, safetySeenCount, seenFollowUps, seenSceneCues, started, verificationHistory]);
 
   useEffect(() => () => {
+    requestSequence.current += 1;
+    activeRequest.current?.abort();
     if (objectiveCueTimer.current !== null) window.clearTimeout(objectiveCueTimer.current);
     if (sceneCueTimer.current !== null) window.clearTimeout(sceneCueTimer.current);
     typingCueTimers.current.forEach((timer) => window.clearTimeout(timer));
@@ -616,40 +600,50 @@ export default function GameClient() {
     return 'Gemini 응답을 받을 수 없어 검수된 내장 대사를 사용했습니다.';
   }
 
+  function cancelPendingReply() {
+    requestSequence.current += 1;
+    activeRequest.current?.abort();
+    activeRequest.current = null;
+    clearTypingCueTimers();
+    setTypingPhase(null);
+    sendingRef.current = false;
+    setSending(false);
+  }
+
   async function requestGemini(gameCase: CaseData, messages: ChatMessage[]) {
     if (gameCase.mode !== 'chat' || !gameCase.dialogue) throw new Error('read-only contact');
-    const latest = messages.at(-1)?.content.trim() ?? '';
-    if (gameCase.dialogue.quickQuestions.includes(latest)) throw new Error('scripted_response');
     if (Date.now() < aiPausedUntil.current) throw new Error('provider_cooldown');
     const controller = new AbortController();
+    activeRequest.current = controller;
     const timeout = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
     try {
-    const response = await fetch('/api/ai-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-whatfraud-session': aiSessionId },
-      signal: controller.signal,
-      body: JSON.stringify({
-        caseId: gameCase.id,
-        messages: messages.slice(-4),
-        userTurnCount: messages.filter((message) => message.role === 'user').length,
-      }),
-    }).catch((error) => {
-      aiPausedUntil.current = Date.now() + 30_000;
+      const response = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-whatfraud-session': aiSessionId },
+        signal: controller.signal,
+        body: JSON.stringify({
+          caseId: gameCase.id,
+          messages: messages.slice(-4),
+          userTurnCount: messages.filter((message) => message.role === 'user').length,
+        }),
+      });
+      const payload = await response.json() as { reply?: unknown; code?: unknown; provider?: string };
+      if (!response.ok) {
+        const seconds = Number(response.headers.get('Retry-After'));
+        aiPausedUntil.current = Date.now() + (payload.code === 'ai_unconfigured'
+          ? 300_000 : Math.min(300, Math.max(12, Number.isFinite(seconds) ? seconds : 30)) * 1000);
+        throw new Error(typeof payload.code === 'string' ? payload.code : `gemini ${response.status}`);
+      }
+      if (typeof payload.reply !== 'string' || !payload.reply.trim()) throw new Error('empty gemini response');
+      const reply = payload.reply.trim();
+      if (payload.provider !== 'scripted' && !validateAiReply(reply, inferDialogueEmotion(messages), inferDialogueReplyMode(messages))) throw new Error('unsafe gemini response');
+      return { reply, provider: payload.provider };
+    } catch (error) {
+      if (!controller.signal.aborted) aiPausedUntil.current = Math.max(aiPausedUntil.current, Date.now() + 30_000);
       throw error;
-    });
-    const payload = await response.json().catch(() => ({})) as { reply?: unknown; code?: unknown };
-    if (!response.ok) {
-      const seconds = Number(response.headers.get('Retry-After'));
-      aiPausedUntil.current = Date.now() + (payload.code === 'ai_unconfigured'
-        ? 300_000 : Math.min(300, Math.max(30, Number.isFinite(seconds) ? seconds : 30)) * 1000);
-    }
-    if (!response.ok) throw new Error(typeof payload.code === 'string' ? payload.code : `gemini ${response.status}`);
-    if (typeof payload.reply !== 'string' || !payload.reply.trim()) throw new Error('empty gemini response');
-    const reply = payload.reply.trim();
-    if (!validateAiReply(reply, inferDialogueEmotion(messages), inferDialogueReplyMode(messages))) throw new Error('unsafe gemini response');
-    return reply;
     } finally {
       window.clearTimeout(timeout);
+      if (activeRequest.current === controller) activeRequest.current = null;
     }
   }
 
@@ -676,8 +670,9 @@ export default function GameClient() {
   async function sendMessage(event: FormEvent) {
     event.preventDefault();
     const content = draft.trim();
-    if (!content || sendingRef.current || sending || activeResult || activeContactBlocked || activeCase.mode !== 'chat') return;
+    if (!content || sendingRef.current || activeResult || activeContactBlocked || activeCase.mode !== 'chat') return;
     sendingRef.current = true;
+    const sequence = ++requestSequence.current;
     const nextMessages = [...activeChat, { role: 'user' as const, content }];
     setChats((current) => ({ ...current, [activeCase.id]: nextMessages }));
     setDraft('');
@@ -690,33 +685,49 @@ export default function GameClient() {
     ];
     const responseStartedAt = performance.now();
     try {
-      if (modelState !== 'connected') setModelState('checking');
-      const reply = await requestGemini(activeCase, nextMessages);
-      const normalizedReply = reply.replace(/\s+/g, ' ').trim();
-      const repeated = activeChat.some((message) => message.role === 'assistant' && message.content.replace(/\s+/g, ' ').trim() === normalizedReply);
-      if (repeated) throw new Error('repeated response');
+      const scripted = getScriptedReply(activeCase, nextMessages);
+      const conserve = (aiCallsByCase.current[activeCase.id] ?? 0) >= 4
+        || Date.now() - lastAiRequestAt.current < 12_000
+        || Date.now() < aiPausedUntil.current;
+      let result: { reply: string; provider?: string };
+      if (scripted !== null || conserve) {
+        result = { reply: scripted ?? fallbackReply(activeCase, content, nextMessages), provider: 'scripted' };
+      } else {
+        lastAiRequestAt.current = Date.now();
+        aiCallsByCase.current[activeCase.id] = (aiCallsByCase.current[activeCase.id] ?? 0) + 1;
+        result = await requestGemini(activeCase, nextMessages);
+      }
+      if (sequence !== requestSequence.current) return;
+      const repeated = activeChat.at(-1)?.role === 'assistant' && activeChat.at(-1)?.content === result.reply;
+      const reply = repeated ? fallbackReply(activeCase, content, nextMessages) : result.reply;
       setLastResponseMs(Math.round(performance.now() - responseStartedAt));
-      setFallbackReason(null);
-      setModelState('connected');
+      if (result.provider === 'gemini') {
+        setFallbackReason(null);
+        setModelState('connected');
+      }
       setChats((current) => ({
         ...current,
         [activeCase.id]: [...(current[activeCase.id] ?? nextMessages), { role: 'assistant', content: reply }],
       }));
       playPhoneFeedback('message', preferences);
     } catch (error) {
+      if (sequence !== requestSequence.current) return;
+      aiPausedUntil.current = Math.max(aiPausedUntil.current, Date.now() + 30_000);
       setLastResponseMs(Math.round(performance.now() - responseStartedAt));
       setFallbackReason(explainFallback(error));
       setModelState('fallback');
       setChats((current) => ({
         ...current,
-        [activeCase.id]: [...(current[activeCase.id] ?? nextMessages), { role: 'assistant', content: fallbackReply(activeCase, content, current[activeCase.id] ?? nextMessages) }],
+        [activeCase.id]: [...(current[activeCase.id] ?? nextMessages), { role: 'assistant', content: fallbackReply(activeCase, content, nextMessages) }],
       }));
       playPhoneFeedback('message', preferences);
     } finally {
-      clearTypingCueTimers();
-      setTypingPhase(null);
-      setSending(false);
-      sendingRef.current = false;
+      if (sequence === requestSequence.current) {
+        clearTypingCueTimers();
+        setTypingPhase(null);
+        setSending(false);
+        sendingRef.current = false;
+      }
     }
   }
 
@@ -744,7 +755,8 @@ export default function GameClient() {
   }
 
   function blockActiveContact() {
-    if (activeCase.mode !== 'chat' || activeResult || sending || activeContactBlocked) return;
+    if (activeCase.mode !== 'chat' || activeResult || activeContactBlocked) return;
+    cancelPendingReply();
     clearTypingCueTimers();
     setTypingPhase(null);
     setDraft('');
@@ -758,6 +770,7 @@ export default function GameClient() {
       setNotice('아직 도착하지 않은 연락입니다. 현재 사건을 판정하면 시간이 진행됩니다.');
       return;
     }
+    cancelPendingReply();
     const result = results.find((entry) => entry.caseId === cases[index].id);
     setActiveIndex(index);
     setSceneCueHold(false);
@@ -771,6 +784,7 @@ export default function GameClient() {
   }
 
   function submitVerdict() {
+    cancelPendingReply();
     if (activeResult || !picked || !selectedAction) return;
     const correct = picked === activeCase.verdict;
     const actionCorrect = selectedAction === IDEAL_ACTION[activeCase.verdict];
@@ -897,6 +911,7 @@ export default function GameClient() {
   }
 
   function returnToMainMenu() {
+    cancelPendingReply();
     saveProgressNow();
     setShowPauseMenu(false);
     setShowVerdictPanel(false);
@@ -1027,6 +1042,7 @@ export default function GameClient() {
   }
 
   function restart() {
+    cancelPendingReply();
     clearSavedProgress();
     setPhoneApp('home');
     setPhoneLocked(true);
@@ -1137,7 +1153,7 @@ export default function GameClient() {
                     {nextSceneCue && scenePresentation !== 'incoming-call' && scenePresentation !== 'bank-overlay' && <button className={`ambient-notification scene-notification cue-${nextSceneCue.tone}`} onClick={() => selectPhoneApp(nextSceneCue.app)}><AppIcon name={nextSceneCue.icon} size="mini"/><span><b>{nextSceneCue.sender}</b><small>{nextSceneCue.title} · {nextSceneCue.detail}</small></span><em>열기</em></button>}
                     <div className="home-widgets">
                       <div><span>오늘의 판별 훈련</span><strong>{results.length}/{cases.length}</strong><small>정확도 {accuracy}% · 점수 {score}</small></div>
-                      <div><span>현재 연락</span><strong>{activeCase.sender}</strong><small>{activeCase.category} · 확인 {activeEvidence.length}건</small></div>
+                      <div><span>현재 연락</span><strong>{activeCase.sender}</strong><small>확인한 단서 {activeEvidence.length}건</small></div>
                     </div>
                     <button className="home-verify-card" onClick={() => verifySource('home')}><i>▤</i><span><b>내 알림·앱 기록 비교</b><small>현재 연락이 공식 앱 안에도 남아 있는지 확인</small></span><em>확인</em></button>
                     <div className="app-grid" aria-label="앱 목록">
@@ -1162,7 +1178,7 @@ export default function GameClient() {
                     })}
                   </aside>
                   <section className={`messenger-panel mode-${activeCase.mode}`} aria-busy={sending}>
-                    <header className="chat-header"><button onClick={() => setPhoneApp('home')} aria-label="홈 화면으로">◀</button><div><b>{activeCase.sender}</b><small>{activeCase.handle} · {activeCase.channel}{activeCase.mode === 'chat' ? ` · ${conversationPressure}` : ''}</small></div>{activeCase.mode === 'chat' && <div className="chat-header-actions"><span className={`model-dot ${modelState}`}>{modelLabel}</span><button className="contact-block-button" onClick={blockActiveContact} disabled={Boolean(activeResult) || sending || activeContactBlocked}>{activeContactBlocked ? '차단됨' : '차단'}</button></div>}</header>
+                    <header className="chat-header"><button onClick={() => setPhoneApp('home')} aria-label="홈 화면으로">◀</button><div><b>{activeCase.sender}</b><small>{activeCase.handle} · {activeCase.channel}{activeCase.mode === 'chat' ? ` · ${conversationPressure}` : ''}</small></div>{activeCase.mode === 'chat' && <div className="chat-header-actions"><button className="contact-block-button" onClick={blockActiveContact} disabled={Boolean(activeResult) || activeContactBlocked}>{activeContactBlocked ? '차단됨' : '차단'}</button></div>}</header>
                     {renderCinematicTrace('messages')}
                     {activeCase.mode === 'chat' && <>
                       <div className="chat-area" aria-live="polite">
@@ -1207,7 +1223,7 @@ export default function GameClient() {
                 </div>
               )}
 
-              {phoneApp === 'settings' && <div className="settings-screen phone-app-body"><span className="pixel-label">PHONE FEEDBACK</span><h2>소리와 진동</h2><div className="start-setting-list phone-feedback-settings"><button role="switch" aria-checked={preferences.soundEnabled} onClick={() => updatePreference('soundEnabled', !preferences.soundEnabled)}><span><b>알림음·통화음</b><small>알림과 전화가 올 때 짧게 재생됩니다.</small></span><i>{preferences.soundEnabled ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.vibrationEnabled} onClick={() => updatePreference('vibrationEnabled', !preferences.vibrationEnabled)}><span><b>진동</b><small>기기와 브라우저가 지원할 때 작동합니다.</small></span><i>{preferences.vibrationEnabled ? '켜짐' : '꺼짐'}</i></button></div><span className="pixel-label settings-section-label">GAME GUIDE</span><h2>게임 방법</h2><p>연락 확인 → 공식 조사 → 근거·판정·대응 선택의 순서로 진행합니다. 사건은 판정을 마칠 때마다 하나씩 도착합니다.</p><button className="guide-replay" onClick={() => setTutorialStep(0)}>게임 방법 다시 보기</button><span className="pixel-label settings-section-label">LOCAL AUTO SAVE</span><h2>기기 내 자동 저장</h2><p>사건 진행, 조사 근거와 판정 결과만 이 브라우저에 저장해 다음 방문에 이어갈 수 있습니다. 직접 입력한 대화와 AI 답변은 저장하지 않습니다.</p><div className="save-status-card" aria-live="polite"><i>✓</i><span><b>현재 진행 자동 저장 중</b><small>{savedProgress ? `${formatSavedTime(savedProgress.savedAt)} 저장 · 판정 ${savedProgress.results.length}/${cases.length}` : '첫 진행 상태를 준비 중입니다.'}</small></span></div><span className="pixel-label settings-section-label">GEMINI ASSIST AI</span><h2>Gemini 보조 AI</h2><p>추천 질문에는 검수된 대사를 사용하고, 자유 질문에는 Gemini 3.5 Flash-Lite가 짧게 답합니다. 키가 없거나 이용 한도·10초 제한을 넘으면 검수된 대사로 자동 전환합니다.</p><button className={`model-test ${modelState}`} onClick={checkModel} disabled={modelState === 'checking'}>{modelLabel} · 설정 확인</button><div className="ai-runtime-summary" aria-live="polite"><span><b>실행 범위</b><small>대화형 사건 {chatCaseCount}건만 보조 AI 사용</small></span><span><b>준비 상태</b><small>{modelLabel}</small></span><span><b>측정값</b><small>{lastResponseMs !== null ? `최근 답변 ${lastResponseMs}ms` : modelLoadMs !== null ? `연결 확인 ${modelLoadMs}ms` : '아직 측정 전'}</small></span>{fallbackReason && <p>{fallbackReason}</p>}</div><div className="privacy-note"><b>개인정보를 입력하지 마세요</b><span>질문은 게임 서버를 거쳐 Gemini로 전송됩니다. 링크·이메일·전화번호 형태는 서버에서 제거하며, 직접 입력한 대화와 AI 답변은 게임 진행 기록에 저장하지 않습니다.</span></div></div>}
+              {phoneApp === 'settings' && <div className="settings-screen phone-app-body"><span className="pixel-label">PHONE FEEDBACK</span><h2>소리와 진동</h2><div className="start-setting-list phone-feedback-settings"><button role="switch" aria-checked={preferences.soundEnabled} onClick={() => updatePreference('soundEnabled', !preferences.soundEnabled)}><span><b>알림음·통화음</b><small>알림과 전화가 올 때 짧게 재생됩니다.</small></span><i>{preferences.soundEnabled ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.vibrationEnabled} onClick={() => updatePreference('vibrationEnabled', !preferences.vibrationEnabled)}><span><b>진동</b><small>기기와 브라우저가 지원할 때 작동합니다.</small></span><i>{preferences.vibrationEnabled ? '켜짐' : '꺼짐'}</i></button></div><span className="pixel-label settings-section-label">GAME GUIDE</span><h2>게임 방법</h2><p>연락 확인 → 공식 조사 → 근거·판정·대응 선택의 순서로 진행합니다. 사건은 판정을 마칠 때마다 하나씩 도착합니다.</p><button className="guide-replay" onClick={() => setTutorialStep(0)}>게임 방법 다시 보기</button><span className="pixel-label settings-section-label">LOCAL AUTO SAVE</span><h2>기기 내 자동 저장</h2><p>사건 진행, 조사 근거와 판정 결과만 이 브라우저에 저장해 다음 방문에 이어갈 수 있습니다. 직접 입력한 대화와 AI 답변은 저장하지 않습니다.</p><div className="save-status-card" aria-live="polite"><i>✓</i><span><b>현재 진행 자동 저장 중</b><small>{savedProgress ? `${formatSavedTime(savedProgress.savedAt)} 저장 · 판정 ${savedProgress.results.length}/${cases.length}` : '첫 진행 상태를 준비 중입니다.'}</small></span></div><span className="pixel-label settings-section-label">GEMINI ASSIST AI</span><h2>Gemini 보조 AI</h2><p>인사·추천·반복 질문은 문맥에 맞는 내장 대사로 이어갑니다. 새로운 질문에만 Gemini 3.5 Flash-Lite를 사용하며, 최소 12초 간격과 사건당 최대 4회로 제한합니다. 키가 없거나 이용 한도·10초 제한을 넘으면 검수된 대사로 자동 전환합니다.</p><button className={`model-test ${modelState}`} onClick={checkModel} disabled={modelState === 'checking'}>{modelLabel} · 설정 확인</button><div className="ai-runtime-summary" aria-live="polite"><span><b>실행 범위</b><small>대화형 사건 {chatCaseCount}건만 보조 AI 사용</small></span><span><b>준비 상태</b><small>{modelLabel}</small></span><span><b>측정값</b><small>{lastResponseMs !== null ? `최근 답변 ${lastResponseMs}ms` : modelLoadMs !== null ? `연결 확인 ${modelLoadMs}ms` : '아직 측정 전'}</small></span>{fallbackReason && <p>{fallbackReason}</p>}</div><div className="privacy-note"><b>개인정보를 입력하지 마세요</b><span>질문은 게임 서버를 거쳐 Gemini로 전송됩니다. 링크·이메일·전화번호 형태는 서버에서 제거하며, 직접 입력한 대화와 AI 답변은 게임 진행 기록에 저장하지 않습니다.</span></div></div>}
 
               {phoneApp === 'photos' && <div className="native-app phone-app-body photos-app"><h2>캡처 보관함</h2><p className="app-lead">시뮬레이션 기록은 실제 개인정보를 포함하지 않습니다.</p><div className="capture-guide"><article><i>1</i><b>대화 전체 화면</b><span>발신자·시간·내용이 함께 보이게 저장</span></article><article><i>2</i><b>링크와 주소</b><span>접속하지 말고 표시된 주소를 함께 기록</span></article><article><i>3</i><b>송금·결제 기록</b><span>원본 거래 내역을 공식 앱에서 보관</span></article></div><div className="empty-photo">+<span>실제 신고에서는 원본 링크와 시간 정보도 함께 보관하세요.</span></div></div>}
 
@@ -1232,7 +1248,7 @@ export default function GameClient() {
         </section>
       </div>}
 
-      {showVerdictPanel && !activeResult && <div className="verdict-overlay-backdrop" role="dialog" aria-modal="true" aria-labelledby="global-verdict-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowVerdictPanel(false); }}><section className="verdict-overlay"><header><div><span className="pixel-label">CASE {String(activeIndex + 1).padStart(2,'0')} · 어디서든 판정</span><h2 id="global-verdict-title">{activeCase.sender} 판단 등록</h2></div><button onClick={() => setShowVerdictPanel(false)} aria-label="판정창 닫기">×</button></header><div className="verdict-screen verdict-overlay-content"><div className="verdict-file"><p className="case-preview">“{activeCase.preview}”</p><div className="case-meta"><span>{activeCase.channel}</span><span>{activeCase.category}</span></div><h3>판정에 사용할 근거</h3><p className="selection-help">직접 확인한 근거를 선택하세요. 선택한 근거만 점수에 반영됩니다.</p>{activeEvidence.length ? <div className="evidence-picker">{activeEvidence.map((item) => <button key={item} className={selectedEvidence.includes(item) ? 'active' : ''} onClick={() => toggleEvidence(item)}><i>{selectedEvidence.includes(item) ? '✓' : '+'}</i><span>{item}</span></button>)}</div> : <p className="empty-note">아직 확인한 근거가 없습니다. 바로 판정할 수 있지만 공식 조사 점수는 받을 수 없습니다.</p>}<button className="back-to-world" onClick={() => { setShowVerdictPanel(false); setPhoneLocked(false); setPhoneApp('home'); }}>앱에서 더 확인하기</button></div><div className="verdict-card"><span className="pixel-label">판정과 대응</span><h2>이 연락은 무엇일까요?</h2><div className="verdict-buttons">{(['normal','caution','scam'] as Verdict[]).map((value) => <button key={value} className={picked === value ? 'active' : ''} onClick={() => setPicked(value)}>{verdictLabels[value]}</button>)}</div><h3>실제로 어떻게 행동할까요?</h3><div className="response-actions">{responseActions.map((action) => <button key={action.id} className={selectedAction === action.id ? 'active' : ''} onClick={() => setSelectedAction(action.id)}><b>{action.label}</b><small>{action.description}</small></button>)}</div><p className="confidence-label">판정 확신도 <strong>{confidence}%</strong></p><div className="confidence-buttons">{confidenceOptions.map((value) => <button key={value} className={confidence === value ? 'active' : ''} onClick={() => setConfidence(value)}>{value}%</button>)}</div><button className="submit-verdict" onClick={submitVerdict} disabled={!picked || !selectedAction}>{!picked ? '판정을 선택하세요' : !selectedAction ? '대응 행동을 선택하세요' : '판정 제출'}</button></div></div></section></div>}
+      {showVerdictPanel && !activeResult && <div className="verdict-overlay-backdrop" role="dialog" aria-modal="true" aria-labelledby="global-verdict-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowVerdictPanel(false); }}><section className="verdict-overlay"><header><div><span className="pixel-label">CASE {String(activeIndex + 1).padStart(2,'0')} · 어디서든 판정</span><h2 id="global-verdict-title">{activeCase.sender} 판단 등록</h2></div><button onClick={() => setShowVerdictPanel(false)} aria-label="판정창 닫기">×</button></header><div className="verdict-screen verdict-overlay-content"><div className="verdict-file"><p className="case-preview">“{activeCase.preview}”</p><div className="case-meta"><span>{activeCase.channel}</span><span>연락 내용과 확인한 기록을 비교하세요</span></div><h3>판정에 사용할 근거</h3><p className="selection-help">직접 확인한 근거를 선택하세요. 선택한 근거만 점수에 반영됩니다.</p>{activeEvidence.length ? <div className="evidence-picker">{activeEvidence.map((item) => <button key={item} className={selectedEvidence.includes(item) ? 'active' : ''} onClick={() => toggleEvidence(item)}><i>{selectedEvidence.includes(item) ? '✓' : '+'}</i><span>{item}</span></button>)}</div> : <p className="empty-note">아직 확인한 근거가 없습니다. 바로 판정할 수 있지만 공식 조사 점수는 받을 수 없습니다.</p>}<button className="back-to-world" onClick={() => { setShowVerdictPanel(false); setPhoneLocked(false); setPhoneApp('home'); }}>앱에서 더 확인하기</button></div><div className="verdict-card"><span className="pixel-label">판정과 대응</span><h2>이 연락은 무엇일까요?</h2><div className="verdict-buttons">{(['normal','caution','scam'] as Verdict[]).map((value) => <button key={value} className={picked === value ? 'active' : ''} onClick={() => setPicked(value)}>{verdictLabels[value]}</button>)}</div><h3>실제로 어떻게 행동할까요?</h3><div className="response-actions">{responseActions.map((action) => <button key={action.id} className={selectedAction === action.id ? 'active' : ''} onClick={() => setSelectedAction(action.id)}><b>{action.label}</b><small>{action.description}</small></button>)}</div><p className="confidence-label">판정 확신도 <strong>{confidence}%</strong></p><div className="confidence-buttons">{confidenceOptions.map((value) => <button key={value} className={confidence === value ? 'active' : ''} onClick={() => setConfidence(value)}>{value}%</button>)}</div><button className="submit-verdict" onClick={submitVerdict} disabled={!picked || !selectedAction}>{!picked ? '판정을 선택하세요' : !selectedAction ? '대응 행동을 선택하세요' : '판정 제출'}</button></div></div></section></div>}
 
       {activeAppInfo && <div className="app-info-backdrop" role="dialog" aria-modal="true" aria-labelledby="app-info-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setInfoApp(null); }}><section className="app-info-sheet"><header><AppIcon name={activeAppInfo.icon}/><div><span className="pixel-label">APP INFORMATION</span><h2 id="app-info-title">{activeAppInfo.label}</h2></div><button onClick={() => setInfoApp(null)} aria-label="앱 정보 닫기">×</button></header><dl><div><dt>이 앱의 역할</dt><dd>{activeAppInfo.purpose}</dd></div><div><dt>언제 사용하나요?</dt><dd>{activeAppInfo.useWhen}</dd></div><div><dt>확인할 점</dt><dd>{activeAppInfo.caution}</dd></div></dl><button className="app-info-close" onClick={() => setInfoApp(null)}>확인</button></section></div>}
 

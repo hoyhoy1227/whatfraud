@@ -37,8 +37,9 @@ export function buildSystemPrompt(gameCase: CaseData, messages: AiChatMessage[],
   if (gameCase.mode !== 'chat' || !gameCase.dialogue) throw new Error('read-only contact');
   const dialogue = gameCase.dialogue;
   const userTurns = totalUserTurns ?? messages.filter((message) => message.role === 'user').length;
-  const stage = dialogue.progression[Math.min(userTurns, dialogue.progression.length - 1)];
-  const emotion = inferDialogueEmotion(messages, userTurns);
+  const stage = dialogue.progression[Math.min(Math.max(0, userTurns - 1), dialogue.progression.length - 1)];
+  const inferredEmotion = inferDialogueEmotion(messages, userTurns);
+  const emotion = gameCase.verdict !== 'scam' && inferredEmotion === 'pressuring' ? 'friendly' : inferredEmotion;
   const replyMode = inferDialogueReplyMode(messages, userTurns);
   const lengthDirection = replyMode === 'short'
     ? '8~35자의 자연스러운 한 문장. 인사말·칭찬·질문 반복 없이 바로 반응한다.'
@@ -49,7 +50,7 @@ export function buildSystemPrompt(gameCase: CaseData, messages: AiChatMessage[],
 기본 주장 소재: ${gameCase.allowedClaims.join(' / ')}
 말투: ${dialogue.voice}
 현재 단계: ${stage}
-감정과 대응: ${emotion} — ${emotionDirections[emotion]}
+감정과 대응: ${emotion} — ${gameCase.verdict !== 'scam' ? '친구로서 아는 사실과 모르는 점을 솔직히 구분하고 확인·보류·거절을 존중한다.' : emotionDirections[emotion]}
 답변 길이: ${replyMode} — ${lengthDirection}
 금지선: ${dialogue.boundaries.join(' / ')}
 
@@ -59,7 +60,7 @@ export function buildSystemPrompt(gameCase: CaseData, messages: AiChatMessage[],
 - 감정은 말투만 바꾸며 사건 순서와 다음 행동은 만들지 않는다.
 - 사기 역할은 목표와 기본 소재에 맞는 그럴듯한 가상 허위 주장을 새로 만들어도 된다. 내부 검증, 제한된 자리, 우대 조건, AI 분석, 일부 성공 사례처럼 신뢰를 얻는 주장으로 질문에 직접 답한다.
 - 허위 주장은 이 사건의 목적과 말투 안에서만 만들며, 구체적인 실제 수익률·배당률·회사·자격번호·계좌·연락처·URL은 만들지 않는다.
-- 정상 역할은 기본 주장 소재 안에서 정직하게 답한다.
+- 정상·주의 역할은 기본 주장 소재 안에서 정직하게 답하며, 질문 횟수만으로 기회 상실을 압박하지 않는다.
 - 보장, 확정, 무조건, 100%, 손실 없음이라는 표현은 부정하는 문장에서도 사용하지 않는다.
 - 충전·입금·송금·결제·가입을 지금 또는 바로 하라고 지시하지 않는다.
 - 플레이어가 말로 거절하거나 연락 중단을 요구해도 휴대폰에서 실제 차단되기 전이므로, disappointed 단계에서는 한 번 더 회유하거나 가상 기회·조건의 상실만 암시할 수 있다.
@@ -95,4 +96,90 @@ export function validateAiReply(text: string, emotion?: DialogueEmotion, replyMo
     if (/나중|언제든|궁금|찾아|다시|필요하시면|생각이\s*바뀌/.test(trimmed)) return false;
   }
   return true;
+}
+
+export function classifyDialogueTopic(text: string): 'source' | 'identity' | 'risk' | 'money' | 'default' {
+  if (/돈|입금|계좌|송금|출금|충전|비용|결제|제휴/.test(text)) return 'money';
+  if (/위험|손실|틀리|보장|실패|잃/.test(text)) return 'risk';
+  if (/소속|누구|회사|신원|등록|자격/.test(text)) return 'identity';
+  if (/어디서|어디에서|출처|자료|공시|성과|적중률|기록|근거|계약/.test(text)) return 'source';
+  return 'default';
+}
+
+const normalizeQuestion = (text: string) => text.toLowerCase().replace(/[\s?!.,。！？]+/g, '').trim();
+
+// Each alternative preserves the case's claims; never invents new evidence.
+const topicAlternatives: Record<string, Partial<Record<ReturnType<typeof classifyDialogueTopic>, string>>> = {
+  'friend-hot-tip': {
+    source: '내가 직접 본 자료는 없어. 친구 형에게 전해 들은 얘기라 공시와는 따로 확인해야 해.',
+    identity: '나는 그냥 소문을 들은 친구야. 금융 전문가처럼 설명할 만큼 아는 건 아니야.',
+    risk: '소문이 틀릴 수도 있고 가격이 내려갈 수도 있어. 내가 샀다는 게 근거가 되지는 않지.',
+    money: '나한테 돈을 보내는 얘기는 아니야. 알아보려면 평소 쓰던 공식 앱에서 확인해.',
+    default: '내가 아는 건 전해 들은 이야기뿐이야. 확인 전에는 결정을 미뤄도 돼.',
+  },
+  'vip-research-room': {
+    source: '좋았던 사례는 보여 드릴 수 있습니다. 전체 원자료는 공개하지 않는 내부 자료입니다.',
+    identity: '증권사 직원은 아닙니다. 시장 자료를 정리하는 별도 연구팀이라고 보시면 됩니다.',
+    risk: '좋은 사례만으로 앞으로의 결과를 단정할 수는 없습니다. 자료를 더 살펴보셔도 됩니다.',
+    money: '자료 확인과 VIP 거래 안내는 별도입니다. 우선 설명을 듣고 판단하실 수 있습니다.',
+    default: '무료 자료를 먼저 보여 드리고, 관심 있는 분께 별도 VIP 안내를 드리는 방식입니다.',
+  },
+  'fixed-match-ai': {
+    source: '공유하는 것은 최근 성공 사례입니다. 실패한 예측을 포함한 전체 기록은 공개 범위에 들어 있지 않습니다.',
+    identity: '공식 스포츠 기관 소속은 아닙니다. 자체적으로 경기 데이터를 다루는 운영팀입니다.',
+    risk: '예측이 빗나갈 수 있고 손실도 생길 수 있습니다. 오늘의 분석은 참고 자료로 봐 주세요.',
+    money: '제휴 플랫폼에는 별도의 정산 조건이 있습니다. 이용 전에 그 조건을 보셔야 합니다.',
+    default: '무료 자료와 VIP 데이터는 구분되어 있습니다. 먼저 설명만 들어 보셔도 됩니다.',
+  },
+  'overseas-preipo-agent': {
+    source: '계약 원문을 모두 공개하기는 어렵습니다. 배정 문서는 참여 절차 뒤에 안내하는 방식입니다.',
+    identity: '일반 증권사 청약 창구와는 다릅니다. 별도 계약으로 배정 업무를 맡는 곳입니다.',
+    risk: '상장 일정이 달라지거나 손실이 생길 수 있습니다. 기관 물량이라는 설명도 그 위험을 없애지는 않습니다.',
+    money: '증권사 청약 화면을 거치는 방식은 아닙니다. 회사 명의 접수 뒤 배정 문서를 드린다는 구조입니다.',
+    default: '일반 공모주 청약과 절차가 다릅니다. 계약과 배정 문서를 따로 보셔야 이해하기 쉽습니다.',
+  },
+};
+
+export function buildFallbackReply(gameCase: CaseData, text: string, messages: AiChatMessage[]) {
+  const dialogue = gameCase.dialogue;
+  if (!dialogue) return '이 연락은 답장을 받지 않습니다.';
+  const userMessages = messages.filter((message) => message.role === 'user');
+  const inferred = inferDialogueEmotion(messages);
+  const emotion = gameCase.verdict !== 'scam' && inferred === 'pressuring' ? 'friendly' : inferred;
+  const used = new Set(messages.filter((message) => message.role === 'assistant').map((message) => message.content));
+  const previous = messages.filter((message) => message.role === 'assistant').at(-1)?.content;
+  const topic = classifyDialogueTopic(text);
+  const quick = dialogue.quickQuestions.some((question) => normalizeQuestion(question) === normalizeQuestion(text));
+  const isRefusal = emotion === 'disappointed';
+  const priorRefusal = userMessages.slice(0, -1).some((message) => inferDialogueEmotion([message]) === 'disappointed');
+  if (isRefusal) {
+    if (priorRefusal) return dialogue.fallbackByEmotion.closed;
+    return dialogue.fallbackByEmotion.disappointed;
+  }
+  if (/^(안녕(하세요)?|네|네네|예|응|알겠(어|어요|습니다)|고마워(요)?|감사(합니다|해요))[.!?~\s]*$/.test(text.trim())) {
+    return gameCase.verdict === 'scam'
+      ? (previous === '네, 궁금한 부분부터 말씀해 주세요.' ? '설명이 더 필요한 부분이 있으신가요?' : '네, 궁금한 부분부터 말씀해 주세요.')
+      : (previous === '응, 궁금한 게 있으면 물어봐.' ? '천천히 확인해 보자.' : '응, 궁금한 게 있으면 물어봐.');
+  }
+  // An intention to verify is different from a question about official evidence.
+  if (/확인(해\s*볼게|하겠|할게)|알아(볼게|보겠)/.test(text) && /공식|직접|공시|은행|증권/.test(text)) {
+    return dialogue.fallbackByEmotion.deflecting;
+  }
+  const emotionFirst = topic === 'default' && !quick;
+  const primary = emotionFirst ? dialogue.fallbackByEmotion[emotion] : dialogue.fallbackByTopic[topic];
+  const alternate = topicAlternatives[gameCase.id]?.[topic] ?? dialogue.fallbackByTopic.default;
+  const candidates = emotionFirst ? [primary, dialogue.fallbackByTopic.default] : [primary, alternate];
+  return candidates.find((reply) => !used.has(reply)) ?? candidates.find((reply) => reply !== previous) ?? primary;
+}
+
+export function getScriptedReply(gameCase: CaseData, messages: AiChatMessage[]) {
+  if (gameCase.mode !== 'chat' || !gameCase.dialogue) return null;
+  const users = messages.filter((message) => message.role === 'user');
+  const latest = users.at(-1)?.content.trim() ?? '';
+  const quick = gameCase.dialogue.quickQuestions.some((question) => normalizeQuestion(question) === normalizeQuestion(latest));
+  const repeated = users.slice(0, -1).some((message) => normalizeQuestion(message.content) === normalizeQuestion(latest));
+  const smallTalk = /^(안녕(하세요)?|네|네네|예|응|알겠(어|어요|습니다)|고마워(요)?|감사(합니다|해요))[.!?~\s]*$/.test(latest);
+  const refusal = inferDialogueEmotion(messages) === 'disappointed';
+  const verify = /확인(해\s*볼게|하겠|할게)|알아(볼게|보겠)/.test(latest) && /공식|직접|공시|은행|증권/.test(latest);
+  return quick || repeated || smallTalk || refusal || verify ? buildFallbackReply(gameCase, latest, messages) : null;
 }

@@ -13,7 +13,11 @@
   ],
   "role": "악의는 없지만 투자 지식이 부족한 가까운 친구",
   "npcGoal": "자신이 들은 소문을 공유하지만 돈을 받거나 가입을 강요하지 않는다.",
-  "allowedClaims": ["공식 앱에서 직접 매수하라고 함", "수익을 보장하지는 않음", "출처가 불확실한 소문"],
+  "allowedClaims": [
+    "공식 앱에서 직접 매수하라고 함",
+    "수익을 보장하지는 않음",
+    "출처가 불확실한 소문"
+  ],
   "fallbackReplies": [
     "나도 확실히 아는 건 아니야. 그냥 들은 얘기라서 무리해서 사지는 마.",
     "내 계좌로 보낼 필요는 없어. 관심 있으면 네가 공식 앱에서 확인해."
@@ -30,7 +34,12 @@
       "수익을 보장하거나 별도 계좌·사이트·단체방으로 유도하지 않는다.",
       "모르는 회사 정보와 공시 내용을 지어내지 않는다."
     ],
-    "quickQuestions": ["그 정보는 어디서 들었어?", "수익을 보장할 수 있어?", "네 계좌로 돈을 보내야 해?", "공식 공시에서 확인했어?"],
+    "quickQuestions": [
+      "그 정보는 어디서 들었어?",
+      "수익을 보장할 수 있어?",
+      "네 계좌로 돈을 보내야 해?",
+      "공식 공시에서 확인했어?"
+    ],
     "fallbackByTopic": {
       "source": "친구 형이 증권사 쪽이라고 해서 들은 건데, 나도 원문이나 공시를 본 건 아니야.",
       "identity": "내가 전문가인 건 아니고 그냥 들은 얘기를 전한 거야. 정확한 건 직접 확인해야 할 것 같아.",
@@ -42,31 +51,100 @@
       "friendly": "그냥 재밌는 얘기 같아서 먼저 보낸 거야. 천천히 보고 궁금한 게 있으면 같이 확인해 보자.",
       "evasive": "정확한 원문은 나도 아직 못 봤어. 아는 사람이 전해 준 얘기라 출처가 좀 애매하긴 해.",
       "deflecting": "공식 자료부터 확인하겠다는 게 맞지. 일단 이 얘기는 접어 두고 나중에 확인되면 다시 말할게.",
-      "pressuring": "다른 사람들도 관심을 보인다는데 너무 늦으면 기회가 없을 수도 있대. 그래도 네가 직접 판단해.",
+      "pressuring": "일단 확인된 자료를 보고 얘기하자. 네가 서둘러 결정할 일은 아니야.",
       "disappointed": "알겠어, 지금은 보류하자. 나도 더 알아보기 전에는 괜히 권하지 않을게.",
       "closed": "응, 이 얘기는 여기까지 할게. 더는 연락하지 않을게."
     }
   },
   "sceneCues": [
-    { "id": "first-trace", "app": "social", "sender": "모임", "title": "준호가 게시물을 공유함", "detail": "메시지와 같은 종목을 언급한 짧은 게시물이 보입니다.", "icon": "social", "tone": "social", "minuteOffset": 4, "stage": "signal", "interference": false },
-    { "id": "message-edited", "app": "messages", "sender": "준호", "title": "메시지가 수정됨", "detail": "처음 보낸 종목 설명 일부가 더 모호한 표현으로 바뀌었습니다.", "icon": "messages", "tone": "social", "minuteOffset": 8, "stage": "pressure", "interference": false, "presentation": "message-status", "silenceMs": 1500, "messageState": { "kind": "edited", "text": "아는 사람이 본 자료래. 확실한 건 아니고 참고만 해." } },
-    { "id": "disclosure-gap", "app": "stocks", "sender": "채움증권", "title": "관련 공시 없음", "detail": "추천 내용과 연결되는 특별 공시는 공식 목록에서 확인되지 않습니다.", "icon": "stocks", "tone": "routine", "minuteOffset": 12, "stage": "pressure", "interference": false },
-    { "id": "transit-payment", "app": "bank", "sender": "새봄은행", "title": "교통카드 이용 내역", "detail": "평소 이용하던 교통카드 결제 알림이 함께 도착했습니다.", "icon": "bank", "tone": "routine", "minuteOffset": 16, "stage": "decision", "interference": true }
+    {
+      "id": "first-trace",
+      "app": "social",
+      "sender": "모임",
+      "title": "준호가 게시물을 공유함",
+      "detail": "메시지와 같은 종목을 언급한 짧은 게시물이 보입니다.",
+      "icon": "social",
+      "tone": "social",
+      "minuteOffset": 4,
+      "stage": "signal",
+      "interference": false
+    },
+    {
+      "id": "message-edited",
+      "app": "messages",
+      "sender": "준호",
+      "title": "메시지가 수정됨",
+      "detail": "처음 보낸 종목 설명 일부가 더 모호한 표현으로 바뀌었습니다.",
+      "icon": "messages",
+      "tone": "social",
+      "minuteOffset": 8,
+      "stage": "pressure",
+      "interference": false,
+      "presentation": "message-status",
+      "silenceMs": 1500,
+      "messageState": {
+        "kind": "edited",
+        "text": "아는 사람이 본 자료래. 확실한 건 아니고 참고만 해."
+      }
+    },
+    {
+      "id": "disclosure-gap",
+      "app": "stocks",
+      "sender": "채움증권",
+      "title": "관련 공시 없음",
+      "detail": "추천 내용과 연결되는 특별 공시는 공식 목록에서 확인되지 않습니다.",
+      "icon": "stocks",
+      "tone": "routine",
+      "minuteOffset": 12,
+      "stage": "pressure",
+      "interference": false
+    },
+    {
+      "id": "transit-payment",
+      "app": "bank",
+      "sender": "새봄은행",
+      "title": "교통카드 이용 내역",
+      "detail": "평소 이용하던 교통카드 결제 알림이 함께 도착했습니다.",
+      "icon": "bank",
+      "tone": "routine",
+      "minuteOffset": 16,
+      "stage": "decision",
+      "interference": true
+    }
   ],
   "checks": {
     "cafe": "준호는 같은 이야기를 다른 친구에게도 들었을 뿐, 대가를 받지는 않았습니다.",
     "library": "해당 회사의 공식 공시에는 소문의 근거가 확인되지 않습니다."
   },
-  "clueLabels": ["금전 요구는 없지만 정보 출처 불명확", "확정적인 표현과 또래 압력"],
+  "clueLabels": [
+    "금전 요구는 없지만 정보 출처 불명확",
+    "확정적인 표현과 또래 압력"
+  ],
   "debrief": "조직적인 사기는 아니지만 근거가 부족한 고위험 권유입니다. 틀린 추천이 곧 사기를 의미하지는 않습니다.",
   "safeAction": "투자 판단을 보류하고 공시와 위험 정보를 직접 확인합니다.",
   "review": {
-    "sourceBasis": ["지인과 온라인 커뮤니티를 통해 출처가 불분명한 종목 소문이 확산되는 투자 피해 유형"],
+    "sourceBasis": [
+      "지인과 온라인 커뮤니티를 통해 출처가 불분명한 종목 소문이 확산되는 투자 피해 유형"
+    ],
     "adaptationScope": "실존 인물과 종목을 사용하지 않고 청년 친구 관계의 또래 압력만 합성했습니다.",
     "verdictReason": "조직적 금전 편취 정황은 없지만 확인 가능한 근거가 없고 손실 가능성이 큰 권유이므로 주의로 분류합니다.",
-    "verificationPaths": ["지인에게 원문의 존재와 전달 경로 확인", "공식 공시와 독립적인 위험 정보 검색"],
-    "misdirection": ["가까운 친구라는 신뢰", "친구도 샀다는 또래 압력", "증권사 지인에게 들었다는 간접 권위"],
-    "learningObjectives": ["친밀함과 정보의 신뢰도를 분리한다", "사기는 아니어도 근거 없는 권유는 보류한다"],
-    "safetyAudit": { "containsPersonalData": false, "containsLiveUrl": false, "containsOperationalCrimeInfo": false }
+    "verificationPaths": [
+      "지인에게 원문의 존재와 전달 경로 확인",
+      "공식 공시와 독립적인 위험 정보 검색"
+    ],
+    "misdirection": [
+      "가까운 친구라는 신뢰",
+      "친구도 샀다는 또래 압력",
+      "증권사 지인에게 들었다는 간접 권위"
+    ],
+    "learningObjectives": [
+      "친밀함과 정보의 신뢰도를 분리한다",
+      "사기는 아니어도 근거 없는 권유는 보류한다"
+    ],
+    "safetyAudit": {
+      "containsPersonalData": false,
+      "containsLiveUrl": false,
+      "containsOperationalCrimeInfo": false
+    }
   }
 }
