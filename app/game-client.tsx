@@ -563,7 +563,7 @@ export default function GameClient() {
     function handleEscape(event: KeyboardEvent) {
       const dialog = document.querySelector<HTMLElement>('[role="dialog"][aria-modal="true"]');
       if (event.key === 'Tab' && dialog) {
-        const focusable = Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+        const focusable = Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'));
         if (!focusable.length) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
@@ -577,7 +577,8 @@ export default function GameClient() {
         return;
       }
       if (event.key !== 'Escape') return;
-      if (showPauseMenu) setShowPauseMenu(false);
+      if (practiceCase) setPracticeCase(null);
+      else if (showPauseMenu) setShowPauseMenu(false);
       else if (confirmNewGame) setConfirmNewGame(false);
       else if (showStartSettings) setShowStartSettings(false);
       else if (infoApp) setInfoApp(null);
@@ -587,10 +588,10 @@ export default function GameClient() {
     }
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [complete, confirmNewGame, infoApp, isAmbientEntry, loadingTask, showDebrief, showPauseMenu, showStartSettings, showVerdictPanel, started, tutorialStep]);
+  }, [practiceCase, complete, confirmNewGame, infoApp, isAmbientEntry, loadingTask, showDebrief, showPauseMenu, showStartSettings, showVerdictPanel, started, tutorialStep]);
 
   useEffect(() => {
-    const hasDialog = Boolean(showPauseMenu || showStartSettings || confirmNewGame || showVerdictPanel || infoApp || tutorialStep !== null || showDebrief || complete);
+    const hasDialog = Boolean(practiceCase || showPauseMenu || showStartSettings || confirmNewGame || showVerdictPanel || infoApp || tutorialStep !== null || showDebrief || complete);
     if (hasDialog) {
       if (!dialogReturnFocus.current) dialogReturnFocus.current = document.activeElement as HTMLElement | null;
       const timer = window.setTimeout(() => {
@@ -602,7 +603,7 @@ export default function GameClient() {
     }
     dialogReturnFocus.current?.focus();
     dialogReturnFocus.current = null;
-  }, [complete, confirmNewGame, infoApp, showDebrief, showPauseMenu, showStartSettings, showVerdictPanel, tutorialStep]);
+  }, [practiceCase, complete, confirmNewGame, infoApp, showDebrief, showPauseMenu, showStartSettings, showVerdictPanel, tutorialStep]);
 
   const modelLabel = useMemo(() => ({
     unchecked: 'Gemini 확인 전', checking: 'AI 확인 중', connected: 'AI 사용 가능', fallback: '대체 대사'
