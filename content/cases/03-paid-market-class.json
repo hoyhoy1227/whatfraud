@@ -23,8 +23,8 @@
       "id": "first-trace",
       "app": "calendar",
       "sender": "달력",
-      "title": "무료 설명회 · 오늘 마감",
-      "detail": "광고가 일정 접근을 유도했지만 공식 일정에는 등록되지 않았습니다.",
+      "title": "강의 신청 마감 알림",
+      "detail": "광고가 달력 등록을 제안합니다. 마감 표시는 강의 효과의 증거가 아닙니다.",
       "icon": "calendar",
       "tone": "warning",
       "minuteOffset": 4,
@@ -32,23 +32,11 @@
       "interference": false
     },
     {
-      "id": "calendar-gap",
-      "app": "calendar",
-      "sender": "달력",
-      "title": "공식 일정 미등록",
-      "detail": "광고 속 설명회는 기관 일정표에서 확인되지 않습니다.",
-      "icon": "calendar",
-      "tone": "warning",
-      "minuteOffset": 10,
-      "stage": "pressure",
-      "interference": false
-    },
-    {
       "id": "dinner-reminder",
       "app": "calendar",
       "sender": "달력",
-      "title": "저녁 약속 1시간 전",
-      "detail": "오늘 저장해 둔 친구와의 저녁 약속 알림입니다.",
+      "title": "점심 약속 확인",
+      "detail": "오후에 만나기로 한 친구가 약속 장소를 확인합니다.",
       "icon": "calendar",
       "tone": "routine",
       "minuteOffset": 15,
@@ -60,7 +48,7 @@
     "library": "사업자와 강의 구성은 확인됩니다. 약관에는 수강 시작 뒤 환불이 제한된다고 명시돼 있습니다.",
     "cafe": "광고에는 성공한 수강생 후기만 실렸고 전체 수강 경험과 만족도는 공개되지 않았습니다.",
     "bank": "결제 명의는 등록 사업자와 일치합니다.",
-    "home": "오늘만 신청 가능이라는 문구가 며칠 전에도 있었습니다."
+    "home": "인기 강의 배지와 높은 관심 수가 광고 첫 화면에 표시됩니다."
   },
   "clueLabels": [
     "사업자와 강의 구성은 확인됩니다. 약관에는 수강 시작 뒤 환불이 제한된다고 명시돼 있습니다.",
@@ -125,11 +113,11 @@
           "claim-2"
         ],
         "text": "사업자와 강의 구성은 확인됩니다. 약관에는 수강 시작 뒤 환불이 제한된다고 명시돼 있습니다.",
-        "explanation": "이 사실은 사기 확정이나 안전 보증이 아니라 추가 확인·보류의 근거입니다.",
+        "explanation": "실제 강의가 존재하지만 수강 뒤 환불 조건은 제한적입니다. 실재 여부와 구매할 가치가 있는지는 다른 판단입니다.",
         "supports": [
           "caution"
         ],
-        "availableAt": 3
+        "availableAt": 0
       },
       {
         "id": "evidence-2",
@@ -137,15 +125,14 @@
         "kind": "signal",
         "key": true,
         "claimIds": [
-          "claim-2",
           "claim-3"
         ],
         "text": "광고에는 성공한 수강생 후기만 실렸고 전체 수강 경험과 만족도는 공개되지 않았습니다.",
-        "explanation": "이 사실은 사기 확정이나 안전 보증이 아니라 추가 확인·보류의 근거입니다.",
+        "explanation": "성공한 후기만 선별돼 전체 수강 결과를 알 수 없습니다. 광고 효과를 기대 수익으로 받아들이기 전 결제를 보류할 근거입니다.",
         "supports": [
           "caution"
         ],
-        "availableAt": 5
+        "availableAt": 0
       },
       {
         "id": "evidence-3",
@@ -156,9 +143,9 @@
           "claim-1"
         ],
         "text": "결제 명의는 등록 사업자와 일치합니다.",
-        "explanation": "참고 정보일 뿐 이번 연락의 결론을 직접 뒷받침하지 않습니다.",
+        "explanation": "명의 일치는 결제 상대를 확인하는 한 단서일 뿐, 강의 효과나 광고의 정확성을 보증하지 않습니다.",
         "supports": [],
-        "availableAt": 7
+        "availableAt": 0
       },
       {
         "id": "evidence-4",
@@ -168,10 +155,10 @@
         "claimIds": [
           "claim-3"
         ],
-        "text": "오늘만 신청 가능이라는 문구가 며칠 전에도 있었습니다.",
-        "explanation": "문체·친숙함·인기 같은 인상만으로 진위를 결정하면 오해할 수 있습니다.",
+        "text": "인기 강의 배지와 높은 관심 수가 광고 첫 화면에 표시됩니다.",
+        "explanation": "순위나 관심 수는 사람들이 클릭했다는 정보입니다. 광고가 약속한 성과를 독립적으로 확인한 결과가 아닙니다.",
         "supports": [],
-        "availableAt": 9
+        "availableAt": 0
       }
     ],
     "appropriateActions": [
@@ -186,8 +173,8 @@
     "takeaway": "실재하는 서비스도 가격·후기·환불을 확인하기 전 결제를 서두르지 마세요.",
     "weakness": "긴급성 압박",
     "variant": {
-      "sender": "월가읽기 클래스 · 새 안내",
-      "preview": "다시 살펴볼 연락이 도착했습니다."
+      "sender": "월가읽기 클래스 · 광고",
+      "preview": "4주 투자 입문 강의, 신청 전에 구성과 환불 조건을 살펴보세요."
     }
   }
 }

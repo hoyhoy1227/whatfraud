@@ -106,27 +106,26 @@
           "claim-2"
         ],
         "text": "설치된 공식 앱 안에서 동일한 체결 내역이 확인됩니다.",
-        "explanation": "연락 밖의 독립 기록으로 주장과 실제 절차를 비교할 수 있습니다.",
+        "explanation": "공식 주문·체결 메뉴에서 주문 시각과 수량까지 일치합니다. 발신자 이름보다 내 주문과의 일치가 중요한 근거입니다.",
         "supports": [
           "normal"
         ],
-        "availableAt": 3
+        "availableAt": 0
       },
       {
         "id": "evidence-2",
         "source": "bank",
-        "kind": "signal",
+        "kind": "decisive",
         "key": true,
         "claimIds": [
-          "claim-2",
-          "claim-3"
+          "claim-2"
         ],
         "text": "연결 계좌에는 주문 금액 외의 출금이 없습니다.",
-        "explanation": "연락 밖의 독립 기록으로 주장과 실제 절차를 비교할 수 있습니다.",
+        "explanation": "추가 송금 요청 없이 주문 대금만 처리됐습니다. 공식 체결 기록과 함께 보면 정상 절차를 뒷받침합니다.",
         "supports": [
           "normal"
         ],
-        "availableAt": 5
+        "availableAt": 0
       },
       {
         "id": "evidence-3",
@@ -137,9 +136,9 @@
           "claim-1"
         ],
         "text": "친구도 오늘 체결 알림을 받았다고 합니다.",
-        "explanation": "참고 정보일 뿐 이번 연락의 결론을 직접 뒷받침하지 않습니다.",
+        "explanation": "친구의 별도 거래는 내 주문의 진위와 무관합니다. 이번 기록을 대신 확인해 주지는 못합니다.",
         "supports": [],
-        "availableAt": 7
+        "availableAt": 0
       },
       {
         "id": "evidence-4",
@@ -150,9 +149,9 @@
           "claim-3"
         ],
         "text": "즉시 확인 문구는 공식 안내에도 쓰입니다.",
-        "explanation": "문체·친숙함·인기 같은 인상만으로 진위를 결정하면 오해할 수 있습니다.",
+        "explanation": "빠른 확인을 부탁하는 말투 자체는 사기의 증거가 아닙니다. 정상 절차에도 비슷한 문구가 쓰입니다.",
         "supports": [],
-        "availableAt": 9
+        "availableAt": 0
       }
     ],
     "appropriateActions": [
@@ -166,8 +165,8 @@
     "takeaway": "공식 앱의 같은 거래 기록을 확인하세요.",
     "weakness": "링크 신뢰",
     "variant": {
-      "sender": "채움증권 · 새 안내",
-      "preview": "다시 살펴볼 연락이 도착했습니다."
+      "sender": "채움증권 · 주문 알림",
+      "preview": "방금 주문한 ETF의 체결 기록을 확인해 주세요."
     }
   }
 }

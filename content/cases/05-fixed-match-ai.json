@@ -101,7 +101,7 @@
   "checks": {
     "library": "제시된 적중률은 전체 예측이 아니라 성공한 일부 기록만 모은 것입니다.",
     "police": "같은 제휴 구조에서 충전 뒤 출금이 막힌 신고가 있고 운영 주체와 수취인이 일치하지 않습니다.",
-    "bank": "아직 내가 보낸 돈은 없고 실제 결제는 시뮬레이션에서 실행되지 않습니다.",
+    "bank": "이 운영사로 보낸 이체나 결제 기록은 아직 없습니다.",
     "home": "복잡한 AI 그래프와 단체방의 감사 글이 보입니다."
   },
   "clueLabels": [
@@ -160,15 +160,14 @@
         "kind": "decisive",
         "key": true,
         "claimIds": [
-          "claim-1",
-          "claim-2"
+          "claim-1"
         ],
         "text": "제시된 적중률은 전체 예측이 아니라 성공한 일부 기록만 모은 것입니다.",
-        "explanation": "연락 밖의 독립 기록으로 주장과 실제 절차를 비교할 수 있습니다.",
+        "explanation": "실패한 예측을 뺀 일부 기록만으로는 전체 성능을 평가할 수 없습니다. 제휴 금전 흐름의 모순과 함께 검토해야 합니다.",
         "supports": [
           "scam"
         ],
-        "availableAt": 3
+        "availableAt": 0
       },
       {
         "id": "evidence-2",
@@ -180,11 +179,11 @@
           "claim-3"
         ],
         "text": "같은 제휴 구조에서 충전 뒤 출금이 막힌 신고가 있고 운영 주체와 수취인이 일치하지 않습니다.",
-        "explanation": "연락 밖의 독립 기록으로 주장과 실제 절차를 비교할 수 있습니다.",
+        "explanation": "출금 차단 신고와 운영·수취 주체 불일치가 함께 확인됩니다. 전문적인 설명보다 실제 돈의 흐름과 피해 기록이 중요합니다.",
         "supports": [
           "scam"
         ],
-        "availableAt": 5
+        "availableAt": 0
       },
       {
         "id": "evidence-3",
@@ -192,12 +191,12 @@
         "kind": "neutral",
         "key": false,
         "claimIds": [
-          "claim-1"
+          "claim-2"
         ],
-        "text": "아직 내가 보낸 돈은 없고 실제 결제는 시뮬레이션에서 실행되지 않습니다.",
-        "explanation": "참고 정보일 뿐 이번 연락의 결론을 직접 뒷받침하지 않습니다.",
+        "text": "이 운영사로 보낸 이체나 결제 기록은 아직 없습니다.",
+        "explanation": "아직 거래하지 않았다는 사실은 현재 내 손실이 없다는 뜻일 뿐, 운영 주체가 신뢰할 만하다는 뜻은 아닙니다.",
         "supports": [],
-        "availableAt": 7
+        "availableAt": 0
       },
       {
         "id": "evidence-4",
@@ -205,12 +204,13 @@
         "kind": "misleading",
         "key": false,
         "claimIds": [
+          "claim-1",
           "claim-3"
         ],
         "text": "복잡한 AI 그래프와 단체방의 감사 글이 보입니다.",
-        "explanation": "문체·친숙함·인기 같은 인상만으로 진위를 결정하면 오해할 수 있습니다.",
+        "explanation": "복잡한 그래프와 감사 글은 검증되지 않은 홍보 자료입니다. 전체 예측 기록이나 실제 출금 내역을 대신하지 못합니다.",
         "supports": [],
-        "availableAt": 9
+        "availableAt": 0
       }
     ],
     "appropriateActions": [
@@ -225,8 +225,8 @@
     "takeaway": "AI 설명보다 전체 기록과 금전 흐름을 확인하세요.",
     "weakness": "사회적 증거",
     "variant": {
-      "sender": "데이터픽 AI · 새 안내",
-      "preview": "다시 살펴볼 연락이 도착했습니다."
+      "sender": "데이터픽 AI · 자료 안내",
+      "preview": "분석 자료의 표본을 보내드립니다. 확인하고 싶은 내용을 말씀해 주세요."
     }
   }
 }

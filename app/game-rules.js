@@ -1,4 +1,4 @@
-export const ARRIVAL_MINUTES = [500, 600, 760, 900, 1110, 1320];
+export const ARRIVAL_MINUTES = [550, 600, 760, 900, 1110, 1320];
 
 export function formatGameClock(minutes) {
   const hour = Math.floor(minutes / 60) % 24;

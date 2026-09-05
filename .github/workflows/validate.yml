@@ -24,15 +24,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
-      - name: Return generated dependency lock
-        run: |
-          node --input-type=module -e 'import {readFileSync} from "node:fs"; const value=readFileSync("pnpm-lock.yaml","utf8"); for(let i=0;i<value.length;i+=4000) console.log("LOCKCHUNK "+i+" "+JSON.stringify(value.slice(i,i+4000)));'
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
-      - name: Return generated migrations
-        run: |
-          node --input-type=module -e 'import {readFileSync,readdirSync} from "node:fs"; for(const file of readdirSync("drizzle",{recursive:true}).filter(x=>/\.(sql|json)$/.test(x))) { const path="drizzle/"+file, value=readFileSync(path,"utf8"); for(let i=0;i<value.length;i+=4000) console.log("SOURCECHUNK "+JSON.stringify({path,offset:i,text:value.slice(i,i+4000)})); }'
+      - run: git diff --exit-code -- drizzle/
       - run: node scripts/check-security.mjs
       - run: node scripts/test-ai-chat.mjs
       - run: node scripts/test-budget.mjs
