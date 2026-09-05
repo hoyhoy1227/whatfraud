@@ -107,7 +107,7 @@ async function main() {
   assert(aiRoute.includes("'Cache-Control': 'no-store'") && aiRoute.includes('sanitizePlayerText'), '보조 AI 응답 캐시 차단 또는 입력 정제가 없습니다.', errors);
   assert(aiDialogue.includes('[링크 제거]') && aiDialogue.includes('[전화번호 제거]') && aiDialogue.includes('validateAiReply'), '입력 개인정보 제거 또는 AI 답변 검사가 없습니다.', errors);
   assert(aiDialogue.includes('inferDialogueEmotion') && aiDialogue.includes('inferDialogueReplyMode') && aiDialogue.includes('답변 길이:') && aiDialogue.includes('감정은 말투만 바꾸며'), 'NPC 감정 또는 동적 답변 길이 규칙이 없습니다.', errors);
-  assert(aiDialogue.includes('가상 허위 주장을 새로 만들어도 된다') && aiDialogue.includes('구체적인 실제 수익률') && client.includes("topic !== 'default'") && client.includes('emotionFirst'), '사기 역할의 허위 주장 경계 또는 질문 우선 대체 대사가 없습니다.', errors);
+  assert(aiDialogue.includes('가상 허위 주장을 새로 만들어도 된다') && aiDialogue.includes('구체적인 실제 수익률') && aiDialogue.includes("topic === 'default'") && aiDialogue.includes('emotionFirst'), '사기 역할의 허위 주장 경계 또는 질문 우선 대체 대사가 없습니다.', errors);
   assert(aiDialogue.includes('8~35자') && aiDialogue.includes('35~100자') && aiDialogue.includes("replyMode === 'short' ? 55 : 140") && aiDialogue.includes('/보장|확정|무조건|100'), 'Gemini 동적 길이·보장·과장 표현 제한이 없습니다.', errors);
   assert(aiDialogue.includes("emotion === 'closed'") && aiDialogue.includes('생각이\\s*바뀌'), '연락 중단 요청 뒤 재접촉 문구 차단이 없습니다.', errors);
   assert(aiRoute.includes('validateAiReply(reply, emotion, replyMode)') && client.includes('inferDialogueReplyMode(messages)'), '서버와 브라우저가 같은 감정·길이 단계로 Gemini 답변을 검사하지 않습니다.', errors);
@@ -143,7 +143,7 @@ async function main() {
   assert(client.includes('blockActiveContact') && client.includes('blockedContacts') && client.includes('차단한 연락처입니다'), '휴대폰에서 직접 연락처를 차단하는 기능이 없습니다.', errors);
   assert(aiDialogue.includes('실제 차단되기 전') && aiDialogue.includes('신체 위해') && aiDialogue.includes('/죽|해코지|찾아가'), '차단 전 회유 또는 위험한 협박 차단 규칙이 없습니다.', errors);
   assert(client.includes('playPhoneFeedback') && client.includes('navigator.vibrate') && client.includes('soundEnabled') && client.includes('vibrationEnabled'), '선택 가능한 휴대폰 알림음·진동이 없습니다.', errors);
-  assert(client.includes('fallbackByEmotion[emotion]'), 'Gemini 실패 시 동일 감정 단계의 검수 대사를 사용하지 않습니다.', errors);
+  assert(aiDialogue.includes('fallbackByEmotion[emotion]'), 'Gemini 실패 시 동일 감정 단계의 검수 대사를 사용하지 않습니다.', errors);
   assert(client.includes('anyRiskExposure') && cases.some((item) => item.sceneCues.some((cue) => cue.condition === 'any-risk-exposure')), '플레이어 행동에 따른 조건부 후속 연락이 없습니다.', errors);
   assert(client.includes('rewindScenes') && client.includes('도착했지만 확인하지 않은 앱 알림') && css.includes('.scene-rewind'), '사건 되감기에 앱 흔적과 놓친 알림 복기가 없습니다.', errors);
 
