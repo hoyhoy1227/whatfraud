@@ -3,7 +3,7 @@ import { cases } from '../../game-data';
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const PROVIDER_TIMEOUT_MS = 24_000;
+const PROVIDER_TIMEOUT_MS = 8_000;
 const SESSION_MINUTE_LIMIT = 5;
 const SESSION_DAY_LIMIT = 30;
 const IP_MINUTE_LIMIT = 10;
@@ -11,6 +11,33 @@ const IP_DAY_LIMIT = 120;
 
 type RateBucket = { minute: number[]; day: number[] };
 const rateBuckets = new Map<string, RateBucket>();
+let providerPausedUntil = 0;
+
+async function readBoundedBody(request: Request) {
+  const reader = request.body?.getReader();
+  if (!reader) throw new Error('empty body');
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 12_000) {
+        await reader.cancel();
+        throw new Error('body too large');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
 
 function json(payload: unknown, status = 200, headers: HeadersInit = {}) {
   return Response.json(payload, {
@@ -25,6 +52,12 @@ function cleanTimes(values: number[], cutoff: number) {
 
 function consumeRateLimit(key: string, minuteLimit: number, dayLimit: number) {
   const now = Date.now();
+  if (!rateBuckets.has(key) && rateBuckets.size >= 1_000) {
+    for (const [bucketKey, bucket] of rateBuckets) {
+      if (!bucket.day.some((time) => time > now - 86_400_000)) rateBuckets.delete(bucketKey);
+    }
+    if (rateBuckets.size >= 1_000) return false;
+  }
   const current = rateBuckets.get(key) ?? { minute: [], day: [] };
   current.minute = cleanTimes(current.minute, now - 60_000);
   current.day = cleanTimes(current.day, now - 86_400_000);
@@ -84,21 +117,52 @@ export async function GET() {
   });
 }
 
+type ChatBody = { caseId?: unknown; messages?: unknown; userTurnCount?: unknown };
+type PendingReply = { response: Promise<Response>; expires: number };
+const pendingReplies = new Map<string, PendingReply>();
+
+// Exact request coalescing, scoped to identity and full context. No cross-player
+// response reuse; only short-lived process memory, never logs or durable storage.
 export async function POST(request: Request) {
+  let body: ChatBody;
+  try {
+    body = await readBoundedBody(request) as ChatBody;
+    if (!body || typeof body !== 'object') return json({ code: 'invalid_request' }, 400);
+  } catch {
+    return json({ code: 'invalid_request' }, 400);
+  }
+  const identity = requestIdentity(request);
+  const bytes = new TextEncoder().encode(JSON.stringify([identity.ip, identity.session, body]));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const key = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  const now = Date.now();
+  for (const [entryKey, entry] of pendingReplies) {
+    if (entry.expires <= now) pendingReplies.delete(entryKey);
+  }
+  const existing = pendingReplies.get(key);
+  if (existing) return (await existing.response).clone();
+  if (pendingReplies.size >= 128) return json({ code: 'rate_limit' }, 429, { 'Retry-After': '30' });
+  const response = handleChat(request, body);
+  pendingReplies.set(key, { response, expires: now + 60_000 });
+  try {
+    return (await response).clone();
+  } catch {
+    pendingReplies.delete(key);
+    return json({ code: 'provider_error' }, 502);
+  }
+}
+
+async function handleChat(request: Request, body: ChatBody) {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return json({ code: 'ai_unconfigured' }, 503);
 
+  if (Date.now() < providerPausedUntil) {
+    return json({ code: 'provider_cooldown' }, 503, { 'Retry-After': String(Math.ceil((providerPausedUntil - Date.now()) / 1000)) });
+  }
   const { ip, session } = requestIdentity(request);
   if (!consumeRateLimit(`ip:${ip}`, IP_MINUTE_LIMIT, IP_DAY_LIMIT)
     || !consumeRateLimit(`session:${ip}:${session}`, SESSION_MINUTE_LIMIT, SESSION_DAY_LIMIT)) {
     return json({ code: 'rate_limit' }, 429, { 'Retry-After': '60' });
-  }
-
-  let body: { caseId?: unknown; messages?: unknown; userTurnCount?: unknown };
-  try {
-    body = await request.json() as { caseId?: unknown; messages?: unknown; userTurnCount?: unknown };
-  } catch {
-    return json({ code: 'invalid_request' }, 400);
   }
 
   if (typeof body.caseId !== 'string') return json({ code: 'invalid_request' }, 400);
@@ -114,6 +178,10 @@ export async function POST(request: Request) {
     return json({ code: 'invalid_turn_count' }, 400);
   }
   const userTurnCount = Number(body.userTurnCount);
+  // Supplemental isolate-local throttle; not a project-wide quota or billing cap.
+  if (!consumeRateLimit(`case:${ip}:${session}:${gameCase.id}`, 5, 8)) {
+    return json({ code: 'rate_limit' }, 429, { 'Retry-After': '60' });
+  }
   const emotion = inferDialogueEmotion(conversation, userTurnCount);
   const replyMode = inferDialogueReplyMode(conversation, userTurnCount);
   const controller = new AbortController();
@@ -140,12 +208,21 @@ export async function POST(request: Request) {
       }),
     });
 
-    if (response.status === 429) return json({ code: 'free_quota' }, 429, { 'Retry-After': '60' });
-    if (!response.ok) return json({ code: response.status === 400 || response.status === 403 ? 'invalid_api_key' : 'provider_error' }, 502);
-    const reply = extractGeminiText(await response.json());
+    if (response.status === 429) {
+      providerPausedUntil = Date.now() + 60_000;
+      return json({ code: 'provider_quota' }, 429, { 'Retry-After': '60' });
+    }
+    if (!response.ok) {
+      providerPausedUntil = Date.now() + (response.status === 400 || response.status === 403 ? 300_000 : 30_000);
+      return json({ code: response.status === 400 || response.status === 403 ? 'provider_configuration' : 'provider_error' }, 502, { 'Retry-After': response.status === 400 || response.status === 403 ? '300' : '30' });
+    }
+    const payload = await response.json() as { candidates?: Array<{ finishReason?: string }> };
+    if (payload.candidates?.[0]?.finishReason !== 'STOP') return json({ code: 'incomplete_response' }, 502);
+    const reply = extractGeminiText(payload);
     if (!validateAiReply(reply, emotion, replyMode)) return json({ code: 'unsafe_response' }, 502);
     return json({ reply, provider: 'gemini', model: GEMINI_MODEL });
   } catch (error) {
+    providerPausedUntil = Date.now() + 30_000;
     return json({ code: error instanceof Error && error.name === 'AbortError' ? 'provider_timeout' : 'provider_error' }, 504);
   } finally {
     clearTimeout(timeout);

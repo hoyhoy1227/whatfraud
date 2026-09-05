@@ -26,8 +26,9 @@ export function inferDialogueEmotion(messages: AiChatMessage[], totalUserTurns?:
 export function inferDialogueReplyMode(messages: AiChatMessage[], totalUserTurns?: number): DialogueReplyMode {
   const latest = messages.filter((message) => message.role === 'user').at(-1)?.content.trim() ?? '';
   const emotion = inferDialogueEmotion(messages, totalUserTurns);
-  if (emotion === 'disappointed' || emotion === 'pressuring' || emotion === 'closed') return 'short';
-  if (/출처|근거|원문|공시|소속|신원|회사|등록|자격|공식|경찰|금감원|금융감독|은행|증권사|절차|위험|손실|이유|설명|어떻게/.test(latest)) return 'normal';
+  if (emotion === 'disappointed' || emotion === 'closed') return 'short';
+  if (/출처|근거|원문|공시|소속|신원|회사|등록|자격|공식|경찰|금감원|금융감독|은행|증권사|어디서|돈|입금|계좌|송금|출금|충전|비용|결제|보장|절차|위험|손실|이유|설명|어떻게/.test(latest)) return 'normal';
+  if (emotion === 'pressuring') return 'short';
   if (latest.length <= 18 || /^(?:안녕|네|예|응|그래|알겠|좋아|싫어|정말|맞아|뭐야|왜)[\s?.!~]*$/.test(latest)) return 'short';
   return 'normal';
 }

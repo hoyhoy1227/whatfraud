@@ -15,7 +15,7 @@ const tests = [
 
 const forbidden = /보장|확정|무조건|100\s*%|손실\s*(?:이\s*)?(?:없|제로)|원금\s*(?:이\s*)?(?:안전|보호)|(?:현명|탁월|훌륭)한?\s*(?:판단|선택|투자자|자세)|좋은\s*투자자의\s*자세|(?:지금|바로).{0,12}(?:충전|입금|송금|결제|가입)/i;
 const reopening = /나중|언제든|궁금|찾아|다시|필요하시면|생각이\s*바뀌/;
-const fallbackCodes = new Set(['unsafe_response', 'provider_timeout', 'provider_error', 'free_quota', 'rate_limit']);
+const fallbackCodes = new Set(['unsafe_response', 'provider_timeout', 'provider_error', 'free_quota', 'provider_quota', 'provider_cooldown', 'provider_configuration', 'incomplete_response', 'rate_limit']);
 
 let providerReplies = 0;
 let guardedFallbacks = 0;

@@ -55,7 +55,7 @@ type SavedProgress = {
 
 const PROGRESS_SAVE_KEY = 'profit-24-progress-v1';
 const PREFERENCES_KEY = 'profit-24-preferences-v1';
-const AI_REQUEST_TIMEOUT_MS = 26_000;
+const AI_REQUEST_TIMEOUT_MS = 10_000;
 const SCENE_GAP_MS: Record<DayAct, number> = { morning: 1_400, afternoon: 900, night: 550 };
 const verdictValues: Verdict[] = ['normal', 'caution', 'scam'];
 const responseActionValues: ResponseAction[] = ['verify', 'pause', 'block'];
@@ -290,17 +290,17 @@ function initialChat(gameCase: CaseData): ChatMessage[] {
 }
 
 function classifyDialogueTopic(text: string): DialogueTopic {
-  if (/돈|입금|계좌|송금|출금|충전|비용|결제/.test(text)) return 'money';
+  if (/돈|입금|계좌|송금|출금|충전|비용|결제|제휴/.test(text)) return 'money';
   if (/위험|손실|틀리|보장|실패|잃/.test(text)) return 'risk';
   if (/소속|누구|회사|신원|등록|자격/.test(text)) return 'identity';
-  if (/어디서|출처|자료|공시|성과|적중률|기록|근거/.test(text)) return 'source';
+  if (/어디서|어디에서|출처|자료|공시|성과|적중률|기록|근거|계약/.test(text)) return 'source';
   return 'default';
 }
 
 function fallbackReply(gameCase: CaseData, userText: string, messages: ChatMessage[]) {
   const topic = classifyDialogueTopic(userText);
   const emotion = inferDialogueEmotion(messages);
-  const emotionFirst = emotion === 'pressuring' || emotion === 'disappointed' || emotion === 'closed';
+  const emotionFirst = emotion === 'disappointed' || emotion === 'closed' || (topic === 'default' && emotion === 'pressuring');
   const topicReply = gameCase.dialogue && topic !== 'default' ? gameCase.dialogue.fallbackByTopic[topic] : null;
   const emotionReply = gameCase.dialogue?.fallbackByEmotion[emotion] ?? null;
   const replies = [
@@ -309,10 +309,15 @@ function fallbackReply(gameCase: CaseData, userText: string, messages: ChatMessa
     '그 질문은 조금 더 확인해 보고 답할게.',
   ];
   const used = new Set(messages.filter((message) => message.role === 'assistant').map((message) => message.content));
-  return replies.find((reply) => !used.has(reply)) ?? replies[messages.length % replies.length];
+  // Keep a direct answer on-topic even if the player asks it again.
+  // Unrelated unused lines are not a substitute for answering the question.
+  if (topicReply && !emotionFirst) return topicReply;
+  return replies.find((reply) => !used.has(reply)) ?? replies[0];
 }
 
 export default function GameClient() {
+  const aiPausedUntil = useRef(0);
+  const sendingRef = useRef(false);
   const dialogReturnFocus = useRef<HTMLElement | null>(null);
   const objectiveCueTimer = useRef<number | null>(null);
   const sceneCueTimer = useRef<number | null>(null);
@@ -584,7 +589,7 @@ export default function GameClient() {
   }, [complete, confirmNewGame, infoApp, showDebrief, showPauseMenu, showStartSettings, showVerdictPanel, tutorialStep]);
 
   const modelLabel = useMemo(() => ({
-    unchecked: 'Gemini 확인 전', checking: 'AI 확인 중', connected: 'Gemini 연결', fallback: '대체 대사'
+    unchecked: 'Gemini 확인 전', checking: 'AI 확인 중', connected: 'AI 사용 가능', fallback: '대체 대사'
   })[modelState], [modelState]);
 
   function revealObjectiveCue() {
@@ -601,18 +606,24 @@ export default function GameClient() {
 
   function explainFallback(error: unknown) {
     const message = error instanceof Error ? error.message : '';
+    if (/scripted_response/i.test(message)) return '추천 질문은 검수된 대사로 답해 AI 호출을 절약합니다.';
+    if (/provider_cooldown/i.test(message)) return '연결 회복을 기다리는 동안 내장 대사로 이어갑니다.';
     if (/ai_unconfigured/i.test(message)) return '서버에 Gemini API 키가 없어 검수된 내장 대사를 사용합니다.';
-    if (/free_quota|rate_limit|429/i.test(message)) return '무료 사용 한도 또는 게임 내 이용 한도에 도달해 내장 대사로 이어갑니다.';
-    if (/invalid_api_key|401|403/i.test(message)) return 'Gemini API 키를 확인할 수 없어 내장 대사를 사용합니다.';
-    if (/timeout|abort/i.test(message)) return '26초 응답 제한을 넘어 내장 대사로 전환했습니다.';
+    if (/provider_quota|free_quota|rate_limit|429/i.test(message)) return '공급자 또는 게임 내 이용 한도에 도달해 내장 대사로 이어갑니다.';
+    if (/provider_configuration|invalid_api_key|401|403/i.test(message)) return 'Gemini API 키를 확인할 수 없어 내장 대사를 사용합니다.';
+    if (/timeout|abort/i.test(message)) return '10초 응답 제한을 넘어 내장 대사로 전환했습니다.';
     if (/unsafe|repeated/i.test(message)) return '안전 검사 또는 반복 검사에서 제외되어 검수된 대사를 사용했습니다.';
     return 'Gemini 응답을 받을 수 없어 검수된 내장 대사를 사용했습니다.';
   }
 
   async function requestGemini(gameCase: CaseData, messages: ChatMessage[]) {
     if (gameCase.mode !== 'chat' || !gameCase.dialogue) throw new Error('read-only contact');
+    const latest = messages.at(-1)?.content.trim() ?? '';
+    if (gameCase.dialogue.quickQuestions.includes(latest)) throw new Error('scripted_response');
+    if (Date.now() < aiPausedUntil.current) throw new Error('provider_cooldown');
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+    try {
     const response = await fetch('/api/ai-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-whatfraud-session': aiSessionId },
@@ -622,13 +633,24 @@ export default function GameClient() {
         messages: messages.slice(-4),
         userTurnCount: messages.filter((message) => message.role === 'user').length,
       }),
-    }).finally(() => window.clearTimeout(timeout));
+    }).catch((error) => {
+      aiPausedUntil.current = Date.now() + 30_000;
+      throw error;
+    });
     const payload = await response.json().catch(() => ({})) as { reply?: unknown; code?: unknown };
+    if (!response.ok) {
+      const seconds = Number(response.headers.get('Retry-After'));
+      aiPausedUntil.current = Date.now() + (payload.code === 'ai_unconfigured'
+        ? 300_000 : Math.min(300, Math.max(30, Number.isFinite(seconds) ? seconds : 30)) * 1000);
+    }
     if (!response.ok) throw new Error(typeof payload.code === 'string' ? payload.code : `gemini ${response.status}`);
     if (typeof payload.reply !== 'string' || !payload.reply.trim()) throw new Error('empty gemini response');
     const reply = payload.reply.trim();
     if (!validateAiReply(reply, inferDialogueEmotion(messages), inferDialogueReplyMode(messages))) throw new Error('unsafe gemini response');
     return reply;
+    } finally {
+      window.clearTimeout(timeout);
+    }
   }
 
   async function checkModel() {
@@ -636,8 +658,13 @@ export default function GameClient() {
     setFallbackReason(null);
     const startedAt = performance.now();
     try {
-      const testCase = cases.find((item) => item.mode === 'chat') ?? activeCase;
-      await requestGemini(testCase, [{ role: 'user', content: '게임 속 역할로 짧게 인사해 주세요.' }]);
+      const response = await fetch('/api/ai-chat', { cache: 'no-store' });
+      const status = await response.json() as { enabled?: boolean; code?: string };
+      if (!response.ok || !status.enabled) {
+        aiPausedUntil.current = Date.now() + 300_000;
+        throw new Error(status.code ?? 'ai_unconfigured');
+      }
+      aiPausedUntil.current = 0;
       setModelLoadMs(Math.round(performance.now() - startedAt));
       setModelState('connected');
     } catch (error) {
@@ -649,7 +676,8 @@ export default function GameClient() {
   async function sendMessage(event: FormEvent) {
     event.preventDefault();
     const content = draft.trim();
-    if (!content || sending || activeResult || activeContactBlocked || activeCase.mode !== 'chat') return;
+    if (!content || sendingRef.current || sending || activeResult || activeContactBlocked || activeCase.mode !== 'chat') return;
+    sendingRef.current = true;
     const nextMessages = [...activeChat, { role: 'user' as const, content }];
     setChats((current) => ({ ...current, [activeCase.id]: nextMessages }));
     setDraft('');
@@ -688,6 +716,7 @@ export default function GameClient() {
       clearTypingCueTimers();
       setTypingPhase(null);
       setSending(false);
+      sendingRef.current = false;
     }
   }
 
@@ -803,11 +832,12 @@ export default function GameClient() {
     const startedAt = performance.now();
     void fetch('/api/ai-chat', { cache: 'no-store' }).then(async (response) => {
       if (!response.ok) throw new Error(`ai status ${response.status}`);
-      const payload = await response.json() as { enabled?: unknown };
+      const payload = await response.json() as { enabled?: unknown; code?: string };
       setModelLoadMs(Math.round(performance.now() - startedAt));
       if (payload.enabled === true) setModelState('connected');
       else {
-        setFallbackReason(explainFallback(new Error('ai_unconfigured')));
+        aiPausedUntil.current = Date.now() + 300_000;
+        setFallbackReason(explainFallback(new Error(payload.code ?? 'ai_unconfigured')));
         setModelState('fallback');
       }
     }).catch((error) => {
@@ -1177,7 +1207,7 @@ export default function GameClient() {
                 </div>
               )}
 
-              {phoneApp === 'settings' && <div className="settings-screen phone-app-body"><span className="pixel-label">PHONE FEEDBACK</span><h2>소리와 진동</h2><div className="start-setting-list phone-feedback-settings"><button role="switch" aria-checked={preferences.soundEnabled} onClick={() => updatePreference('soundEnabled', !preferences.soundEnabled)}><span><b>알림음·통화음</b><small>알림과 전화가 올 때 짧게 재생됩니다.</small></span><i>{preferences.soundEnabled ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.vibrationEnabled} onClick={() => updatePreference('vibrationEnabled', !preferences.vibrationEnabled)}><span><b>진동</b><small>기기와 브라우저가 지원할 때 작동합니다.</small></span><i>{preferences.vibrationEnabled ? '켜짐' : '꺼짐'}</i></button></div><span className="pixel-label settings-section-label">GAME GUIDE</span><h2>게임 방법</h2><p>연락 확인 → 공식 조사 → 근거·판정·대응 선택의 순서로 진행합니다. 사건은 판정을 마칠 때마다 하나씩 도착합니다.</p><button className="guide-replay" onClick={() => setTutorialStep(0)}>게임 방법 다시 보기</button><span className="pixel-label settings-section-label">LOCAL AUTO SAVE</span><h2>기기 내 자동 저장</h2><p>사건 진행, 조사 근거와 판정 결과만 이 브라우저에 저장해 다음 방문에 이어갈 수 있습니다. 직접 입력한 대화와 AI 답변은 저장하지 않습니다.</p><div className="save-status-card" aria-live="polite"><i>✓</i><span><b>현재 진행 자동 저장 중</b><small>{savedProgress ? `${formatSavedTime(savedProgress.savedAt)} 저장 · 판정 ${savedProgress.results.length}/${cases.length}` : '첫 진행 상태를 준비 중입니다.'}</small></span></div><span className="pixel-label settings-section-label">GEMINI ASSIST AI</span><h2>Gemini 보조 AI</h2><p>대화형 사건에서만 Gemini 3.5 Flash-Lite가 최소 생각 수준으로 한국어 1~2문장을 답합니다. 키가 없거나 무료 한도·26초 제한을 넘으면 검수된 대사로 자동 전환합니다.</p><button className={`model-test ${modelState}`} onClick={checkModel} disabled={modelState === 'checking'}>{modelLabel} · 연결 시험</button><div className="ai-runtime-summary" aria-live="polite"><span><b>실행 범위</b><small>대화형 사건 {chatCaseCount}건만 보조 AI 사용</small></span><span><b>준비 상태</b><small>{modelLabel}</small></span><span><b>측정값</b><small>{lastResponseMs !== null ? `최근 답변 ${lastResponseMs}ms` : modelLoadMs !== null ? `연결 확인 ${modelLoadMs}ms` : '아직 측정 전'}</small></span>{fallbackReason && <p>{fallbackReason}</p>}</div><div className="privacy-note"><b>개인정보를 입력하지 마세요</b><span>질문은 게임 서버를 거쳐 Gemini로 전송됩니다. 링크·이메일·전화번호 형태는 서버에서 제거하며, 직접 입력한 대화와 AI 답변은 게임 진행 기록에 저장하지 않습니다.</span></div></div>}
+              {phoneApp === 'settings' && <div className="settings-screen phone-app-body"><span className="pixel-label">PHONE FEEDBACK</span><h2>소리와 진동</h2><div className="start-setting-list phone-feedback-settings"><button role="switch" aria-checked={preferences.soundEnabled} onClick={() => updatePreference('soundEnabled', !preferences.soundEnabled)}><span><b>알림음·통화음</b><small>알림과 전화가 올 때 짧게 재생됩니다.</small></span><i>{preferences.soundEnabled ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.vibrationEnabled} onClick={() => updatePreference('vibrationEnabled', !preferences.vibrationEnabled)}><span><b>진동</b><small>기기와 브라우저가 지원할 때 작동합니다.</small></span><i>{preferences.vibrationEnabled ? '켜짐' : '꺼짐'}</i></button></div><span className="pixel-label settings-section-label">GAME GUIDE</span><h2>게임 방법</h2><p>연락 확인 → 공식 조사 → 근거·판정·대응 선택의 순서로 진행합니다. 사건은 판정을 마칠 때마다 하나씩 도착합니다.</p><button className="guide-replay" onClick={() => setTutorialStep(0)}>게임 방법 다시 보기</button><span className="pixel-label settings-section-label">LOCAL AUTO SAVE</span><h2>기기 내 자동 저장</h2><p>사건 진행, 조사 근거와 판정 결과만 이 브라우저에 저장해 다음 방문에 이어갈 수 있습니다. 직접 입력한 대화와 AI 답변은 저장하지 않습니다.</p><div className="save-status-card" aria-live="polite"><i>✓</i><span><b>현재 진행 자동 저장 중</b><small>{savedProgress ? `${formatSavedTime(savedProgress.savedAt)} 저장 · 판정 ${savedProgress.results.length}/${cases.length}` : '첫 진행 상태를 준비 중입니다.'}</small></span></div><span className="pixel-label settings-section-label">GEMINI ASSIST AI</span><h2>Gemini 보조 AI</h2><p>추천 질문에는 검수된 대사를 사용하고, 자유 질문에는 Gemini 3.5 Flash-Lite가 짧게 답합니다. 키가 없거나 이용 한도·10초 제한을 넘으면 검수된 대사로 자동 전환합니다.</p><button className={`model-test ${modelState}`} onClick={checkModel} disabled={modelState === 'checking'}>{modelLabel} · 설정 확인</button><div className="ai-runtime-summary" aria-live="polite"><span><b>실행 범위</b><small>대화형 사건 {chatCaseCount}건만 보조 AI 사용</small></span><span><b>준비 상태</b><small>{modelLabel}</small></span><span><b>측정값</b><small>{lastResponseMs !== null ? `최근 답변 ${lastResponseMs}ms` : modelLoadMs !== null ? `연결 확인 ${modelLoadMs}ms` : '아직 측정 전'}</small></span>{fallbackReason && <p>{fallbackReason}</p>}</div><div className="privacy-note"><b>개인정보를 입력하지 마세요</b><span>질문은 게임 서버를 거쳐 Gemini로 전송됩니다. 링크·이메일·전화번호 형태는 서버에서 제거하며, 직접 입력한 대화와 AI 답변은 게임 진행 기록에 저장하지 않습니다.</span></div></div>}
 
               {phoneApp === 'photos' && <div className="native-app phone-app-body photos-app"><h2>캡처 보관함</h2><p className="app-lead">시뮬레이션 기록은 실제 개인정보를 포함하지 않습니다.</p><div className="capture-guide"><article><i>1</i><b>대화 전체 화면</b><span>발신자·시간·내용이 함께 보이게 저장</span></article><article><i>2</i><b>링크와 주소</b><span>접속하지 말고 표시된 주소를 함께 기록</span></article><article><i>3</i><b>송금·결제 기록</b><span>원본 거래 내역을 공식 앱에서 보관</span></article></div><div className="empty-photo">+<span>실제 신고에서는 원본 링크와 시간 정보도 함께 보관하세요.</span></div></div>}
 
