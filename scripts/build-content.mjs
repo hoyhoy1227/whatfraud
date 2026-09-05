@@ -108,7 +108,7 @@ function validateCase(data, file, errors) {
       if (!['decisive','signal','neutral','misleading'].includes(clue.kind) || typeof clue.key !== 'boolean') addError(errors,file,'단서 분류가 잘못됐습니다.');
       if (!Array.isArray(clue.claimIds) || !clue.claimIds.length || clue.claimIds.some(id=>!ids.has(id))) addError(errors,file,'단서가 알 수 없는 주장을 가리킵니다.');
       if (!Array.isArray(clue.supports) || clue.supports.some(value=>!verdicts.has(value))) addError(errors,file,'단서의 지지 결론이 잘못됐습니다.');
-      if (!clue.explanation || !Number.isInteger(clue.availableAt) || clue.availableAt < 1) addError(errors,file,'단서의 복기 설명과 등장 시점이 필요합니다.');
+      if (!clue.explanation || !Number.isInteger(clue.availableAt) || clue.availableAt < 0) addError(errors,file,'단서의 복기 설명과 등장 시점이 필요합니다.');
     }
     const keys = training.evidence.filter(clue=>clue.key);
     if (keys.length < 2 || keys.length > 3 || !training.evidence.some(clue=>['neutral','misleading'].includes(clue.kind))) addError(errors,file,'핵심 단서 2~3개와 중립·반대 정보가 필요합니다.');

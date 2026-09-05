@@ -138,7 +138,7 @@ async function main() {
   assert(client.includes('playPhoneFeedback') && client.includes('navigator.vibrate') && client.includes('soundEnabled') && client.includes('vibrationEnabled'), '선택 가능한 휴대폰 알림음·진동이 없습니다.', errors);
   assert(aiDialogue.includes('fallbackByEmotion[emotion]'), 'Gemini 실패 시 동일 감정 단계의 검수 대사를 사용하지 않습니다.', errors);
   assert(client.includes('anyRiskExposure') && cases.some((item) => item.sceneCues.some((cue) => cue.condition === 'any-risk-exposure')), '플레이어 행동에 따른 조건부 후속 연락이 없습니다.', errors);
-  assert(client.includes('rewindScenes') && client.includes('도착했지만 확인하지 않은 앱 알림') && css.includes('.scene-rewind'), '사건 되감기에 앱 흔적과 놓친 알림 복기가 없습니다.', errors);
+  assert(client.includes('rewindScenes') && client.includes('아직 열지 않은 앱 알림') && css.includes('.scene-rewind'), '사건 되감기에 앱 흔적과 놓친 알림 복기가 없습니다.', errors);
 
   if (errors.length) throw new Error(`출시 전 자동 점검 실패:\n- ${errors.join('\n- ')}`);
   console.log(`출시 전 자동 점검 완료: ${cases.length}개 사건 순차 진행 · 읽음 처리 · 자동 저장 · 로딩 전환 · 점수 · Gemini 서버 격리 · 키보드 · 모바일 · 콘텐츠 안전`);

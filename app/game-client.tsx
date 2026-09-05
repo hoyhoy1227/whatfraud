@@ -13,6 +13,7 @@ type ChatMessage = { role: 'user' | 'assistant'; content: string };
 type ResponseAction = 'verify' | 'pause' | 'block' | 'report';
 type RiskEvent = { kind: 'link'; minuteOffset: number };
 type Result = ReturnType<typeof evaluateDecision> & {
+  decisionMinute: number;
   riskBeforeEvidence: boolean;
   exposed: boolean;
   caseId: string;
@@ -156,6 +157,7 @@ function readSavedProgress(serialized: string | null): SavedProgress | null {
         selectedEvidence,
         ...assessment,
         riskBeforeEvidence,
+        decisionMinute: Number.isInteger(candidate.decisionMinute) ? Math.max(0,Math.min(60,Number(candidate.decisionMinute))) : Math.max(9,...history.map(event=>event.minuteOffset+1),...risks.map(event=>event.minuteOffset+1)),
         exposed: risks.length>0 || candidate.exposed===true,
       });
     }
@@ -467,6 +469,11 @@ export default function GameClient() {
     return source ? [{ source, evidence: item, minuteOffset: 4 + index * 5 }] : [];
   });
   const rewindScenes = sceneCues.map((cue) => ({ ...cue, seen: viewedSceneCueIds.has(cue.id) }));
+  const rewindTimeline = [
+    ...rewindScenes.map(cue=>({id:'scene-'+cue.id,minuteOffset:cue.minuteOffset,className:cue.seen?'completed scene-rewind':'missed scene-rewind',title:cue.seen?cue.sender+' · '+cue.title:cue.interference?'열지 않은 일상 알림':'아직 열지 않은 앱 알림',detail:cue.seen?cue.detail:'예정된 주변 알림입니다. 실제로 읽은 기록과 구분해서 살펴보세요.'})),
+    ...rewindHistory.map(event=>({id:'verify-'+event.source,minuteOffset:event.minuteOffset,className:event.evidence?'completed':'missed',title:verificationActions.find(source=>source.id===event.source)?.label??'독립 경로 확인',detail:event.evidence??'이 사건과 직접 연결되는 기록은 없었습니다.'})),
+    ...(riskHistory[activeCase.id]??[]).map(event=>({id:'risk-link',minuteOffset:event.minuteOffset,className:'missed',title:'외부 링크 열기',detail:activeResult?.riskBeforeEvidence?'핵심 단서를 확인하기 전에 링크를 열었습니다.':'핵심 확인 뒤에 링크를 열었습니다. 실제 상황에서는 공식 경로를 유지하세요.'})),
+  ].sort((a,b)=>a.minuteOffset-b.minuteOffset);
   const missedVerificationCount = Math.max(0, Object.keys(activeCase.checks).length - rewindHistory.filter((event) => event.evidence).length);
 
   useEffect(() => {
@@ -823,7 +830,7 @@ export default function GameClient() {
     if (activeResult || !picked || !selectedAction) return;
     const riskBeforeEvidence = hadEarlyRisk(activeCase,activeHistory,riskHistory[activeCase.id]??[]);
     const assessment = evaluateDecision(activeCase,{picked,action:selectedAction,confidence,selectedEvidence,evidence:activeEvidence,history:activeHistory,riskBeforeEvidence});
-    setResults(current=>[...current,{...assessment,caseId:activeCase.id,picked,confidence,action:selectedAction,selectedEvidence:[...new Set(selectedEvidence)].filter(text=>activeEvidence.includes(text)),riskBeforeEvidence,exposed:Boolean(openedLinks[activeCase.id])||activeChat.filter(message=>message.role==='user').length>=3}]);
+    setResults(current=>[...current,{...assessment,caseId:activeCase.id,picked,confidence,action:selectedAction,decisionMinute:Math.max(clockOffset+1,playerTurns*2+1,...activeHistory.map(event=>event.minuteOffset+1),...(riskHistory[activeCase.id]??[]).map(event=>event.minuteOffset+1)),selectedEvidence:[...new Set(selectedEvidence)].filter(text=>activeEvidence.includes(text)),riskBeforeEvidence,exposed:Boolean(openedLinks[activeCase.id])||activeChat.filter(message=>message.role==='user').length>=3}]);
     setShowVerdictPanel(false);
     setShowDebrief(true);
   }
@@ -1313,15 +1320,10 @@ export default function GameClient() {
               <header><span>사건 되감기</span><b>{formatGameClock(ARRIVAL_MINUTES[activeIndex])}부터 판정까지</b></header>
               <ol>
                 <li><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex])}</time><i className="rewind-contact">1</i><span><b>연락 도착</b><small>{activeCase.sender} · {activeCase.channel}</small></span></li>
-                <li className={contactReviewed ? 'completed' : 'missed'}><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + 2)}</time><i>2</i><span><b>{contactReviewed ? '연락 내용 확인' : '내용을 충분히 열어보지 않음'}</b><small>{contactReviewed ? activeCase.preview : '발신 경로와 전체 문맥을 먼저 확인하세요.'}</small></span></li>
-                {rewindScenes.map((cue, index) => <li key={cue.id} className={cue.seen ? 'completed scene-rewind' : 'missed scene-rewind'}><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + cue.minuteOffset)}</time><i>{index + 3}</i><span><b>{cue.seen ? `${cue.sender} · ${cue.title}` : cue.interference ? '확인하지 않은 일상 알림' : '도착했지만 확인하지 않은 앱 알림'}</b><small>{cue.seen ? `${cue.interference ? '사건과 무관한 일상 알림 · ' : ''}${cue.detail}` : cue.interference ? '사건과 직접 관련 없는 정상 알림도 함께 도착했습니다.' : '다른 앱에 남은 기록을 열어보고 공식 확인 전의 흐름을 비교하세요.'}</small></span></li>)}
-                {rewindHistory.map((event, index) => {
-                  const source = verificationActions.find((item) => item.id === event.source);
-                  return <li key={event.source} className={event.evidence ? 'completed' : 'missed'}><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + event.minuteOffset)}</time><i>{index + 3 + rewindScenes.length}</i><span><b>{source?.label ?? '공식 경로 확인'}</b><small>{event.evidence ?? '현재 연락과 직접 연결되는 기록을 찾지 못했습니다.'}</small></span></li>;
-                })}
-                <li className="verdict"><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + Math.max(9, latestSceneOffset + 1, ...rewindHistory.map(event=>event.minuteOffset+1), ...(riskHistory[activeCase.id]??[]).map(event=>event.minuteOffset+1)))}</time><i>✓</i><span><b>{verdictLabels[activeResult.picked]} · {responseActions.find((action) => action.id === activeResult.action)?.label}</b><small>확신도 {activeResult.confidence}%로 판단을 등록했습니다.</small></span></li>
+                {rewindTimeline.filter(event=>event.minuteOffset<=activeResult.decisionMinute).map((event,index)=><li key={event.id} className={event.className}><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex]+event.minuteOffset)}</time><i>{index+2}</i><span><b>{event.title}</b><small>{event.detail}</small></span></li>)}
+                <li className="verdict"><time>{formatGameClock(ARRIVAL_MINUTES[activeIndex] + activeResult.decisionMinute)}</time><i>✓</i><span><b>{verdictLabels[activeResult.picked]} · {responseActions.find((action) => action.id === activeResult.action)?.label}</b><small>확신도 {activeResult.confidence}%로 판단을 등록했습니다.</small></span></li>
               </ol>
-              {missedVerificationCount > 0 && <p className="missed-paths">확인하지 않은 공식 경로 {missedVerificationCount}곳이 남아 있었습니다.</p>}
+              {missedVerificationCount > 0 && <p className="missed-paths">모든 앱을 확인할 필요는 없습니다. 놓친 핵심 주장과 안전한 대안 경로를 먼저 보세요.</p>}
             </div>
             <div className="simulated-outcome"><b>선택 뒤의 위험과 대안</b><span>{activeResult.actionCorrect?'안전한 다음 행동을 선택해 확인할 시간을 확보했습니다. ':'선택한 대응을 다시 검토해 보세요. '}{activeCase.training.riskConsequence}</span></div>
             <div className={`action-result ${activeResult.actionCorrect ? 'correct' : 'needs-review'}`}><b>{activeResult.actionCorrect ? '안전한 대응을 선택했습니다' : '대응 행동도 다시 확인해 보세요'}</b><span>나의 선택: {responseActions.find((action) => action.id === activeResult.action)?.label}</span></div>
