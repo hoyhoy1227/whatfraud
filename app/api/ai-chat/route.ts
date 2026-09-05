@@ -1,3 +1,4 @@
+import { reserveSharedBudget } from '../ai-budget';
 import { buildSystemPrompt, inferDialogueEmotion, inferDialogueReplyMode, sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
 import { cases } from '../../game-data';
 
@@ -12,37 +13,72 @@ const IP_DAY_LIMIT = 120;
 type RateBucket = { minute: number[]; day: number[] };
 const rateBuckets = new Map<string, RateBucket>();
 let providerPausedUntil = 0;
+let activeProviderRequests = 0;
+const MAX_PROVIDER_CONCURRENCY = 2;
+const aiEnabled = () => process.env.GEMINI_ENABLED !== 'false';
 
 async function readBoundedBody(request: Request) {
   const reader = request.body?.getReader();
   if (!reader) throw new Error('empty body');
   const chunks: Uint8Array[] = [];
   let size = 0;
+  let rejectDeadline: (reason: Error) => void = () => {};
+  const deadline = new Promise<never>((_, reject) => { rejectDeadline = reject; });
+  const cancel = (reason: string) => {
+    rejectDeadline(new Error(reason));
+    void reader.cancel().catch(() => {});
+  };
+  const timer = setTimeout(() => cancel('body_timeout'), 2_000);
+  const abort = () => cancel('request_aborted');
+  request.signal.addEventListener('abort', abort, { once: true });
   try {
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > 12_000) {
-        await reader.cancel();
-        throw new Error('body too large');
+    if (request.signal.aborted) throw new Error('request_aborted');
+    return await Promise.race([deadline, (async () => {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > 12_000) {
+          void reader.cancel().catch(() => {});
+          throw new Error('body too large');
+        }
+        chunks.push(value);
       }
-      chunks.push(value);
-    }
+      const bytes = new Uint8Array(size);
+      let offset = 0;
+      for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+      return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    })()]);
   } finally {
+    clearTimeout(timer);
+    request.signal.removeEventListener('abort', abort);
     reader.releaseLock();
   }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+// Browser cross-origin defense, not authentication: a non-browser client can
+// spoof these headers. Never trust forwarded host/IP values from arbitrary proxies.
+function validateRequestEnvelope(request: Request) {
+  const origin = request.headers.get('origin');
+  if (origin && origin !== new URL(request.url).origin) return json({ code: 'forbidden_origin' }, 403);
+  const site = request.headers.get('sec-fetch-site');
+  if (site && site !== 'same-origin' && site !== 'none') return json({ code: 'forbidden_origin' }, 403);
+  if (request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') {
+    return json({ code: 'unsupported_media_type' }, 415);
+  }
+  const length = request.headers.get('content-length');
+  if (length && (!/^\d+$/.test(length) || Number(length) > 12_000)) return json({ code: 'invalid_request' }, 400);
+  return null;
 }
 
 
 function json(payload: unknown, status = 200, headers: HeadersInit = {}) {
+  const outcome = payload as { code?: string; provider?: string };
+  // Only application-defined categorical outcomes; no request content/identity.
+  console.info(JSON.stringify({ event: 'ai_chat_result', status, outcome: outcome.code ?? outcome.provider ?? 'status' }));
   return Response.json(payload, {
     status,
-    headers: { 'Cache-Control': 'no-store', ...headers },
+    headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', ...headers },
   });
 }
 
@@ -77,7 +113,6 @@ function consumeRateLimit(key: string, minuteLimit: number, dayLimit: number) {
 
 function requestIdentity(request: Request) {
   const ip = request.headers.get('cf-connecting-ip')
-    ?? request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     ?? 'unknown';
   const rawSession = request.headers.get('x-whatfraud-session') ?? '';
   const session = /^[a-zA-Z0-9-]{16,64}$/.test(rawSession) ? rawSession : 'anonymous';
@@ -91,11 +126,16 @@ function parseMessages(value: unknown): AiChatMessage[] | null {
     if (!candidate || typeof candidate !== 'object') return null;
     const record = candidate as { role?: unknown; content?: unknown };
     if ((record.role !== 'user' && record.role !== 'assistant') || typeof record.content !== 'string') return null;
-    const content = record.role === 'user' ? sanitizePlayerText(record.content) : record.content.slice(0, 500).trim();
+    if (record.content.length > 500) return null;
+    const content = sanitizePlayerText(record.content);
     if (!content) return null;
     messages.push({ role: record.role, content });
   }
   if (messages.at(-1)?.role !== 'user') return null;
+  const firstUser = messages.findIndex((message) => message.role === 'user');
+  for (let index = firstUser + 1; index < messages.length; index++) {
+    if (messages[index].role === messages[index - 1].role) return null;
+  }
   return messages;
 }
 
@@ -110,7 +150,9 @@ function extractGeminiText(payload: unknown) {
 
 export async function GET() {
   return json({
-    enabled: Boolean(process.env.GEMINI_API_KEY?.trim()),
+    enabled: aiEnabled() && Boolean(process.env.GEMINI_API_KEY?.trim()),
+    mode: aiEnabled() ? 'selective' : 'scripted',
+    limiterScope: 'shared-d1-budget-and-isolate-throttle',
     provider: 'gemini',
     model: GEMINI_MODEL,
     fallback: true,
@@ -124,13 +166,16 @@ const pendingReplies = new Map<string, PendingReply>();
 // Exact request coalescing, scoped to identity and full context. No cross-player
 // response reuse; only short-lived process memory, never logs or durable storage.
 export async function POST(request: Request) {
+  const rejected = validateRequestEnvelope(request);
+  if (rejected) return rejected;
   let body: ChatBody;
   try {
     body = await readBoundedBody(request) as ChatBody;
-    if (!body || typeof body !== 'object') return json({ code: 'invalid_request' }, 400);
-  } catch {
-    return json({ code: 'invalid_request' }, 400);
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !['caseId', 'messages', 'userTurnCount'].includes(key))) return json({ code: 'invalid_request' }, 400);
+  } catch (error) {
+    return json({ code: error instanceof Error && error.message === 'body_timeout' ? 'body_timeout' : 'invalid_request' }, error instanceof Error && error.message === 'body_timeout' ? 408 : 400);
   }
+  if (!aiEnabled()) return handleChat(request, body);
   const identity = requestIdentity(request);
   const bytes = new TextEncoder().encode(JSON.stringify([identity.ip, identity.session, body]));
   const digest = await crypto.subtle.digest('SHA-256', bytes);
@@ -145,7 +190,9 @@ export async function POST(request: Request) {
   const response = handleChat(request, body);
   pendingReplies.set(key, { response, expires: now + 60_000 });
   try {
-    return (await response).clone();
+    const resolved = await response;
+    if (!resolved.ok) pendingReplies.delete(key);
+    return resolved.clone();
   } catch {
     pendingReplies.delete(key);
     return json({ code: 'provider_error' }, 502);
@@ -168,6 +215,7 @@ async function handleChat(request: Request, body: ChatBody) {
   const userTurnCount = Number(body.userTurnCount);
   const scripted = getScriptedReply(gameCase, conversation);
   if (scripted !== null) return json({ reply: scripted, provider: 'scripted', model: null });
+  if (!aiEnabled()) return json({ code: 'ai_disabled' }, 503, { 'Retry-After': '300' });
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return json({ code: 'ai_unconfigured' }, 503);
 
@@ -175,6 +223,7 @@ async function handleChat(request: Request, body: ChatBody) {
     return json({ code: 'provider_cooldown' }, 503, { 'Retry-After': String(Math.ceil((providerPausedUntil - Date.now()) / 1000)) });
   }
 
+  if (activeProviderRequests >= MAX_PROVIDER_CONCURRENCY) return json({ code: 'provider_busy' }, 503, { 'Retry-After': '12' });
   const { ip, session } = requestIdentity(request);
   const lastRequest = rateBuckets.get(`session:${ip}:${session}`)?.minute.at(-1);
   if (lastRequest !== undefined && Date.now() - lastRequest < 12_000) return json({ code: 'rate_limit' }, 429, { 'Retry-After': String(Math.ceil((12_000 - (Date.now() - lastRequest)) / 1000)) });
@@ -189,12 +238,18 @@ async function handleChat(request: Request, body: ChatBody) {
   if (!consumeRateLimit(caseKey, 5, 4)) {
     return json({ code: 'rate_limit' }, 429, { 'Retry-After': '60' });
   }
+  // Aggregate brake remains isolate-local and does not claim a billing cap.
+  if (!consumeRateLimit('aggregate', 20, 240)) return json({ code: 'rate_limit' }, 429, { 'Retry-After': '60' });
   const emotion = inferDialogueEmotion(conversation, userTurnCount);
   const replyMode = inferDialogueReplyMode(conversation, userTurnCount);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  activeProviderRequests += 1;
 
   try {
+    const budget = await reserveSharedBudget();
+    if (budget !== 'allowed') return json({ code: budget === 'exhausted' ? 'budget_exhausted' : 'budget_unavailable' }, budget === 'exhausted' ? 429 : 503, { 'Retry-After': '60' });
+    if (controller.signal.aborted) return json({ code: 'provider_timeout' }, 504);
     const response = await fetch(GEMINI_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -233,5 +288,6 @@ async function handleChat(request: Request, body: ChatBody) {
     return json({ code: error instanceof Error && error.name === 'AbortError' ? 'provider_timeout' : 'provider_error' }, 504);
   } finally {
     clearTimeout(timeout);
+    activeProviderRequests -= 1;
   }
 }

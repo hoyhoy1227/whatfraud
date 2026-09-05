@@ -1,0 +1,180 @@
+{
+  "id": "paid-market-class",
+  "sender": "월가읽기 클래스",
+  "handle": "스폰서 콘텐츠",
+  "channel": "SNS",
+  "mode": "link",
+  "preview": "주식 기초 강의 얼리버드 40% 할인",
+  "verdict": "caution",
+  "category": "과장된 투자 교육 광고",
+  "initialMessages": [
+    "초보 투자자를 위한 4주 온라인 강의입니다. 오늘까지 얼리버드 할인이 적용됩니다.",
+    "수강한다고 수익이 보장되지는 않으며 모든 투자의 책임은 본인에게 있습니다."
+  ],
+  "role": "실재하는 교육 업체의 다소 과장된 일방형 광고 페이지",
+  "npcGoal": "유료 강의를 홍보하지만 투자금 송금이나 수익 보장은 하지 않는다.",
+  "allowedClaims": [
+    "수강료와 환불 규정 공개",
+    "수익 비보장 고지",
+    "과장된 마감 홍보"
+  ],
+  "sceneCues": [
+    {
+      "id": "first-trace",
+      "app": "calendar",
+      "sender": "달력",
+      "title": "강의 신청 마감 알림",
+      "detail": "광고가 달력 등록을 제안합니다. 마감 표시는 강의 효과의 증거가 아닙니다.",
+      "icon": "calendar",
+      "tone": "warning",
+      "minuteOffset": 4,
+      "stage": "signal",
+      "interference": false
+    },
+    {
+      "id": "dinner-reminder",
+      "app": "calendar",
+      "sender": "달력",
+      "title": "점심 약속 확인",
+      "detail": "오후에 만나기로 한 친구가 약속 장소를 확인합니다.",
+      "icon": "calendar",
+      "tone": "routine",
+      "minuteOffset": 15,
+      "stage": "decision",
+      "interference": true
+    }
+  ],
+  "checks": {
+    "library": "사업자와 강의 구성은 확인됩니다. 약관에는 수강 시작 뒤 환불이 제한된다고 명시돼 있습니다.",
+    "cafe": "광고에는 성공한 수강생 후기만 실렸고 전체 수강 경험과 만족도는 공개되지 않았습니다.",
+    "bank": "결제 명의는 등록 사업자와 일치합니다.",
+    "home": "인기 강의 배지와 높은 관심 수가 광고 첫 화면에 표시됩니다."
+  },
+  "clueLabels": [
+    "사업자와 강의 구성은 확인됩니다. 약관에는 수강 시작 뒤 환불이 제한된다고 명시돼 있습니다.",
+    "광고에는 성공한 수강생 후기만 실렸고 전체 수강 경험과 만족도는 공개되지 않았습니다."
+  ],
+  "debrief": "주의는 애매한 중간 점수가 아니라, 추가 확인이나 행동 보류가 필요한 상태입니다. 실재하는 서비스도 가격·후기·환불을 확인하기 전 결제를 서두르지 마세요.",
+  "safeAction": "결제를 미루고 커리큘럼·환불 규정·독립 후기를 비교합니다.",
+  "displayUrl": "wallread-class.invalid/early",
+  "linkLabel": "강의 소개 페이지 보기",
+  "landingTitle": "초보자를 위한 4주 시장 읽기",
+  "landingCopy": "수강료 89,000원 · 결제 후 7일 이내 미수강 강의 환불 가능 · 투자 수익은 보장되지 않습니다.",
+  "landingCta": "수강 신청 검토",
+  "review": {
+    "sourceBasis": [
+      "투자 교육 상품이 할인 마감과 성공 후기를 강조해 충동 결제를 유도하는 일반적인 광고 유형"
+    ],
+    "adaptationScope": "실존 업체와 후기를 사용하지 않고 가격, 약관과 광고 문구를 가상으로 합성했습니다.",
+    "verdictReason": "사업자와 환불 조건은 확인되지만 과장된 후기와 시간 압박 때문에 합리적인 비교가 필요해 주의로 분류합니다.",
+    "verificationPaths": [
+      "사업자 정보와 환불 약관 독립 확인",
+      "광고와 무관한 수강 후기 및 대체 강의 비교"
+    ],
+    "misdirection": [
+      "오늘까지라는 할인 마감",
+      "선별된 성공 후기",
+      "정상 업체라면 좋은 상품일 것이라는 오해"
+    ],
+    "learningObjectives": [
+      "주장과 독립 확인 경로를 연결한다.",
+      "판별과 대응·확신도를 별도로 검토한다.",
+      "실재하는 서비스도 가격·후기·환불을 확인하기 전 결제를 서두르지 마세요."
+    ],
+    "safetyAudit": {
+      "containsPersonalData": false,
+      "containsLiveUrl": false,
+      "containsOperationalCrimeInfo": false
+    }
+  },
+  "training": {
+    "claims": [
+      {
+        "id": "claim-1",
+        "text": "실제 교육 서비스인가?"
+      },
+      {
+        "id": "claim-2",
+        "text": "가격과 환불 조건을 이해했는가?"
+      },
+      {
+        "id": "claim-3",
+        "text": "후기가 전체 경험을 대표하는가?"
+      }
+    ],
+    "evidence": [
+      {
+        "id": "evidence-1",
+        "source": "library",
+        "kind": "decisive",
+        "key": true,
+        "claimIds": [
+          "claim-1",
+          "claim-2"
+        ],
+        "text": "사업자와 강의 구성은 확인됩니다. 약관에는 수강 시작 뒤 환불이 제한된다고 명시돼 있습니다.",
+        "explanation": "실제 강의가 존재하지만 수강 뒤 환불 조건은 제한적입니다. 실재 여부와 구매할 가치가 있는지는 다른 판단입니다.",
+        "supports": [
+          "caution"
+        ],
+        "availableAt": 0
+      },
+      {
+        "id": "evidence-2",
+        "source": "cafe",
+        "kind": "signal",
+        "key": true,
+        "claimIds": [
+          "claim-3"
+        ],
+        "text": "광고에는 성공한 수강생 후기만 실렸고 전체 수강 경험과 만족도는 공개되지 않았습니다.",
+        "explanation": "성공한 후기만 선별돼 전체 수강 결과를 알 수 없습니다. 광고 효과를 기대 수익으로 받아들이기 전 결제를 보류할 근거입니다.",
+        "supports": [
+          "caution"
+        ],
+        "availableAt": 0
+      },
+      {
+        "id": "evidence-3",
+        "source": "bank",
+        "kind": "neutral",
+        "key": false,
+        "claimIds": [
+          "claim-1"
+        ],
+        "text": "결제 명의는 등록 사업자와 일치합니다.",
+        "explanation": "명의 일치는 결제 상대를 확인하는 한 단서일 뿐, 강의 효과나 광고의 정확성을 보증하지 않습니다.",
+        "supports": [],
+        "availableAt": 0
+      },
+      {
+        "id": "evidence-4",
+        "source": "home",
+        "kind": "misleading",
+        "key": false,
+        "claimIds": [
+          "claim-3"
+        ],
+        "text": "인기 강의 배지와 높은 관심 수가 광고 첫 화면에 표시됩니다.",
+        "explanation": "순위나 관심 수는 사람들이 클릭했다는 정보입니다. 광고가 약속한 성과를 독립적으로 확인한 결과가 아닙니다.",
+        "supports": [],
+        "availableAt": 0
+      }
+    ],
+    "appropriateActions": [
+      "pause",
+      "verify"
+    ],
+    "optimalSources": [
+      "library",
+      "cafe"
+    ],
+    "riskConsequence": "충동 결제 후 수강을 시작하면 환불 제한에 걸릴 수 있습니다.",
+    "takeaway": "실재하는 서비스도 가격·후기·환불을 확인하기 전 결제를 서두르지 마세요.",
+    "weakness": "긴급성 압박",
+    "variant": {
+      "sender": "월가읽기 클래스 · 광고",
+      "preview": "4주 투자 입문 강의, 신청 전에 구성과 환불 조건을 살펴보세요."
+    }
+  }
+}

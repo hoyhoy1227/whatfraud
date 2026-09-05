@@ -1,0 +1,27 @@
+name: Manual Gemini sample
+on:
+  workflow_dispatch:
+    inputs:
+      allow_live:
+        description: '실제 요청 비용이 발생할 수 있는 최대 5개 표본 검사에 동의'
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: manual-gemini-sample
+  cancel-in-progress: false
+jobs:
+  sample:
+    if: inputs.allow_live == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - run: node scripts/evaluate-live-gemini.mjs --allow-live

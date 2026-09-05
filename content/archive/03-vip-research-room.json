@@ -13,7 +13,12 @@
   ],
   "role": "차분하고 전문적으로 보이는 가상의 투자리딩방 매니저",
   "npcGoal": "즉시 돈을 요구하지 않고 대화를 유지한 뒤 가상의 VIP 거래 화면으로 유도한다.",
-  "allowedClaims": ["독립 연구팀이라고 주장", "초기에는 무료라고 주장", "외부에서 신원 확인이 어려움", "선별된 회원이라는 희소성 강조"],
+  "allowedClaims": [
+    "독립 연구팀이라고 주장",
+    "초기에는 무료라고 주장",
+    "외부에서 신원 확인이 어려움",
+    "선별된 회원이라는 희소성 강조"
+  ],
   "fallbackReplies": [
     "의심하시는 게 당연합니다. 우선 무료 자료만 보시고 판단하셔도 됩니다.",
     "특정 증권사 소속은 아니고 여러 시장 데이터를 분석하는 독립팀입니다.",
@@ -32,7 +37,12 @@
       "실제 금융회사·자격번호·수익률·계좌번호를 만들어내지 않는다.",
       "악성 앱 설치나 수사 회피 방법을 설명하지 않는다."
     ],
-    "quickQuestions": ["어느 금융회사 소속인가요?", "전체 투자 성과를 볼 수 있나요?", "왜 무료로 알려 주나요?", "돈은 어디로 보내야 하나요?"],
+    "quickQuestions": [
+      "어느 금융회사 소속인가요?",
+      "전체 투자 성과를 볼 수 있나요?",
+      "왜 무료로 알려 주나요?",
+      "돈은 어디로 보내야 하나요?"
+    ],
     "fallbackByTopic": {
       "source": "분석 자료는 내부 데이터와 공개 시장 자료를 함께 정리한 것입니다. 다만 전체 원자료는 회원 전용이라 지금 모두 보여 드리기는 어렵습니다.",
       "identity": "특정 증권사 소속은 아니고 여러 시장 데이터를 분석하는 독립팀입니다. 그래서 일반 검색에서는 정보가 많지 않을 수 있습니다.",
@@ -50,26 +60,98 @@
     }
   },
   "sceneCues": [
-    { "id": "first-trace", "app": "calls", "sender": "알 수 없는 번호", "title": "수신 전화", "detail": "투자방 메시지가 도착한 직후 전화가 걸려 왔습니다.", "icon": "calls", "tone": "warning", "minuteOffset": 4, "stage": "signal", "interference": false, "presentation": "incoming-call" },
-    { "id": "room-invite", "app": "social", "sender": "모임", "title": "비공개 투자방 초대", "detail": "같은 문구를 쓴 계정이 짧은 시간에 여러 초대를 보냈습니다.", "icon": "social", "tone": "warning", "minuteOffset": 9, "stage": "pressure", "interference": false },
-    { "id": "message-deleted", "app": "messages", "sender": "VIP 종목 연구소", "title": "메시지가 삭제됨", "detail": "수익 보장처럼 보이던 문장이 전송 취소되었습니다.", "icon": "messages", "tone": "warning", "minuteOffset": 12, "stage": "pressure", "interference": false, "presentation": "message-status", "silenceMs": 1800, "messageState": { "kind": "deleted", "text": "상대방이 메시지를 삭제했습니다." } },
-    { "id": "no-disclosure", "app": "stocks", "sender": "채움증권", "title": "공식 공시 확인 필요", "detail": "방에서 언급한 내용과 연결되는 공식 기록은 아직 보이지 않습니다.", "icon": "stocks", "tone": "routine", "minuteOffset": 16, "stage": "decision", "interference": false }
+    {
+      "id": "first-trace",
+      "app": "calls",
+      "sender": "알 수 없는 번호",
+      "title": "수신 전화",
+      "detail": "투자방 메시지가 도착한 직후 전화가 걸려 왔습니다.",
+      "icon": "calls",
+      "tone": "warning",
+      "minuteOffset": 4,
+      "stage": "signal",
+      "interference": false,
+      "presentation": "incoming-call"
+    },
+    {
+      "id": "room-invite",
+      "app": "social",
+      "sender": "모임",
+      "title": "비공개 투자방 초대",
+      "detail": "같은 문구를 쓴 계정이 짧은 시간에 여러 초대를 보냈습니다.",
+      "icon": "social",
+      "tone": "warning",
+      "minuteOffset": 9,
+      "stage": "pressure",
+      "interference": false
+    },
+    {
+      "id": "message-deleted",
+      "app": "messages",
+      "sender": "VIP 종목 연구소",
+      "title": "메시지가 삭제됨",
+      "detail": "수익 보장처럼 보이던 문장이 전송 취소되었습니다.",
+      "icon": "messages",
+      "tone": "warning",
+      "minuteOffset": 12,
+      "stage": "pressure",
+      "interference": false,
+      "presentation": "message-status",
+      "silenceMs": 1800,
+      "messageState": {
+        "kind": "deleted",
+        "text": "상대방이 메시지를 삭제했습니다."
+      }
+    },
+    {
+      "id": "no-disclosure",
+      "app": "stocks",
+      "sender": "채움증권",
+      "title": "공식 공시 확인 필요",
+      "detail": "방에서 언급한 내용과 연결되는 공식 기록은 아직 보이지 않습니다.",
+      "icon": "stocks",
+      "tone": "routine",
+      "minuteOffset": 16,
+      "stage": "decision",
+      "interference": false
+    }
   ],
   "checks": {
     "library": "소개된 연구소 명칭과 상담원 신원을 독립적으로 확인할 수 없습니다.",
     "bank": "안내된 입금처는 금융회사가 아닌 개인 명의 계좌입니다.",
     "police": "유사한 무료방→VIP방→가짜 거래 화면 유형의 신고가 확인됩니다."
   },
-  "clueLabels": ["외부에서 확인되지 않는 신원", "무료방에서 별도 VIP 거래로 유도", "금융회사가 아닌 입금 경로"],
+  "clueLabels": [
+    "외부에서 확인되지 않는 신원",
+    "무료방에서 별도 VIP 거래로 유도",
+    "금융회사가 아닌 입금 경로"
+  ],
   "debrief": "무료 정보로 신뢰를 쌓은 뒤 가짜 거래 화면과 별도 입금을 이용하는 투자리딩방 사기입니다.",
   "safeAction": "대화를 중단하고 공식 금융회사 등록 여부를 독립적으로 확인합니다.",
   "review": {
-    "sourceBasis": ["무료 투자 정보를 제공한 뒤 유료 VIP방과 가짜 거래 화면으로 이동시키는 리딩방 사기 유형"],
+    "sourceBasis": [
+      "무료 투자 정보를 제공한 뒤 유료 VIP방과 가짜 거래 화면으로 이동시키는 리딩방 사기 유형"
+    ],
     "adaptationScope": "실제 업체, 수익률, 계좌와 앱을 재현하지 않고 신뢰 형성에서 외부 거래 유도까지의 심리 구조만 합성했습니다.",
     "verdictReason": "운영 주체를 독립적으로 확인할 수 없고 개인 명의 입금과 별도 거래 화면으로 이어지는 전형적인 편취 구조가 확인됩니다.",
-    "verificationPaths": ["금융회사·투자자문업 등록 여부 독립 검색", "은행에서 입금 계좌의 예금주와 운영 주체 비교", "공식 신고 사례에서 같은 접근 구조 확인"],
-    "misdirection": ["무료 자료로 경계심 완화", "의심을 존중하는 전문적인 말투", "선정된 회원과 제한된 자리라는 희소성"],
-    "learningObjectives": ["초기 무료 여부가 이후 거래의 안전을 보장하지 않음을 안다", "상대가 준 화면과 계좌를 독립적인 공식 정보와 비교한다"],
-    "safetyAudit": { "containsPersonalData": false, "containsLiveUrl": false, "containsOperationalCrimeInfo": false }
+    "verificationPaths": [
+      "금융회사·투자자문업 등록 여부 독립 검색",
+      "은행에서 입금 계좌의 예금주와 운영 주체 비교",
+      "공식 신고 사례에서 같은 접근 구조 확인"
+    ],
+    "misdirection": [
+      "무료 자료로 경계심 완화",
+      "의심을 존중하는 전문적인 말투",
+      "선정된 회원과 제한된 자리라는 희소성"
+    ],
+    "learningObjectives": [
+      "초기 무료 여부가 이후 거래의 안전을 보장하지 않음을 안다",
+      "상대가 준 화면과 계좌를 독립적인 공식 정보와 비교한다"
+    ],
+    "safetyAudit": {
+      "containsPersonalData": false,
+      "containsLiveUrl": false,
+      "containsOperationalCrimeInfo": false
+    }
   }
 }

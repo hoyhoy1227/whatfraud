@@ -2033,3 +2033,19 @@ button.message-status-event.pending:hover, button.message-status-event.pending:f
   .incoming-call-screen p { font-size: 12px; }
   .bank-interruption-banner { top: 75px; left: 9px; right: 9px; }
 }
+
+/* Evidence-first training: no extra visual theme or external assets. */
+.claims-panel{background:#fff;color:#172b40;border:1px solid #c5d3df;border-radius:14px;padding:14px;margin:12px 0;font-size:1rem}
+.claims-panel h3{margin:0 0 8px}.claims-panel p{font-size:.875rem;line-height:1.6}.claims-panel article{padding:12px 0;border-top:1px solid #dde5ee}.claims-panel article b{display:block;line-height:1.5}.claims-panel article div{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.claims-panel button{font-size:.875rem;min-height:40px;padding:8px;background:#e8f1ff;color:#193d63;border:1px solid #aac3df;border-radius:8px}.claims-panel button:disabled{background:#edf0f4;color:#536271}
+.training-decision{display:flex!important;flex-direction:column;max-height:92dvh!important;width:min(760px,94vw)}
+.training-decision-scroll{overflow-y:auto;min-height:0;padding:16px;overscroll-behavior:contain}.training-decision-scroll fieldset{border:0;border-top:1px solid #ccd6e1;padding:16px 0;margin-top:12px}.training-decision-scroll legend{font-weight:700}
+.decision-dock{flex:none;position:sticky;bottom:0;background:#fff;color:#172b40;border-top:2px solid #89a6c5;padding:12px 16px max(12px,env(safe-area-inset-bottom));display:grid;gap:10px;font-size:.875rem}.decision-dock button{margin:0;min-height:46px}
+.score-breakdown,.training-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px}.score-breakdown span,.training-metrics span{border:1px solid #bbcde0;padding:9px;font-size:.875rem;border-radius:8px}.score-breakdown b{display:block;font-size:1.25rem}
+.process-feedback{margin:16px 0;padding:16px;background:#edf4ff;color:#152e49;border-radius:12px;line-height:1.65}.process-feedback blockquote{margin:12px 0;border-left:4px solid #3a75b8;padding-left:12px}
+.evidence-rewind li{padding:12px;border-left:3px solid #3a75b8;margin:10px 0;list-style:none}.evidence-rewind li.missed{border-left-style:dashed;background:#f7f0e5}.evidence-rewind time{display:block;font-size:.875rem}.evidence-rewind p{margin:8px 0}.evidence-rewind small{font-size:.875rem}
+.practice-backdrop{z-index:200}.practice-panel{overflow:auto;max-height:92dvh}.practice-panel header{display:flex;justify-content:space-between;align-items:center}.practice-panel label{display:block;margin:14px 0;line-height:1.6}.practice-panel select{display:block;width:100%;min-height:44px;font-size:1rem;padding:8px}.practice-evidence input{margin-right:8px}
+.weakness-practice{display:flex;flex-wrap:wrap;gap:8px}.weakness-practice button{font-size:.875rem;padding:10px}
+.linked-day-note,.legacy-save-note{padding:12px;line-height:1.6;font-size:.875rem;background:#edf4ff;color:#1b3553;border-radius:10px}
+.new-clue-app{outline:2px solid #7da6d3;outline-offset:3px}
+@media(max-width:680px){.training-decision{height:94dvh;max-height:94dvh!important}.training-decision-scroll{padding:12px}.decision-dock{font-size:.875rem;line-height:1.5}.training-decision .response-actions{grid-template-columns:1fr 1fr}.evidence-rewind ol{padding-left:0}.claims-panel{padding:12px}}

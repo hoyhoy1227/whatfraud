@@ -114,13 +114,15 @@
   ],
   "checks": {
     "cafe": "준호는 같은 이야기를 다른 친구에게도 들었을 뿐, 대가를 받지는 않았습니다.",
-    "library": "해당 회사의 공식 공시에는 소문의 근거가 확인되지 않습니다."
+    "library": "해당 회사의 공식 공시에는 소문의 근거가 확인되지 않습니다.",
+    "bank": "지인은 별도 송금이나 소개비를 요구하지 않았습니다.",
+    "home": "같은 출처를 인용한 인기 게시물이 반복해서 보입니다."
   },
   "clueLabels": [
-    "금전 요구는 없지만 정보 출처 불명확",
-    "확정적인 표현과 또래 압력"
+    "준호는 같은 이야기를 다른 친구에게도 들었을 뿐, 대가를 받지는 않았습니다.",
+    "해당 회사의 공식 공시에는 소문의 근거가 확인되지 않습니다."
   ],
-  "debrief": "조직적인 사기는 아니지만 근거가 부족한 고위험 권유입니다. 틀린 추천이 곧 사기를 의미하지는 않습니다.",
+  "debrief": "주의는 애매한 중간 점수가 아니라, 추가 확인이나 행동 보류가 필요한 상태입니다. 아는 사람의 말도 투자 근거를 확인하기 전 행동을 보류하세요.",
   "safeAction": "투자 판단을 보류하고 공시와 위험 정보를 직접 확인합니다.",
   "review": {
     "sourceBasis": [
@@ -138,13 +140,105 @@
       "증권사 지인에게 들었다는 간접 권위"
     ],
     "learningObjectives": [
-      "친밀함과 정보의 신뢰도를 분리한다",
-      "사기는 아니어도 근거 없는 권유는 보류한다"
+      "주장과 독립 확인 경로를 연결한다.",
+      "판별과 대응·확신도를 별도로 검토한다.",
+      "아는 사람의 말도 투자 근거를 확인하기 전 행동을 보류하세요."
     ],
     "safetyAudit": {
       "containsPersonalData": false,
       "containsLiveUrl": false,
       "containsOperationalCrimeInfo": false
+    }
+  },
+  "training": {
+    "claims": [
+      {
+        "id": "claim-1",
+        "text": "실제 지인이 보낸 말인가?"
+      },
+      {
+        "id": "claim-2",
+        "text": "소문을 독립적으로 확인할 수 있는가?"
+      },
+      {
+        "id": "claim-3",
+        "text": "선의가 투자 안전을 뜻하는가?"
+      }
+    ],
+    "evidence": [
+      {
+        "id": "evidence-1",
+        "source": "cafe",
+        "kind": "decisive",
+        "key": true,
+        "claimIds": [
+          "claim-1",
+          "claim-3"
+        ],
+        "text": "준호는 같은 이야기를 다른 친구에게도 들었을 뿐, 대가를 받지는 않았습니다.",
+        "explanation": "저장된 연락처로 확인한 실제 친구의 전달입니다. 선의와 이해관계가 없다는 사실은 소문의 정확성을 증명하지 않습니다.",
+        "supports": [
+          "caution"
+        ],
+        "availableAt": 0
+      },
+      {
+        "id": "evidence-2",
+        "source": "library",
+        "kind": "signal",
+        "key": true,
+        "claimIds": [
+          "claim-2"
+        ],
+        "text": "해당 회사의 공식 공시에는 소문의 근거가 확인되지 않습니다.",
+        "explanation": "독립적으로 확인 가능한 공시가 없어 매수 근거가 부족합니다. 그렇다고 곧바로 친구의 사기를 확정할 수도 없습니다.",
+        "supports": [
+          "caution"
+        ],
+        "availableAt": 0
+      },
+      {
+        "id": "evidence-3",
+        "source": "bank",
+        "kind": "neutral",
+        "key": false,
+        "claimIds": [
+          "claim-3"
+        ],
+        "text": "지인은 별도 송금이나 소개비를 요구하지 않았습니다.",
+        "explanation": "금전 요구가 없다는 사실만으로 추천 상품이 안전하다고 결론 내릴 수 없습니다.",
+        "supports": [],
+        "availableAt": 0
+      },
+      {
+        "id": "evidence-4",
+        "source": "home",
+        "kind": "misleading",
+        "key": false,
+        "claimIds": [
+          "claim-2",
+          "claim-3"
+        ],
+        "text": "같은 출처를 인용한 인기 게시물이 반복해서 보입니다.",
+        "explanation": "여러 게시물이 같은 원문을 재인용했습니다. 게시물 수가 많아도 독립된 증거가 늘어난 것은 아닙니다.",
+        "supports": [],
+        "availableAt": 0
+      }
+    ],
+    "appropriateActions": [
+      "pause",
+      "verify"
+    ],
+    "optimalSources": [
+      "cafe",
+      "library"
+    ],
+    "riskConsequence": "소문만으로 매수하면 지인이 선의였어도 손실에 노출될 수 있습니다.",
+    "takeaway": "아는 사람의 말도 투자 근거를 확인하기 전 행동을 보류하세요.",
+    "weakness": "지인 추천",
+    "variant": {
+      "sender": "준호 · 동창",
+      "preview": "친구한테 들은 종목 이야기인데 같이 확인해 볼래?"
     }
   }
 }

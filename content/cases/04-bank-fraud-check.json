@@ -13,25 +13,161 @@
   ],
   "role": "공식 은행의 일방형 이상거래 안내 문자",
   "npcGoal": "답장을 받지 않고 사용자가 직접 공식 앱에서 확인하도록 안내한다.",
-  "allowedClaims": ["공식 앱 안에서만 확인", "인증번호와 비밀번호를 요구하지 않음"],
+  "allowedClaims": [
+    "공식 앱 안에서만 확인",
+    "인증번호와 비밀번호를 요구하지 않음"
+  ],
   "sceneCues": [
-    { "id": "first-trace", "app": "bank", "sender": "새봄은행", "title": "보안 알림 확인 가능", "detail": "문자 링크가 아닌 설치된 은행 앱에서도 확인할 수 있습니다.", "icon": "bank", "tone": "routine", "minuteOffset": 4, "stage": "signal", "interference": false },
-    { "id": "official-record", "app": "bank", "sender": "새봄은행", "title": "공식 보안 안내 일치", "detail": "문자가 아닌 설치된 은행 앱에도 같은 점검 안내가 등록되어 있습니다.", "icon": "bank", "tone": "routine", "minuteOffset": 8, "stage": "signal", "interference": false, "presentation": "bank-overlay" }
+    {
+      "id": "first-trace",
+      "app": "bank",
+      "sender": "새봄은행",
+      "title": "보안 알림 확인 가능",
+      "detail": "문자 링크가 아닌 설치된 은행 앱에서도 확인할 수 있습니다.",
+      "icon": "bank",
+      "tone": "routine",
+      "minuteOffset": 4,
+      "stage": "signal",
+      "interference": false
+    },
+    {
+      "id": "official-record",
+      "app": "bank",
+      "sender": "새봄은행",
+      "title": "공식 보안 안내 일치",
+      "detail": "문자가 아닌 설치된 은행 앱에도 같은 점검 안내가 등록되어 있습니다.",
+      "icon": "bank",
+      "tone": "routine",
+      "minuteOffset": 8,
+      "stage": "signal",
+      "interference": false,
+      "presentation": "bank-overlay"
+    }
   ],
   "checks": {
     "bank": "은행 직원이 공식 시스템에서 동일한 이상거래 확인 요청을 찾았습니다.",
-    "home": "직접 연 공식 은행 앱의 보안센터에 동일한 이상거래 확인 요청이 있습니다."
+    "cafe": "기존 저장 번호로 전화한 은행이 같은 요청을 확인했고 비밀번호 전달이나 새 앱 설치는 요구하지 않습니다.",
+    "library": "검색에서 유사한 은행 사칭 사례도 발견됩니다.",
+    "home": "계좌 이용에 제한이 생길 수 있다는 문구가 있습니다."
   },
-  "clueLabels": ["문자를 닫고 공식 앱에서 재확인 가능", "민감정보·송금 요구 없음"],
-  "debrief": "정상적인 이상거래 확인입니다. 긴급한 표현만으로 사기라고 단정하면 안 되며, 독립적인 공식 경로로 확인해야 합니다.",
+  "clueLabels": [
+    "은행 직원이 공식 시스템에서 동일한 이상거래 확인 요청을 찾았습니다.",
+    "기존 저장 번호로 전화한 은행이 같은 요청을 확인했고 비밀번호 전달이나 새 앱 설치는 요구하지 않습니다."
+  ],
+  "debrief": "급한 연락일수록 공식 앱과 저장한 번호로 확인하세요.",
   "safeAction": "알림 링크가 아니라 직접 공식 은행 앱을 열어 확인합니다.",
   "review": {
-    "sourceBasis": ["은행이 평소와 다른 결제를 탐지해 공식 앱에서 본인 거래 여부를 확인시키는 정상 이상거래 안내"],
+    "sourceBasis": [
+      "은행이 평소와 다른 결제를 탐지해 공식 앱에서 본인 거래 여부를 확인시키는 정상 이상거래 안내"
+    ],
     "adaptationScope": "은행명과 거래 상황을 가상화하고 실제 고객·카드·거래 정보는 포함하지 않았습니다.",
     "verdictReason": "문자에 답하거나 민감정보를 보내게 하지 않고 사용자가 직접 연 공식 앱에서 동일 요청을 확인할 수 있습니다.",
-    "verificationPaths": ["직접 연 공식 은행 앱의 보안센터", "은행의 공식 시스템을 이용한 독립 확인"],
-    "misdirection": ["긴급한 금융 문구와 Web발신 표기만 보고 사기로 단정할 수 있음"],
-    "learningObjectives": ["긴급성이나 Web발신 표기만으로 판정하지 않는다", "알림을 닫고 공식 앱에서 같은 사건을 확인한다"],
-    "safetyAudit": { "containsPersonalData": false, "containsLiveUrl": false, "containsOperationalCrimeInfo": false }
+    "verificationPaths": [
+      "직접 연 공식 은행 앱의 보안센터",
+      "은행의 공식 시스템을 이용한 독립 확인"
+    ],
+    "misdirection": [
+      "긴급한 금융 문구와 Web발신 표기만 보고 사기로 단정할 수 있음"
+    ],
+    "learningObjectives": [
+      "주장과 독립 확인 경로를 연결한다.",
+      "판별과 대응·확신도를 별도로 검토한다.",
+      "급한 연락일수록 공식 앱과 저장한 번호로 확인하세요."
+    ],
+    "safetyAudit": {
+      "containsPersonalData": false,
+      "containsLiveUrl": false,
+      "containsOperationalCrimeInfo": false
+    }
+  },
+  "training": {
+    "claims": [
+      {
+        "id": "claim-1",
+        "text": "실제 은행 안내인가?"
+      },
+      {
+        "id": "claim-2",
+        "text": "독립적인 공식 경로로 확인할 수 있는가?"
+      },
+      {
+        "id": "claim-3",
+        "text": "비밀번호나 새 앱 설치를 요구하는가?"
+      }
+    ],
+    "evidence": [
+      {
+        "id": "evidence-1",
+        "source": "bank",
+        "kind": "decisive",
+        "key": true,
+        "claimIds": [
+          "claim-1",
+          "claim-2"
+        ],
+        "text": "은행 직원이 공식 시스템에서 동일한 이상거래 확인 요청을 찾았습니다.",
+        "explanation": "문자에 적힌 경로를 쓰지 않고 직접 연 은행 앱에 같은 이상거래 요청이 있습니다. 이번 요청이 실제 기록과 연결됩니다.",
+        "supports": [
+          "normal"
+        ],
+        "availableAt": 0
+      },
+      {
+        "id": "evidence-2",
+        "source": "cafe",
+        "kind": "decisive",
+        "key": true,
+        "claimIds": [
+          "claim-2",
+          "claim-3"
+        ],
+        "text": "기존 저장 번호로 전화한 은행이 같은 요청을 확인했고 비밀번호 전달이나 새 앱 설치는 요구하지 않습니다.",
+        "explanation": "원래 저장된 공식 번호로 재확인했고 비밀번호 전달·새 앱 설치 요구도 없습니다. 기존 연락의 지시만 따라간 것과 다릅니다.",
+        "supports": [
+          "normal"
+        ],
+        "availableAt": 0
+      },
+      {
+        "id": "evidence-3",
+        "source": "library",
+        "kind": "neutral",
+        "key": false,
+        "claimIds": [
+          "claim-1"
+        ],
+        "text": "검색에서 유사한 은행 사칭 사례도 발견됩니다.",
+        "explanation": "비슷한 사칭 사건의 존재는 주의를 기울일 이유이지만, 이번 공식 확인 결과를 뒤집는 증거는 아닙니다.",
+        "supports": [],
+        "availableAt": 0
+      },
+      {
+        "id": "evidence-4",
+        "source": "home",
+        "kind": "misleading",
+        "key": false,
+        "claimIds": [
+          "claim-3"
+        ],
+        "text": "계좌 이용에 제한이 생길 수 있다는 문구가 있습니다.",
+        "explanation": "이용 제한이라는 표현이 불안을 만들 수 있습니다. 표현의 강도보다 독립적인 요청 확인과 요구 행동을 기준으로 판단하세요.",
+        "supports": [],
+        "availableAt": 0
+      }
+    ],
+    "appropriateActions": [
+      "verify"
+    ],
+    "optimalSources": [
+      "bank",
+      "cafe"
+    ],
+    "riskConsequence": "진짜 보안 연락을 무조건 차단하면 이상거래 확인을 놓칠 수 있습니다.",
+    "takeaway": "급한 연락일수록 공식 앱과 저장한 번호로 확인하세요.",
+    "weakness": "링크 신뢰",
+    "variant": {
+      "sender": "새봄은행 · 보안 알림",
+      "preview": "본인 거래 확인이 필요한 내역이 있습니다. 공식 보안센터를 직접 열어 주세요."
+    }
   }
 }
