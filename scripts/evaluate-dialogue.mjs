@@ -41,7 +41,7 @@ async function main() {
     }
   }
 
-  if (chatCases.length < 3) errors.push('대화형 평가 대상 사건이 3개 미만입니다.');
+  if (chatCases.length < 2) errors.push('대화형 평가 대상 사건이 2개 미만입니다.');
   if (errors.length) throw new Error(`대화 안전 평가 실패:\n- ${errors.join('\n- ')}`);
 
   console.log(`대화 안전 평가 완료: ${chatCases.length}개 사건 · ${responseCount}개 후보 응답`);

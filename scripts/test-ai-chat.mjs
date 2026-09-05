@@ -13,6 +13,7 @@ const dialogue = await import(dialogueUrl);
 let serial = 0;
 async function freshRoute() {
   const source = routeSource
+    .replace("import { reserveSharedBudget } from '../ai-budget';", "const reserveSharedBudget = async () => globalThis.__budgetOutcome ?? 'allowed';")
     .replace("'../../ai-dialogue'", JSON.stringify(dialogueUrl))
     .replace("import { cases } from '../../game-data';", 'const cases = ' + JSON.stringify(cases) + ';');
   return import(moduleUrl(source) + '#' + serial++);
@@ -131,6 +132,15 @@ try {
   assert.ok(!statusCheck.includes('requestGemini('), 'settings check must not generate');
   await testClientCancellation();
   await testSecurity();
+  for (const outcome of ['exhausted','unavailable']) {
+    globalThis.__budgetOutcome=outcome;
+    const route=await freshRoute(); let budgetCalls=0;
+    globalThis.fetch=async()=>{budgetCalls++;return successful();};
+    assert.equal((await (await route.POST(request())).json()).code,outcome==='exhausted'?'budget_exhausted':'budget_unavailable');
+    assert.equal(budgetCalls,0);
+    assert.equal((await (await route.POST(request('네'))).json()).provider,'scripted');
+  }
+  delete globalThis.__budgetOutcome;
   console.log('AI call tests passed: status, coalescing, isolation, cooldown, body limit, invalid inputs, missing key, truncation, topic continuity.');
 } finally {
   if (originalEnabled === undefined) delete process.env.GEMINI_ENABLED;

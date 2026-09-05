@@ -18,7 +18,7 @@ function assert(condition, message, errors) {
 }
 
 async function main() {
-  const [{ ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore }, cases, client, loading, appIcon, aiRoute, aiDialogue, css, envExample, apiKeyGuide, liveGeminiEvaluation] = await Promise.all([
+  const [{ ARRIVAL_MINUTES, advanceCaseProgress }, cases, client, loading, appIcon, aiRoute, aiDialogue, css, envExample, apiKeyGuide, liveGeminiEvaluation] = await Promise.all([
     import('../app/game-rules.js'),
     readFile(generatedFile, 'utf8').then(JSON.parse),
     readFile(clientFile, 'utf8'),
@@ -32,14 +32,10 @@ async function main() {
     readFile(liveGeminiEvaluationFile, 'utf8'),
   ]);
   const errors = [];
-  const expectedOrder = [
-    'official-etf-fill', 'friend-hot-tip', 'vip-research-room', 'bank-fraud-check',
-    'paid-market-class', 'fixed-match-ai', 'recovery-team', 'official-maintenance',
-    'official-ipo-calendar', 'ai-celebrity-room', 'overseas-preipo-agent', 'worldcup-betting-bonus',
-  ];
+  const expectedOrder = ["official-etf-fill","friend-hot-tip","paid-market-class","bank-fraud-check","fixed-match-ai","recovery-team"];
 
-  assert(cases.length === 12, '출시판에는 정확히 12개 사건이 필요합니다.', errors);
-  assert(JSON.stringify(cases.map((item) => item.id)) === JSON.stringify(expectedOrder), '사건 도착 순서가 승인된 12단계 순서와 다릅니다.', errors);
+  assert(cases.length === 6, '출시판에는 정확히 6개 사건이 필요합니다.', errors);
+  assert(JSON.stringify(cases.map((item) => item.id)) === JSON.stringify(expectedOrder), '사건 도착 순서가 승인된 6단계 순서와 다릅니다.', errors);
   assert(ARRIVAL_MINUTES.length === cases.length, '사건별 도착 시간이 부족합니다.', errors);
   assert(ARRIVAL_MINUTES.every((value, index) => index === 0 || value > ARRIVAL_MINUTES[index - 1]), '사건 도착 시간은 계속 증가해야 합니다.', errors);
 
@@ -55,9 +51,6 @@ async function main() {
     progress = next;
   }
 
-  assert(calculateCaseScore({ correct: true, actionCorrect: true, confidence: 90, evidenceCount: 2 }) === 210, '최고 확신 정답 점수 계산이 변경됐습니다.', errors);
-  assert(calculateCaseScore({ correct: false, actionCorrect: false, confidence: 90, evidenceCount: 0 }) === -90, '오답 위험 점수 계산이 변경됐습니다.', errors);
-  assert(Object.keys(IDEAL_ACTION).sort().join(',') === 'caution,normal,scam', '판정별 안전 행동 연결이 부족합니다.', errors);
 
   for (const item of cases) {
     assert(Object.keys(item.checks).length >= 2, `${item.id}: 독립 조사 경로가 2개 미만입니다.`, errors);
@@ -70,8 +63,8 @@ async function main() {
   }
 
   const verdictCounts = Object.groupBy(cases, (item) => item.verdict);
-  assert((verdictCounts.normal?.length ?? 0) >= 3 && (verdictCounts.caution?.length ?? 0) >= 2 && (verdictCounts.scam?.length ?? 0) >= 4, '정상·주의·사기 사건의 혼합 비율이 부족합니다.', errors);
-  assert(cases.some((item) => item.id === 'overseas-preipo-agent') && cases.some((item) => item.id === 'worldcup-betting-bonus'), '최신 투자·도박 피해 유형 사건이 누락됐습니다.', errors);
+  assert((verdictCounts.normal?.length ?? 0) === 2 && (verdictCounts.caution?.length ?? 0) === 2 && (verdictCounts.scam?.length ?? 0) === 2, '정상·주의·사기 사건의 혼합 비율이 부족합니다.', errors);
+  assert(cases.some((item) => item.id === 'fixed-match-ai') && cases.some((item) => item.id === 'recovery-team'), '최신 투자·도박 피해 유형 사건이 누락됐습니다.', errors);
 
   assert(client.includes("if (gameCase.mode !== 'chat'"), '읽기 전용 연락의 보조 AI 호출 차단이 없습니다.', errors);
   assert(client.includes("fetch('/api/ai-chat'"), '클라이언트가 서버 보조 AI 경로를 사용하지 않습니다.', errors);
@@ -81,7 +74,7 @@ async function main() {
   assert(client.includes('await Promise.all(startupAssets.map'), '시작 화면이 실제 시각 자산 준비와 연결되지 않았습니다.', errors);
   assert(!client.includes('world-screen') && !client.includes('town-map') && !client.includes('player-sprite'), '스마트폰 전용 화면에 마을 또는 캐릭터 요소가 남아 있습니다.', errors);
   assert(client.includes('function verifySource') && client.includes("verifySource('bank')") && client.includes("verifySource('library')") && client.includes("verifySource('police')"), '휴대폰 앱을 통한 독립 확인 경로가 부족합니다.', errors);
-  assert(client.includes('phone-system-nav') && client.includes('앱에서 더 확인하기'), '전역 홈·판정 메뉴 또는 앱 복귀 흐름이 없습니다.', errors);
+  assert(client.includes('phone-system-nav') && client.includes('DecisionPanel'), '전역 홈·판정 메뉴 또는 앱 복귀 흐름이 없습니다.', errors);
   assert(client.includes('actForIndex') && client.includes('1막 · 평범한 오전') && client.includes('3막 · 압박의 밤'), '오전·오후·밤의 3막 진행 연출이 없습니다.', errors);
   assert(client.includes('setTutorialStep(forceGuide ? 0 : null)') && client.includes('게임 방법부터 보기'), '기본 진입에서 긴 안내를 건너뛰거나 선택형 안내를 여는 흐름이 없습니다.', errors);
   assert(client.includes('isAmbientEntry') && css.includes('.phone-only-game.ambient-entry'), '첫 잠금 화면의 조용한 휴대폰 진입 연출이 없습니다.', errors);
@@ -93,8 +86,8 @@ async function main() {
   assert(client.includes('!contactReviewed && <button className="home-notification"') && client.includes('nextSceneCue && <button'), '확인한 홈·잠금 알림을 한 건씩 이어 보여 주는 흐름이 없습니다.', errors);
   assert(client.includes('AI_REQUEST_TIMEOUT_MS = 10_000') && client.includes("setTypingPhase('paused')"), '보조 AI의 전체 대기 제한 또는 휴대폰 입력 상태 연출이 올바르지 않습니다.', errors);
   const saveSnapshot = client.match(/const snapshot: SavedProgress = \{([\s\S]*?)\n    \};/);
-  assert(client.includes("const PROGRESS_SAVE_KEY = 'profit-24-progress-v1'"), '버전이 있는 진행 저장 키가 없습니다.', errors);
-  assert(client.includes('readSavedProgress') && client.includes('calculateCaseScore({ correct, actionCorrect, confidence'), '저장된 판정과 점수를 다시 검증하는 복원 절차가 없습니다.', errors);
+  assert(client.includes("const PROGRESS_SAVE_KEY = 'profit-24-progress-v2'"), '버전이 있는 진행 저장 키가 없습니다.', errors);
+  assert(client.includes('readSavedProgress') && client.includes('evaluateDecision(gameCase,'), '저장된 판정과 점수를 다시 검증하는 복원 절차가 없습니다.', errors);
   assert(Boolean(saveSnapshot) && !saveSnapshot?.[1].includes('chats') && !saveSnapshot?.[1].includes('draft'), '자유 입력 대화가 진행 저장에 포함될 수 있습니다.', errors);
   assert(client.includes('>이어하기<') && client.includes('>새로 시작<'), '타이틀 화면에 이어하기와 새 게임 선택이 모두 없습니다.', errors);
   assert(client.includes('window.localStorage.removeItem(PROGRESS_SAVE_KEY)'), '새로운 하루를 시작할 때 진행 기록을 지우지 않습니다.', errors);
@@ -111,7 +104,7 @@ async function main() {
   assert(aiDialogue.includes('8~35자') && aiDialogue.includes('35~100자') && aiDialogue.includes("replyMode === 'short' ? 55 : 140") && aiDialogue.includes('/보장|확정|무조건|100'), 'Gemini 동적 길이·보장·과장 표현 제한이 없습니다.', errors);
   assert(aiDialogue.includes("emotion === 'closed'") && aiDialogue.includes('생각이\\s*바뀌'), '연락 중단 요청 뒤 재접촉 문구 차단이 없습니다.', errors);
   assert(aiRoute.includes('validateAiReply(reply, emotion, replyMode)') && client.includes('inferDialogueReplyMode(messages)'), '서버와 브라우저가 같은 감정·길이 단계로 Gemini 답변을 검사하지 않습니다.', errors);
-  assert(liveGeminiEvaluation.includes('친구·출처 질문') && liveGeminiEvaluation.includes('리딩방·말로 중단 요구') && liveGeminiEvaluation.includes("replyMode: 'short'") && liveGeminiEvaluation.includes('guardedFallbacks'), '대표 반응과 동적 길이를 점검하는 Gemini 실응답 평가가 없습니다.', errors);
+  assert(liveGeminiEvaluation.includes('친구·출처 질문') && liveGeminiEvaluation.includes('도박방·말로 중단 요구') && liveGeminiEvaluation.includes("replyMode: 'short'") && liveGeminiEvaluation.includes('guardedFallbacks'), '대표 반응과 동적 길이를 점검하는 Gemini 실응답 평가가 없습니다.', errors);
   assert(envExample.includes('GEMINI_API_KEY=') && !envExample.includes('NEXT_PUBLIC_GEMINI_API_KEY='), '서버 전용 Gemini 환경 변수 예제가 올바르지 않습니다.', errors);
   assert(apiKeyGuide.includes('Sites Secret') && apiKeyGuide.includes('NEXT_PUBLIC_GEMINI_API_KEY') && apiKeyGuide.includes('키가 유출됐을 때'), 'API 키 등록·노출 방지·교체 안내가 부족합니다.', errors);
   assert(loading.includes('role="progressbar"') && loading.includes('aria-valuenow={safeProgress}'), '전체 화면 로딩 진행률의 접근성 정보가 없습니다.', errors);

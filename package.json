@@ -17,7 +17,8 @@
     "build": "vinext build",
     "start": "vinext start",
     "prelint": "pnpm content:check && pnpm dialogue:check",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "next": "16.2.11",
@@ -41,7 +42,9 @@
     "typescript": "5.9.3",
     "vinext": "1.0.0-beta.3",
     "vite": "8.0.13",
-    "wrangler": "4.92.0"
+    "wrangler": "4.92.0",
+    "drizzle-orm": "0.45.2",
+    "drizzle-kit": "0.31.10"
   },
   "type": "module"
 }

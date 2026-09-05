@@ -3,13 +3,18 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { CaseData, cases, LocationId, SceneCueData, SceneStage, Verdict, verdictLabels } from './game-data';
 import { inferDialogueEmotion, inferDialogueReplyMode, validateAiReply, buildFallbackReply, getScriptedReply } from './ai-dialogue';
-import { ARRIVAL_MINUTES, IDEAL_ACTION, advanceCaseProgress, calculateCaseScore, formatGameClock } from './game-rules';
+import { ARRIVAL_MINUTES, advanceCaseProgress, formatGameClock } from './game-rules';
+import { evaluateDecision, verifiedClaims, hadEarlyRisk, deriveDayState, summarizeTraining, replayCases } from './training-rules';
+import { ClaimsPanel, DecisionPanel, ProcessFeedback, EvidenceRewind, BranchPractice, type PracticeRecord } from './training-panels';
 import GameLoadingScreen from './game-loading';
 import AppIcon from './app-icon';
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
-type ResponseAction = 'verify' | 'pause' | 'block';
-type Result = {
+type ResponseAction = 'verify' | 'pause' | 'block' | 'report';
+type RiskEvent = { kind: 'link'; minuteOffset: number };
+type Result = ReturnType<typeof evaluateDecision> & {
+  riskBeforeEvidence: boolean;
+  exposed: boolean;
   caseId: string;
   correct: boolean;
   actionCorrect: boolean;
@@ -33,7 +38,10 @@ type CinematicCue = { app: AppId; sender: string; title: string; detail: string;
 type HabitBadge = { id: string; icon: string; title: string; detail: string; unlocked: boolean };
 type PlayerPreferences = { reduceMotion: boolean; guideOnNewGame: boolean; soundEnabled: boolean; vibrationEnabled: boolean };
 type SavedProgress = {
-  version: 1;
+  version: 2;
+  round: number;
+  riskHistory: Record<string, RiskEvent[]>;
+  practice: PracticeRecord[];
   savedAt: number;
   availableCount: number;
   activeIndex: number;
@@ -53,12 +61,12 @@ type SavedProgress = {
   safetySeenCount: number;
 };
 
-const PROGRESS_SAVE_KEY = 'profit-24-progress-v1';
+const PROGRESS_SAVE_KEY = 'profit-24-progress-v2';
 const PREFERENCES_KEY = 'profit-24-preferences-v1';
 const AI_REQUEST_TIMEOUT_MS = 10_000;
 const SCENE_GAP_MS: Record<DayAct, number> = { morning: 1_400, afternoon: 900, night: 550 };
 const verdictValues: Verdict[] = ['normal', 'caution', 'scam'];
-const responseActionValues: ResponseAction[] = ['verify', 'pause', 'block'];
+const responseActionValues: ResponseAction[] = ['verify', 'pause', 'block', 'report'];
 const phoneAppValues: PhoneApp[] = ['home', 'messages', 'calls', 'bank', 'stocks', 'browser', 'social', 'calendar', 'notes', 'contacts', 'safety', 'settings', 'photos'];
 const locationValues: LocationId[] = ['home', 'bank', 'cafe', 'police', 'library'];
 
@@ -69,8 +77,8 @@ const dayActs: Record<DayAct, { eyebrow: string; title: string; detail: string }
 };
 
 function actForIndex(index: number): DayAct {
-  if (index < 4) return 'morning';
-  if (index < 8) return 'afternoon';
+  if (index < 2) return 'morning';
+  if (index < 4) return 'afternoon';
   return 'night';
 }
 
@@ -122,7 +130,7 @@ function readSavedProgress(serialized: string | null): SavedProgress | null {
   if (!serialized) return null;
   try {
     const raw = JSON.parse(serialized) as Partial<SavedProgress>;
-    if (raw.version !== 1 || !Array.isArray(raw.results) || !Number.isFinite(raw.savedAt)) return null;
+    if (raw.version !== 2 || !Array.isArray(raw.results) || !Number.isFinite(raw.savedAt)) return null;
 
     const results: Result[] = [];
     for (let index = 0; index < raw.results.length && index < cases.length; index += 1) {
@@ -137,7 +145,10 @@ function readSavedProgress(serialized: string | null): SavedProgress | null {
         ? candidate.selectedEvidence.filter((item): item is string => typeof item === 'string' && knownEvidence.has(item))
         : [];
       const correct = picked === gameCase.verdict;
-      const actionCorrect = action === IDEAL_ACTION[gameCase.verdict];
+      const history = (raw.verificationHistory?.[gameCase.id] ?? []).filter(event=>locationValues.includes(event.source) && event.evidence===gameCase.checks[event.source]);
+      const risks = (raw.riskHistory?.[gameCase.id] ?? []).filter(event=>event.kind==='link' && Number.isFinite(event.minuteOffset) && event.minuteOffset>=0 && event.minuteOffset<=60);
+      const riskBeforeEvidence = hadEarlyRisk(gameCase,history,risks);
+      const assessment = evaluateDecision(gameCase,{picked,action,confidence,selectedEvidence,evidence:raw.evidence?.[gameCase.id]??[],history,riskBeforeEvidence});
       results.push({
         caseId: gameCase.id,
         picked,
@@ -145,8 +156,9 @@ function readSavedProgress(serialized: string | null): SavedProgress | null {
         confidence,
         selectedEvidence,
         correct,
-        actionCorrect,
-        score: calculateCaseScore({ correct, actionCorrect, confidence, evidenceCount: selectedEvidence.length }),
+        ...assessment,
+        riskBeforeEvidence,
+        exposed: risks.length>0 || candidate.exposed===true,
       });
     }
     if (results.length !== raw.results.length) return null;
@@ -188,7 +200,10 @@ function readSavedProgress(serialized: string | null): SavedProgress | null {
     }).filter(([, items]) => (items as string[]).length > 0));
 
     return {
-      version: 1,
+      version: 2,
+      round: Number.isInteger(raw.round) ? Math.max(0,Math.min(10000,Number(raw.round))) : 0,
+      riskHistory: Object.fromEntries(cases.map(gameCase=>[gameCase.id,(raw.riskHistory?.[gameCase.id]??[]).filter(event=>event.kind==='link' && Number.isFinite(event.minuteOffset) && event.minuteOffset>=0 && event.minuteOffset<=60).slice(0,1)])),
+      practice: (raw.practice??[]).filter(item=>cases.some(gameCase=>gameCase.id===item.caseId)&&typeof item.changed==='boolean'&&typeof item.correct==='boolean'&&typeof item.northStar==='boolean').slice(-30),
       savedAt: raw.savedAt as number,
       availableCount,
       activeIndex,
@@ -237,7 +252,8 @@ const confidenceOptions = [50, 70, 90];
 const responseActions: { id: ResponseAction; label: string; description: string }[] = [
   { id: 'verify', label: '공식 경로로 확인', description: '연락 속 링크가 아닌 공식 앱·번호로 다시 확인한다.' },
   { id: 'pause', label: '대화 중단·보류', description: '결제와 정보 제공을 멈추고 판단 시간을 확보한다.' },
-  { id: 'block', label: '차단·신고', description: '연락을 끊고 안전센터나 관계 기관에 신고한다.' },
+  { id: 'block', label: '연락 차단', description: '상대의 연락을 끊는다.' },
+  { id: 'report', label: '기록 보관·신고', description: '기록을 보관하고 공식 신고 창구로 대응한다.' },
 ];
 const verificationActions: VerificationDefinition[] = [
   { id: 'home', label: '내 알림 기록 확인', app: '메시지·알림', description: '이전에 받은 공식 알림과 앱 안의 기록을 비교합니다.', icon: '▤' },
@@ -294,6 +310,12 @@ function fallbackReply(gameCase: CaseData, userText: string, messages: ChatMessa
 }
 
 export default function GameClient() {
+  const [round,setRound] = useState(0);
+  const [riskHistory,setRiskHistory] = useState<Record<string,RiskEvent[]>>({});
+  const [practice,setPractice] = useState<PracticeRecord[]>([]);
+  const [practiceCase,setPracticeCase] = useState<string|null>(null);
+  const [legacySave,setLegacySave] = useState(false);
+  const sessionCases = useMemo(()=>replayCases(cases,round),[round]);
   const aiPausedUntil = useRef(0);
   const sendingRef = useRef(false);
   const activeRequest = useRef<AbortController | null>(null);
@@ -351,7 +373,7 @@ export default function GameClient() {
   const [showPauseMenu, setShowPauseMenu] = useState(false);
   const [sceneCueHold, setSceneCueHold] = useState(false);
 
-  const activeCase = cases[activeIndex];
+  const activeCase = sessionCases[activeIndex];
   const activeChat = chats[activeCase.id] ?? initialChat(activeCase);
   const activeEvidence = evidence[activeCase.id] ?? [];
   const activeHistory = verificationHistory[activeCase.id] ?? [];
@@ -359,10 +381,13 @@ export default function GameClient() {
   const activeContactBlocked = Boolean(blockedContacts[activeCase.id]);
   const score = results.reduce((sum, result) => sum + result.score, 0);
   const complete = results.length === cases.length;
+  const dayState = deriveDayState(results,cases,openedLinks);
+  const trainingStats = summarizeTraining(results,cases,practice);
+  const practiceGame = cases.find(item=>item.id===practiceCase);
   const accuracy = results.length ? Math.round((results.filter((result) => result.correct).length / results.length) * 100) : 0;
   const actionAccuracy = results.length ? Math.round((results.filter((result) => result.actionCorrect).length / results.length) * 100) : 0;
   const groundedCount = results.filter((result) => result.selectedEvidence.length > 0).length;
-  const availableCases = cases.slice(0, availableCount);
+  const availableCases = sessionCases.slice(0, availableCount);
   const unreadCount = availableCases.filter((item) => !openedCases[item.id]).length;
   const activeAct = actForIndex(activeIndex);
   const actInfo = dayActs[activeAct];
@@ -371,7 +396,7 @@ export default function GameClient() {
   const openedRiskLinkBefore = Object.entries(openedLinks).some(([caseId, opened]) => opened && priorCaseIds.has(caseId) && cases.find((item) => item.id === caseId)?.verdict !== 'normal');
   const prolongedRiskChatBefore = Object.entries(chats).some(([caseId, messages]) => priorCaseIds.has(caseId) && cases.find((item) => item.id === caseId)?.verdict !== 'normal' && messages.filter((message) => message.role === 'user').length >= 3);
   const unsafeActionBefore = results.some((result) => priorCaseIds.has(result.caseId) && cases.find((item) => item.id === result.caseId)?.verdict !== 'normal' && !result.actionCorrect);
-  const anyRiskExposure = openedRiskLinkBefore || prolongedRiskChatBefore || unsafeActionBefore;
+  const anyRiskExposure = openedRiskLinkBefore || prolongedRiskChatBefore || unsafeActionBefore || dayState.exposed;
   const sceneCues = activeCase.sceneCues.filter((cue) => {
     if (!cue.condition) return true;
     if (cue.condition === 'opened-link-before') return openedRiskLinkBefore;
@@ -401,7 +426,7 @@ export default function GameClient() {
           : '서둘러 반응한 기록 때문에 유사 광고가 더 자주 노출됩니다.'
         : previousResult.actionCorrect
           ? '공식 경로 확인 후 정상 안내를 안전하게 처리했습니다.'
-          : '정상 연락이었지만 공식 기록을 확인하는 습관은 더 필요합니다.'
+          : '정상 안내를 놓쳤을 수 있습니다. 차단 여부와 관계없이 공식 앱에서 필요한 보안·거래 안내를 확인하세요.'
     : null;
   const followUpCue: CinematicCue | null = previousResult && previousCase && activeIndex === availableCount - 1
     ? previousCase.verdict === 'scam'
@@ -433,12 +458,12 @@ export default function GameClient() {
   const objectiveStage = activeResult ? 3 : activeEvidence.length ? 2 : contactReviewed ? 1 : 0;
   const objective = [
     { title: '새 연락을 확인하세요', detail: `${activeCase.sender}의 연락을 열어 내용과 발신 경로를 살펴보세요.` },
-    { title: '다른 앱에서 근거를 찾으세요', detail: activeCase.mode === 'chat' ? '질문을 해본 뒤 은행·웹·연락처 앱에서 주장을 교차 확인하세요.' : '안내문이나 링크의 주장과 공식 앱·공식 검색 결과를 비교하세요.' },
+    { title: '아직 확인하지 않은 주장을 검증하세요', detail: activeCase.mode === 'chat' ? '대화는 선택 사항입니다. 주장 카드에서 독립 확인 경로를 고르세요.' : '안내문이나 링크의 주장과 공식 앱·공식 검색 결과를 비교하세요.' },
     { title: '근거와 안전 행동을 선택하세요', detail: '화면 아래 판정하기를 눌러 근거와 실제로 취할 대응을 함께 제출하세요.' },
     { title: '판정을 완료했습니다', detail: '해설을 확인한 뒤 시간을 진행하면 다음 연락이 도착합니다.' },
   ][objectiveStage];
   const playerTurns = activeChat.filter((message) => message.role === 'user').length;
-  const conversationPressure = activeContactBlocked ? '차단됨' : playerTurns >= 3 ? '재촉하는 흐름' : playerTurns >= 1 ? '반응을 살피는 중' : '처음 온 연락';
+  const conversationPressure = activeContactBlocked ? '차단됨' : playerTurns >= 3 ? '질문을 이어가는 중' : playerTurns >= 1 ? '반응을 살피는 중' : '처음 온 연락';
   const rewindHistory = activeHistory.length ? activeHistory : activeEvidence.flatMap((item, index) => {
     const source = locationValues.find((location) => activeCase.checks[location] === item);
     return source ? [{ source, evidence: item, minuteOffset: 4 + index * 5 }] : [];
@@ -451,7 +476,7 @@ export default function GameClient() {
     let storedProgress: SavedProgress | null = null;
     let storedPreferences: PlayerPreferences = { reduceMotion: false, guideOnNewGame: false, soundEnabled: true, vibrationEnabled: true };
     try {
-      storedBest = Number(window.localStorage.getItem('profit-24-best-score') ?? 0);
+      storedBest = Number(window.localStorage.getItem('profit-24-best-score-v2') ?? 0);
       storedProgress = readSavedProgress(window.localStorage.getItem(PROGRESS_SAVE_KEY));
       const rawPreferences = JSON.parse(window.localStorage.getItem(PREFERENCES_KEY) ?? '{}') as Partial<PlayerPreferences>;
       storedPreferences = { reduceMotion: rawPreferences.reduceMotion === true, guideOnNewGame: rawPreferences.guideOnNewGame === true, soundEnabled: rawPreferences.soundEnabled !== false, vibrationEnabled: rawPreferences.vibrationEnabled !== false };
@@ -462,6 +487,7 @@ export default function GameClient() {
     window.setTimeout(() => {
       setBestScore(Number.isFinite(storedBest) ? storedBest : 0);
       setSavedProgress(storedProgress);
+      try { setLegacySave(Boolean(window.localStorage.getItem('profit-24-progress-v1')) && !storedProgress); } catch { setLegacySave(false); }
       setPreferences(storedPreferences);
     }, 0);
   }, []);
@@ -481,7 +507,7 @@ export default function GameClient() {
 
   useEffect(() => {
     if (complete && score > bestScore) {
-      window.localStorage.setItem('profit-24-best-score', String(score));
+      try { window.localStorage.setItem('profit-24-best-score-v2', String(score)); } catch { /* Device storage is optional. */ }
       window.setTimeout(() => setBestScore(score), 0);
     }
   }, [bestScore, complete, score]);
@@ -489,7 +515,8 @@ export default function GameClient() {
   useEffect(() => {
     if (!started || loadingTask) return;
     const snapshot: SavedProgress = {
-      version: 1,
+      version: 2,
+      round, riskHistory, practice,
       savedAt: Date.now(),
       availableCount,
       activeIndex,
@@ -517,7 +544,7 @@ export default function GameClient() {
       }
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [activeIndex, availableCount, blockedContacts, evidence, loadingTask, openedCases, openedCues, openedLinks, phoneApp, phoneLocked, results, safetySeenCount, seenFollowUps, seenSceneCues, started, verificationHistory]);
+  }, [round, riskHistory, practice, activeIndex, availableCount, blockedContacts, evidence, loadingTask, openedCases, openedCues, openedLinks, phoneApp, phoneLocked, results, safetySeenCount, seenFollowUps, seenSceneCues, started, verificationHistory]);
 
   useEffect(() => () => {
     requestSequence.current += 1;
@@ -592,6 +619,9 @@ export default function GameClient() {
     const message = error instanceof Error ? error.message : '';
     if (/scripted_response/i.test(message)) return '추천 질문은 검수된 대사로 답해 AI 호출을 절약합니다.';
     if (/provider_cooldown/i.test(message)) return '연결 회복을 기다리는 동안 내장 대사로 이어갑니다.';
+    if (/ai_disabled/i.test(message)) return '운영자가 AI 생성을 쉬도록 설정했습니다. 기본 게임은 계속할 수 있습니다.';
+    if (/budget_unavailable|provider_busy/i.test(message)) return '호출 안전 장치가 응답을 보류해 내장 대사로 이어갑니다.';
+    if (/budget_exhausted/i.test(message)) return '게임 전체 AI 요청 예산에 도달해 내장 대사로 이어갑니다.';
     if (/ai_unconfigured/i.test(message)) return '서버에 Gemini API 키가 없어 검수된 내장 대사를 사용합니다.';
     if (/provider_quota|free_quota|rate_limit|429/i.test(message)) return '공급자 또는 게임 내 이용 한도에 도달해 내장 대사로 이어갑니다.';
     if (/provider_configuration|invalid_api_key|401|403/i.test(message)) return 'Gemini API 키를 확인할 수 없어 내장 대사를 사용합니다.';
@@ -731,7 +761,14 @@ export default function GameClient() {
     }
   }
 
+  function openRiskLink() {
+    if (activeResult) return;
+    setRiskHistory(current=>({...current,[activeCase.id]:current[activeCase.id]?.length?current[activeCase.id]:[{kind:'link',minuteOffset:Math.max(latestSceneOffset,4+activeHistory.length*5,...activeHistory.map(event=>event.minuteOffset))+1}]}));
+    setOpenedLinks(current=>({...current,[activeCase.id]:true}));
+  }
+
   function verifySource(nextLocation: LocationId) {
+    if (activeResult) return;
     const source = verificationActions.find((item) => item.id === nextLocation);
     const found = activeCase.checks[nextLocation];
     setVerificationHistory((current) => {
@@ -739,7 +776,7 @@ export default function GameClient() {
       if (list.some((event) => event.source === nextLocation)) return current;
       return {
         ...current,
-        [activeCase.id]: [...list, { source: nextLocation, evidence: found ?? null, minuteOffset: 4 + list.length * 5 }],
+        [activeCase.id]: [...list, { source: nextLocation, evidence: found ?? null, minuteOffset: Math.max(latestSceneOffset,4 + list.length * 5,...list.map(event=>event.minuteOffset+1),...(riskHistory[activeCase.id]??[]).map(event=>event.minuteOffset+1)) }],
       };
     });
     if (found) {
@@ -786,10 +823,9 @@ export default function GameClient() {
   function submitVerdict() {
     cancelPendingReply();
     if (activeResult || !picked || !selectedAction) return;
-    const correct = picked === activeCase.verdict;
-    const actionCorrect = selectedAction === IDEAL_ACTION[activeCase.verdict];
-    const caseScore = calculateCaseScore({ correct, actionCorrect, confidence, evidenceCount: selectedEvidence.length });
-    setResults((current) => [...current, { caseId: activeCase.id, correct, actionCorrect, score: caseScore, picked, confidence, action: selectedAction, selectedEvidence }]);
+    const riskBeforeEvidence = hadEarlyRisk(activeCase,activeHistory,riskHistory[activeCase.id]??[]);
+    const assessment = evaluateDecision(activeCase,{picked,action:selectedAction,confidence,selectedEvidence,evidence:activeEvidence,history:activeHistory,riskBeforeEvidence});
+    setResults(current=>[...current,{...assessment,caseId:activeCase.id,picked,confidence,action:selectedAction,selectedEvidence:[...new Set(selectedEvidence)].filter(text=>activeEvidence.includes(text)),riskBeforeEvidence,exposed:Boolean(openedLinks[activeCase.id])||activeChat.filter(message=>message.role==='user').length>=3}]);
     setShowVerdictPanel(false);
     setShowDebrief(true);
   }
@@ -883,7 +919,8 @@ export default function GameClient() {
 
   function saveProgressNow() {
     const snapshot: SavedProgress = {
-      version: 1,
+      version: 2,
+      round, riskHistory, practice,
       savedAt: Date.now(),
       availableCount,
       activeIndex,
@@ -956,6 +993,9 @@ export default function GameClient() {
     setLoadingTask({ kind: 'startup', progress: 100 });
     await wait(220);
     if (progressToRestore) {
+      setRound(progressToRestore.round);
+      setRiskHistory(progressToRestore.riskHistory);
+      setPractice(progressToRestore.practice);
       setAvailableCount(progressToRestore.availableCount);
       setActiveIndex(progressToRestore.activeIndex);
       setResults(progressToRestore.results);
@@ -1043,6 +1083,10 @@ export default function GameClient() {
 
   function restart() {
     cancelPendingReply();
+    setRound(current=>current+1);
+    setRiskHistory({});
+    setPractice([]);
+    setPracticeCase(null);
     clearSavedProgress();
     setPhoneApp('home');
     setPhoneLocked(true);
@@ -1090,6 +1134,7 @@ export default function GameClient() {
         <section className="intro-panel" aria-labelledby="game-title">
           <h1 id="game-title">수익률 24시</h1>
           <nav className="start-menu" aria-label="게임 시작 메뉴">
+            {legacySave && <p className="legacy-save-note">6개 사건 판단 훈련으로 개편했습니다. 이전 12개 사건 기록은 이 기기에 그대로 보관되며 새 점수와 합산하지 않습니다.</p>}
             {savedProgress && <button className="start-menu-item resume" onClick={() => startSimulation(false, true)}><span><b>이어하기</b><small>사건 {Math.min(savedProgress.results.length + 1, cases.length)}/{cases.length} · {formatSavedTime(savedProgress.savedAt)} 저장</small></span><i>›</i></button>}
             <button className={`start-menu-item new ${savedProgress ? '' : 'primary'}`} onClick={requestNewGame}><span><b>새로 시작</b><small>{savedProgress ? '현재 기록을 지우고 처음부터 시작' : '새로운 하루를 처음부터 시작'}</small></span><i>＋</i></button>
             <button className="start-menu-item settings" onClick={() => setShowStartSettings(true)}><span><b>설정</b><small>안내·소리·진동·화면 움직임</small></span><AppIcon name="settings" size="mini"/></button>
@@ -1097,7 +1142,8 @@ export default function GameClient() {
         </section>
         {showStartSettings && <div className="start-dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="start-settings-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowStartSettings(false); }}><section className="start-dialog settings-dialog"><header><div><small>게임 설정</small><h2 id="start-settings-title">시작 전 설정</h2></div><button onClick={() => setShowStartSettings(false)} aria-label="설정 닫기">×</button></header><div className="start-setting-list"><button role="switch" aria-checked={preferences.soundEnabled} onClick={() => updatePreference('soundEnabled', !preferences.soundEnabled)}><span><b>알림음·통화음</b><small>새 알림과 전화에 짧고 조용한 소리를 냅니다.</small></span><i>{preferences.soundEnabled ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.vibrationEnabled} onClick={() => updatePreference('vibrationEnabled', !preferences.vibrationEnabled)}><span><b>진동</b><small>지원하는 휴대폰에서 짧은 진동을 사용합니다.</small></span><i>{preferences.vibrationEnabled ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.reduceMotion} onClick={() => updatePreference('reduceMotion', !preferences.reduceMotion)}><span><b>화면 움직임 줄이기</b><small>알림과 화면 전환 애니메이션을 최소화합니다.</small></span><i>{preferences.reduceMotion ? '켜짐' : '꺼짐'}</i></button><button role="switch" aria-checked={preferences.guideOnNewGame} onClick={() => updatePreference('guideOnNewGame', !preferences.guideOnNewGame)}><span><b>새 게임에서 안내 먼저 보기</b><small>새로 시작할 때 조작 방법을 먼저 보여줍니다.</small></span><i>{preferences.guideOnNewGame ? '켜짐' : '꺼짐'}</i></button></div><div className="start-save-note"><AppIcon name="settings" size="mini"/><span><b>진행 기록은 이 기기에 자동 저장됩니다</b><small>직접 입력한 대화와 AI 답변은 저장하지 않습니다.</small></span></div><button className="start-dialog-guide" onClick={() => { setShowStartSettings(false); void startSimulation(true, Boolean(savedProgress)); }}>게임 방법부터 보기</button><button className="start-dialog-close" onClick={() => setShowStartSettings(false)}>완료</button></section></div>}
         {confirmNewGame && <div className="start-dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="new-game-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmNewGame(false); }}><section className="start-dialog confirm-dialog"><header><div><small>새 게임</small><h2 id="new-game-title">처음부터 시작할까요?</h2></div><button onClick={() => setConfirmNewGame(false)} aria-label="확인창 닫기">×</button></header><p>현재 저장된 사건 진행과 판정 기록이 지워집니다.</p><div><button onClick={() => setConfirmNewGame(false)}>취소</button><button className="danger" onClick={startNewGame}>기록을 지우고 시작</button></div></section></div>}
-      </main>
+        {practiceGame && <BranchPractice key={practiceGame.id} gameCase={practiceGame} firstPicked={results.find(result=>result.caseId===practiceGame.id)?.picked??'caution'} onFinish={record=>setPractice(current=>[...current,record].slice(-30))} onClose={()=>setPracticeCase(null)}/>}
+    </main>
     );
   }
 
@@ -1151,13 +1197,16 @@ export default function GameClient() {
                     {!contactReviewed && <button className="home-notification" onClick={() => selectPhoneApp('messages')}><AppIcon name="messages" size="mini"/><span><b>{activeCase.sender}</b><small>{activeCase.preview}</small></span><em>{formatGameClock(ARRIVAL_MINUTES[activeIndex])}</em></button>}
                     {followUpCue && !seenFollowUps[activeCase.id] && <button className={`ambient-notification follow-up cue-${followUpCue.tone}`} onClick={() => selectPhoneApp(followUpCue.app)}><AppIcon name={followUpCue.icon} size="mini"/><span><b>{followUpCue.sender}</b><small>{followUpCue.title} · {followUpCue.detail}</small></span><em>확인</em></button>}
                     {nextSceneCue && scenePresentation !== 'incoming-call' && scenePresentation !== 'bank-overlay' && <button className={`ambient-notification scene-notification cue-${nextSceneCue.tone}`} onClick={() => selectPhoneApp(nextSceneCue.app)}><AppIcon name={nextSceneCue.icon} size="mini"/><span><b>{nextSceneCue.sender}</b><small>{nextSceneCue.title} · {nextSceneCue.detail}</small></span><em>열기</em></button>}
+                    <ClaimsPanel gameCase={activeCase} evidence={activeEvidence} verify={verifySource} fast={dayState.verificationHabit>=2}/>
+                    {activeCase.id==='recovery-team' && <p className="linked-day-note">{dayState.reported?'앞서 신고한 기록을 조회할 수 있습니다. 새 회복 연락의 자격과 절차는 별도로 확인하세요.':dayState.exposed?(dayState.impulsive?'서둘러 반응했던 내용을 아는 듯한 연락입니다. 회복 기대보다 자격과 절차를 먼저 보세요.':'앞서 본 내용을 아는 듯한 연락입니다. 익숙한 정보는 공식 자격의 증거가 아닙니다.'):'광범위하게 발송된 회복 안내입니다. 피해가 없어도 사칭 연락은 도착할 수 있습니다.'}</p>}
                     <div className="home-widgets">
                       <div><span>오늘의 판별 훈련</span><strong>{results.length}/{cases.length}</strong><small>정확도 {accuracy}% · 점수 {score}</small></div>
-                      <div><span>현재 연락</span><strong>{activeCase.sender}</strong><small>확인한 단서 {activeEvidence.length}건</small></div>
+                      <div><span>현재 연락</span><strong>{activeCase.sender}</strong><small>검증한 주장 {verifiedClaims(activeCase,activeEvidence).length}개</small></div>
                     </div>
                     <button className="home-verify-card" onClick={() => verifySource('home')}><i>▤</i><span><b>내 알림·앱 기록 비교</b><small>현재 연락이 공식 앱 안에도 남아 있는지 확인</small></span><em>확인</em></button>
+                    {previousResult?.selectedEvidence.length>0 && <p className="linked-day-note">지난 판단에서 보관한 단서: {previousResult.selectedEvidence[0]}</p>}
                     <div className="app-grid" aria-label="앱 목록">
-                      {phoneApps.map((app) => <button key={app.id} onClick={() => selectPhoneApp(app.id)}><AppIcon name={app.icon}/><span>{app.label}</span>{app.id === 'messages' && unreadCount > 0 && <em>{unreadCount}</em>}</button>)}
+                      {phoneApps.map((app) => <button key={app.id} className={nextSceneCue?.app===app.id?'new-clue-app':''} aria-label={app.label+(nextSceneCue?.app===app.id?' · 새 확인 기록 도착':'')} onClick={() => selectPhoneApp(app.id)}><AppIcon name={app.icon}/><span>{app.label}</span>{app.id === 'messages' && unreadCount > 0 && <em>{unreadCount}</em>}</button>)}
                     </div>
                   </div>
                   <div className="phone-dock">
@@ -1193,7 +1242,7 @@ export default function GameClient() {
                       <form className="reply-row" onSubmit={sendMessage}><input aria-label="메시지" maxLength={500} autoComplete="off" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={activeContactBlocked ? '차단한 연락처입니다' : activeResult ? '판정이 완료된 연락입니다' : sending ? '답장을 기다리는 중' : '상대에게 질문하거나 직접 입력하기'} disabled={activeContactBlocked || Boolean(activeResult) || sending} /><button type="submit" disabled={activeContactBlocked || !draft.trim() || sending || Boolean(activeResult)}>전송</button></form>
                     </>}
                     {activeCase.mode === 'notice' && <div className="read-only-surface notice-surface"><span className="date-pill">오늘</span><article><header><span>{activeCase.channel}</span><time>{formatGameClock(9 * 60 + 8)}</time></header><div className="notice-brand"><i>{activeCase.sender.slice(0,1)}</i><div><b>{activeCase.sender}</b><small>{activeCase.handle}</small></div></div><h2>{activeCase.initialMessages[0]}</h2>{activeCase.initialMessages.slice(1).map((text) => <p key={text}>{text}</p>)}<button className="official-app-button" onClick={() => setPhoneApp(activeCase.id === 'bank-fraud-check' ? 'bank' : activeCase.id === 'official-etf-fill' ? 'stocks' : 'browser')}>메시지를 닫고 관련 앱 직접 열기</button></article></div>}
-                    {activeCase.mode === 'link' && <div className="read-only-surface link-surface"><span className="date-pill">오늘</span><article className="one-way-message"><header><b>{activeCase.handle}</b><time>{formatGameClock(10 * 60 + 17)}</time></header>{activeCase.initialMessages.map((text) => <p key={text}>{text}</p>)}<button className="embedded-link" onClick={() => setOpenedLinks((current) => ({ ...current, [activeCase.id]: true }))}><span>외부 페이지</span><b>{activeCase.linkLabel}</b><small>{activeCase.displayUrl}</small></button></article>{openedLinks[activeCase.id] && <section className="simulated-landing"><div className="landing-address"><span>교육용 가상 주소</span><b>{activeCase.displayUrl}</b></div><div className="landing-copy"><small>SPONSORED INFORMATION</small><h2>{activeCase.landingTitle}</h2><p>{activeCase.landingCopy}</p><button disabled>{activeCase.landingCta}</button><span>시뮬레이션에서는 정보 제출과 결제가 실행되지 않습니다.</span></div></section>}</div>}
+                    {activeCase.mode === 'link' && <div className="read-only-surface link-surface"><span className="date-pill">오늘</span><article className="one-way-message"><header><b>{activeCase.handle}</b><time>{formatGameClock(10 * 60 + 17)}</time></header>{activeCase.initialMessages.map((text) => <p key={text}>{text}</p>)}<button className="embedded-link" onClick={openRiskLink}><span>외부 페이지</span><b>{activeCase.linkLabel}</b><small>{activeCase.displayUrl}</small></button></article>{openedLinks[activeCase.id] && <section className="simulated-landing"><div className="landing-address"><span>교육용 가상 주소</span><b>{activeCase.displayUrl}</b></div><div className="landing-copy"><small>SPONSORED INFORMATION</small><h2>{activeCase.landingTitle}</h2><p>{activeCase.landingCopy}</p><button disabled>{activeCase.landingCta}</button><span>시뮬레이션에서는 정보 제출과 결제가 실행되지 않습니다.</span></div></section>}</div>}
                   </section>
                 </div>
               )}
@@ -1248,18 +1297,20 @@ export default function GameClient() {
         </section>
       </div>}
 
-      {showVerdictPanel && !activeResult && <div className="verdict-overlay-backdrop" role="dialog" aria-modal="true" aria-labelledby="global-verdict-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowVerdictPanel(false); }}><section className="verdict-overlay"><header><div><span className="pixel-label">CASE {String(activeIndex + 1).padStart(2,'0')} · 어디서든 판정</span><h2 id="global-verdict-title">{activeCase.sender} 판단 등록</h2></div><button onClick={() => setShowVerdictPanel(false)} aria-label="판정창 닫기">×</button></header><div className="verdict-screen verdict-overlay-content"><div className="verdict-file"><p className="case-preview">“{activeCase.preview}”</p><div className="case-meta"><span>{activeCase.channel}</span><span>연락 내용과 확인한 기록을 비교하세요</span></div><h3>판정에 사용할 근거</h3><p className="selection-help">직접 확인한 근거를 선택하세요. 선택한 근거만 점수에 반영됩니다.</p>{activeEvidence.length ? <div className="evidence-picker">{activeEvidence.map((item) => <button key={item} className={selectedEvidence.includes(item) ? 'active' : ''} onClick={() => toggleEvidence(item)}><i>{selectedEvidence.includes(item) ? '✓' : '+'}</i><span>{item}</span></button>)}</div> : <p className="empty-note">아직 확인한 근거가 없습니다. 바로 판정할 수 있지만 공식 조사 점수는 받을 수 없습니다.</p>}<button className="back-to-world" onClick={() => { setShowVerdictPanel(false); setPhoneLocked(false); setPhoneApp('home'); }}>앱에서 더 확인하기</button></div><div className="verdict-card"><span className="pixel-label">판정과 대응</span><h2>이 연락은 무엇일까요?</h2><div className="verdict-buttons">{(['normal','caution','scam'] as Verdict[]).map((value) => <button key={value} className={picked === value ? 'active' : ''} onClick={() => setPicked(value)}>{verdictLabels[value]}</button>)}</div><h3>실제로 어떻게 행동할까요?</h3><div className="response-actions">{responseActions.map((action) => <button key={action.id} className={selectedAction === action.id ? 'active' : ''} onClick={() => setSelectedAction(action.id)}><b>{action.label}</b><small>{action.description}</small></button>)}</div><p className="confidence-label">판정 확신도 <strong>{confidence}%</strong></p><div className="confidence-buttons">{confidenceOptions.map((value) => <button key={value} className={confidence === value ? 'active' : ''} onClick={() => setConfidence(value)}>{value}%</button>)}</div><button className="submit-verdict" onClick={submitVerdict} disabled={!picked || !selectedAction}>{!picked ? '판정을 선택하세요' : !selectedAction ? '대응 행동을 선택하세요' : '판정 제출'}</button></div></div></section></div>}
+      {showVerdictPanel && !activeResult && <DecisionPanel gameCase={activeCase} evidence={activeEvidence} selected={selectedEvidence} toggle={toggleEvidence} picked={picked} setPicked={setPicked} action={selectedAction} setAction={setSelectedAction} confidence={confidence} setConfidence={setConfidence} submit={submitVerdict} close={()=>setShowVerdictPanel(false)} investigate={()=>{setShowVerdictPanel(false);setPhoneLocked(false);setPhoneApp('home');}}/>}
 
       {activeAppInfo && <div className="app-info-backdrop" role="dialog" aria-modal="true" aria-labelledby="app-info-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setInfoApp(null); }}><section className="app-info-sheet"><header><AppIcon name={activeAppInfo.icon}/><div><span className="pixel-label">APP INFORMATION</span><h2 id="app-info-title">{activeAppInfo.label}</h2></div><button onClick={() => setInfoApp(null)} aria-label="앱 정보 닫기">×</button></header><dl><div><dt>이 앱의 역할</dt><dd>{activeAppInfo.purpose}</dd></div><div><dt>언제 사용하나요?</dt><dd>{activeAppInfo.useWhen}</dd></div><div><dt>확인할 점</dt><dd>{activeAppInfo.caution}</dd></div></dl><button className="app-info-close" onClick={() => setInfoApp(null)}>확인</button></section></div>}
 
-      {tutorialStep !== null && <div className="tutorial-backdrop" role="dialog" aria-modal="true" aria-labelledby="tutorial-title"><section className={`tutorial-card guide-${tutorialSteps[tutorialStep].kind}`}><div className="tutorial-progress" aria-label={`${tutorialStep + 1}단계 / ${tutorialSteps.length}단계`}>{tutorialSteps.map((_, index) => <i key={index} className={index <= tutorialStep ? 'active' : ''}/>)}</div><div className="tutorial-icon">{tutorialSteps[tutorialStep].icon}</div><span className="pixel-label">{tutorialSteps[tutorialStep].eyebrow}</span><h2 id="tutorial-title">{tutorialSteps[tutorialStep].title}</h2><p>{tutorialSteps[tutorialStep].body}</p>{tutorialSteps[tutorialStep].kind === 'controls' && <div className="control-guide-grid"><article><b>PC</b><span>클릭 · Tab 이동 · Enter 실행</span><small>ESC로 열린 창 닫기</small></article><article><b>모바일</b><span>터치로 선택 · 위아래 스크롤</span><small>하단의 뒤로·홈으로 이동</small></article></div>}{tutorialSteps[tutorialStep].kind === 'interface' && <ol className="interface-guide"><li><i>1</i><span><b>상단 상태와 ? 도움말</b><small>시간·사건·점수와 전체 안내</small></span></li><li><i>2</i><span><b>현재 목표</b><small>지금 필요한 다음 행동</small></span></li><li><i>3</i><span><b>하단 고정 메뉴</b><small>뒤로 · 홈 · 판정하기</small></span></li><li><i>4</i><span><b>설정과 앱 i</b><small>게임 설정 및 앱별 도움말</small></span></li></ol>}{tutorialSteps[tutorialStep].kind === 'mission' && <div className="tutorial-loop"><span>연락 확인</span><i>→</i><span>공식 조사</span><i>→</i><span>판정·대응</span></div>}{tutorialSteps[tutorialStep].kind === 'verify' && <div className="place-guide-grid">{verificationActions.map((action) => <article key={action.id}><i>{action.icon}</i><span><b>{action.label}</b><small>{action.app} · {action.description}</small></span></article>)}</div>}{tutorialSteps[tutorialStep].kind === 'apps' && <div className="app-guide-grid">{phoneApps.map((app) => <article key={app.id}><AppIcon name={app.icon}/><span><b>{app.label}</b><small>{app.purpose}</small></span></article>)}</div>}{tutorialSteps[tutorialStep].kind === 'verdict' && <div className="tutorial-nav-demo"><span>‹<small>뒤로</small></span><span>●<small>홈</small></span><span className="highlight">!<small>판정하기</small></span></div>}{tutorialSteps[tutorialStep].kind === 'score' && <div className="score-guide-grid"><span>판정<strong>45%</strong></span><span>근거<strong>25%</strong></span><span>대응<strong>20%</strong></span><span>확신도<strong>10%</strong></span></div>}<div className="tutorial-actions"><button className="tutorial-skip" onClick={closeTutorial}>건너뛰기</button><button className="tutorial-next" onClick={() => tutorialStep === tutorialSteps.length - 1 ? closeTutorial() : setTutorialStep(tutorialStep + 1)}>{tutorialStep === tutorialSteps.length - 1 ? '첫 연락 확인하기' : '다음'}</button></div></section></div>}
+      {tutorialStep !== null && <div className="tutorial-backdrop" role="dialog" aria-modal="true" aria-labelledby="tutorial-title"><section className={`tutorial-card guide-${tutorialSteps[tutorialStep].kind}`}><div className="tutorial-progress" aria-label={`${tutorialStep + 1}단계 / ${tutorialSteps.length}단계`}>{tutorialSteps.map((_, index) => <i key={index} className={index <= tutorialStep ? 'active' : ''}/>)}</div><div className="tutorial-icon">{tutorialSteps[tutorialStep].icon}</div><span className="pixel-label">{tutorialSteps[tutorialStep].eyebrow}</span><h2 id="tutorial-title">{tutorialSteps[tutorialStep].title}</h2><p>{tutorialSteps[tutorialStep].body}</p>{tutorialSteps[tutorialStep].kind === 'controls' && <div className="control-guide-grid"><article><b>PC</b><span>클릭 · Tab 이동 · Enter 실행</span><small>ESC로 열린 창 닫기</small></article><article><b>모바일</b><span>터치로 선택 · 위아래 스크롤</span><small>하단의 뒤로·홈으로 이동</small></article></div>}{tutorialSteps[tutorialStep].kind === 'interface' && <ol className="interface-guide"><li><i>1</i><span><b>상단 상태와 ? 도움말</b><small>시간·사건·점수와 전체 안내</small></span></li><li><i>2</i><span><b>현재 목표</b><small>지금 필요한 다음 행동</small></span></li><li><i>3</i><span><b>하단 고정 메뉴</b><small>뒤로 · 홈 · 판정하기</small></span></li><li><i>4</i><span><b>설정과 앱 i</b><small>게임 설정 및 앱별 도움말</small></span></li></ol>}{tutorialSteps[tutorialStep].kind === 'mission' && <div className="tutorial-loop"><span>연락 확인</span><i>→</i><span>공식 조사</span><i>→</i><span>판정·대응</span></div>}{tutorialSteps[tutorialStep].kind === 'verify' && <div className="place-guide-grid">{verificationActions.map((action) => <article key={action.id}><i>{action.icon}</i><span><b>{action.label}</b><small>{action.app} · {action.description}</small></span></article>)}</div>}{tutorialSteps[tutorialStep].kind === 'apps' && <div className="app-guide-grid">{phoneApps.map((app) => <article key={app.id}><AppIcon name={app.icon}/><span><b>{app.label}</b><small>{app.purpose}</small></span></article>)}</div>}{tutorialSteps[tutorialStep].kind === 'verdict' && <div className="tutorial-nav-demo"><span>‹<small>뒤로</small></span><span>●<small>홈</small></span><span className="highlight">!<small>판정하기</small></span></div>}{tutorialSteps[tutorialStep].kind === 'score' && <div className="score-guide-grid"><span>판별<strong>25%</strong></span><span>근거<strong>30%</strong></span><span>대응<strong>20%</strong></span><span>확신도<strong>15%</strong></span><span>효율<strong>10%</strong></span></div>}<div className="tutorial-actions"><button className="tutorial-skip" onClick={closeTutorial}>건너뛰기</button><button className="tutorial-next" onClick={() => tutorialStep === tutorialSteps.length - 1 ? closeTutorial() : setTutorialStep(tutorialStep + 1)}>{tutorialStep === tutorialSteps.length - 1 ? '첫 연락 확인하기' : '다음'}</button></div></section></div>}
 
-      {showDebrief && activeResult && (
+      {showDebrief && activeResult && !practiceCase && (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="debrief-title" tabIndex={-1}>
           <section className={`debrief ${activeResult.correct ? 'correct' : 'wrong'}`}>
             <span className="pixel-label">판정 결과 · {activeCase.category}</span>
             <h2 id="debrief-title">{activeResult.correct ? '정확한 판정입니다!' : `실제 판정은 “${verdictLabels[activeCase.verdict]}”입니다`}</h2>
             <p>{activeCase.debrief}</p>
+            <ProcessFeedback gameCase={activeCase} result={activeResult}/>
+            <EvidenceRewind gameCase={activeCase} evidence={activeEvidence} history={activeHistory} arrival={ARRIVAL_MINUTES[activeIndex]} clock={formatGameClock}/>
             <div className="case-rewind">
               <header><span>사건 되감기</span><b>{formatGameClock(ARRIVAL_MINUTES[activeIndex])}부터 판정까지</b></header>
               <ol>
@@ -1274,17 +1325,18 @@ export default function GameClient() {
               </ol>
               {missedVerificationCount > 0 && <p className="missed-paths">확인하지 않은 공식 경로 {missedVerificationCount}곳이 남아 있었습니다.</p>}
             </div>
-            <div className="simulated-outcome"><b>이 선택이 이어졌다면</b><span>{activeCase.verdict === 'scam' ? activeResult.actionCorrect ? '연락을 끊고 신고해 추가 입금과 개인정보 노출 위험을 막을 수 있었습니다.' : '대화를 계속했다면 추가 입금이나 개인정보 요구로 피해가 커질 수 있었습니다.' : activeCase.verdict === 'caution' ? activeResult.actionCorrect ? '결정을 보류해 과도한 위험을 다시 검토할 시간을 확보했습니다.' : '서둘러 행동했다면 사기는 아니더라도 감당하기 어려운 손실로 이어질 수 있었습니다.' : activeResult.actionCorrect ? '공식 경로 확인 후 정상적인 안내를 안전하게 처리할 수 있었습니다.' : '정상 연락도 공식 경로 확인 없이 처리하면 다른 위조 연락에 취약해질 수 있습니다.'}</span></div>
+            <div className="simulated-outcome"><b>선택 뒤의 위험과 대안</b><span>{activeResult.actionCorrect?'안전한 다음 행동을 선택해 확인할 시간을 확보했습니다. ':'선택한 대응을 다시 검토해 보세요. '}{activeCase.training.riskConsequence}</span></div>
             <div className={`action-result ${activeResult.actionCorrect ? 'correct' : 'needs-review'}`}><b>{activeResult.actionCorrect ? '안전한 대응을 선택했습니다' : '대응 행동도 다시 확인해 보세요'}</b><span>나의 선택: {responseActions.find((action) => action.id === activeResult.action)?.label}</span></div>
             <h3>확인해야 했던 핵심 단서</h3><ul>{activeCase.clueLabels.map((clue) => <li key={clue}>{clue}</li>)}</ul>
             <div className="safe-action"><b>현실에서의 권장 행동</b><span>{activeCase.safeAction}</span></div>
             <div className="debrief-score"><span>판정·근거·대응 점수</span><strong>{activeResult.score > 0 ? '+' : ''}{activeResult.score}</strong></div>
+            <button onClick={()=>setPracticeCase(activeCase.id)}>핵심 분기부터 다시 판단하기</button>
             <button onClick={nextCase}>{activeIndex < availableCount - 1 ? '현재 연락으로 돌아가기' : results.length === cases.length ? '최종 결과 보기' : '다음 시간으로'}</button>
           </section>
         </div>
       )}
 
-      {complete && !showDebrief && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="summary-title" tabIndex={-1}><section className="summary-card"><span className="pixel-label">DAY CLEAR!</span><h2 id="summary-title">{playerTitle}</h2><p className="summary-lead">판정 정확도 {accuracy}% · 안전 대응 {actionAccuracy}%</p><div className="summary-grid"><div><span>최종 점수</span><strong>{score}</strong></div><div><span>근거 판정</span><strong>{groundedCount}/{results.length}</strong></div><div><span>공식 확인</span><strong>{Object.values(evidence).flat().length}회</strong></div></div><section className="summary-badges"><span>오늘 얻은 안전 습관</span>{earnedBadges.length ? <div>{earnedBadges.map((badge) => <span key={badge.id}><i>{badge.icon}</i><b>{badge.title}</b></span>)}</div> : <p>다음 플레이에서는 연락 밖의 공식 앱에서 근거를 먼저 확인해 보세요.</p>}</section><p>사기범을 말로 이기는 것보다, 돈을 보내기 전에 독립적인 공식 경로로 확인하는 습관이 중요합니다.</p><button onClick={restart}>새로운 하루 시작</button></section></div>}
+      {complete && !showDebrief && !practiceCase && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="summary-title" tabIndex={-1}><section className="summary-card"><span className="pixel-label">DAY CLEAR!</span><h2 id="summary-title">{playerTitle}</h2><p className="summary-lead">핵심 근거를 확인하고 안전하게 대응한 사건 {trainingStats.groundedSafety}%</p><div className="training-metrics"><span>최초 판별 {trainingStats.firstAccuracy}%</span><span>핵심 단서 {trainingStats.keyCoverage}%</span><span>근거 없는 판정 {trainingStats.noEvidence}%</span><span>고확신 오답 {trainingStats.overconfidentErrors}%</span><span>안전 대응 {trainingStats.safeActions}%</span><span>재훈련 판단 변화 {trainingStats.changedAfterReview}%</span></div><p>보완할 영역: {trainingStats.weaknesses.join(' · ')||'이번 하루의 핵심 경로를 잘 확인했습니다.'}</p><div className="weakness-practice">{results.filter(result=>!result.northStar).map(result=><button key={result.caseId} onClick={()=>setPracticeCase(result.caseId)}>{cases.find(item=>item.id===result.caseId)?.training.weakness} 재훈련</button>)}</div><div className="summary-grid"><div><span>최종 점수</span><strong>{score}</strong></div><div><span>근거 판정</span><strong>{groundedCount}/{results.length}</strong></div><div><span>공식 확인</span><strong>{Object.values(evidence).flat().length}회</strong></div></div><section className="summary-badges"><span>오늘 얻은 안전 습관</span>{earnedBadges.length ? <div>{earnedBadges.map((badge) => <span key={badge.id}><i>{badge.icon}</i><b>{badge.title}</b></span>)}</div> : <p>다음 플레이에서는 연락 밖의 공식 앱에서 근거를 먼저 확인해 보세요.</p>}</section><p>사기범을 말로 이기는 것보다, 돈을 보내기 전에 독립적인 공식 경로로 확인하는 습관이 중요합니다.</p><button onClick={restart}>새로운 하루 시작</button></section></div>}
     </main>
   );
 }

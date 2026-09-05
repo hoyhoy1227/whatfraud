@@ -22,7 +22,7 @@ const commonKeys = new Set([
   'id', 'sender', 'handle', 'channel', 'mode', 'preview', 'verdict', 'category',
   'initialMessages', 'role', 'npcGoal', 'allowedClaims', 'sceneCues', 'fallbackReplies', 'dialogue',
   'checks', 'clueLabels', 'debrief', 'safeAction', 'displayUrl', 'linkLabel',
-  'landingTitle', 'landingCopy', 'landingCta', 'review',
+  'landingTitle', 'landingCopy', 'landingCta', 'review', 'training',
 ]);
 
 function isRecord(value) {
@@ -92,6 +92,30 @@ function validateCase(data, file, errors) {
       if (cue.presentation === 'message-status' && cue.messageState === undefined) addError(errors, file, 'message-status 표시에는 messageState가 필요합니다.');
       if (cue.condition !== undefined && !sceneConditions.has(cue.condition)) addError(errors, file, `sceneCues의 등장 조건 ${cue.condition}은 지원하지 않습니다.`);
     }
+  }
+
+  const training = data.training;
+  if (!training || !Array.isArray(training.claims) || training.claims.length < 3 || training.claims.length > 5 || !Array.isArray(training.evidence)) {
+    addError(errors, file, '검증 주장 3~5개와 연결된 단서가 필요합니다.');
+  } else {
+    const ids = new Set(training.claims.map(claim => claim.id));
+    if (ids.size !== training.claims.length || training.claims.some(claim => !claim.text)) addError(errors,file,'주장 ID 또는 본문이 올바르지 않습니다.');
+    const clueIds = new Set();
+    for (const clue of training.evidence) {
+      if (!clue.id || clueIds.has(clue.id)) addError(errors,file,'단서 ID가 중복되거나 없습니다.');
+      clueIds.add(clue.id);
+      if (!locations.has(clue.source) || data.checks?.[clue.source] !== clue.text) addError(errors,file,'단서와 공식 확인 본문이 다릅니다.');
+      if (!['decisive','signal','neutral','misleading'].includes(clue.kind) || typeof clue.key !== 'boolean') addError(errors,file,'단서 분류가 잘못됐습니다.');
+      if (!Array.isArray(clue.claimIds) || !clue.claimIds.length || clue.claimIds.some(id=>!ids.has(id))) addError(errors,file,'단서가 알 수 없는 주장을 가리킵니다.');
+      if (!Array.isArray(clue.supports) || clue.supports.some(value=>!verdicts.has(value))) addError(errors,file,'단서의 지지 결론이 잘못됐습니다.');
+      if (!clue.explanation || !Number.isInteger(clue.availableAt) || clue.availableAt < 1) addError(errors,file,'단서의 복기 설명과 등장 시점이 필요합니다.');
+    }
+    const keys = training.evidence.filter(clue=>clue.key);
+    if (keys.length < 2 || keys.length > 3 || !training.evidence.some(clue=>['neutral','misleading'].includes(clue.kind))) addError(errors,file,'핵심 단서 2~3개와 중립·반대 정보가 필요합니다.');
+    if (!Array.isArray(training.appropriateActions) || training.appropriateActions.length < 1 || training.appropriateActions.length > 2 || training.appropriateActions.some(value=>!['verify','pause','block','report'].includes(value))) addError(errors,file,'적절한 대응 1~2개가 필요합니다.');
+    if (!Array.isArray(training.optimalSources) || keys.some(clue=>!training.optimalSources.includes(clue.source))) addError(errors,file,'최소 확인 경로가 핵심 단서와 연결되지 않습니다.');
+    for (const key of ['riskConsequence','takeaway','weakness']) requireString(training,key,errors,file);
+    if (!training.variant?.sender || !training.variant?.preview) addError(errors,file,'재훈련용 표현 변형이 필요합니다.');
   }
 
   if (!isRecord(data.review)) {

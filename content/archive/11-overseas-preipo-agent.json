@@ -13,7 +13,12 @@
   ],
   "role": "제도권 금융회사처럼 차분하게 행동하는 가상의 공모주 대행 상담원",
   "npcGoal": "독점 배정 계약을 주장하며 공식 증권사 청약이 아닌 회사 명의 입금으로 유도한다.",
-  "allowedClaims": ["해외 투자사와 독점 계약이라고 주장", "기관 배정 물량이라고 주장", "상장 전이라 공개 자료가 제한된다고 주장", "회사 명의 입금을 정상 절차라고 주장"],
+  "allowedClaims": [
+    "해외 투자사와 독점 계약이라고 주장",
+    "기관 배정 물량이라고 주장",
+    "상장 전이라 공개 자료가 제한된다고 주장",
+    "회사 명의 입금을 정상 절차라고 주장"
+  ],
   "fallbackReplies": [
     "일반 청약과 달리 기관 배정분을 나누는 구조라 공개 화면에서 바로 보이지 않을 수 있습니다.",
     "등록 여부만으로 계약 전체가 공개되는 것은 아닙니다. 배정 확인서는 참여가 확정되면 제공됩니다.",
@@ -32,7 +37,12 @@
       "실제 송금 방법이나 금융 규제 회피 방법을 설명하지 않는다.",
       "원금이나 상장을 보장한다고 직접 말하지 않는다."
     ],
-    "quickQuestions": ["어느 금융회사 소속이고 등록 정보는 어디서 확인하나요?", "독점 계약을 어디서 확인할 수 있나요?", "상장이 미뤄져 손실이 생기면 어떻게 되나요?", "왜 회사 계좌로 보내야 하나요?"],
+    "quickQuestions": [
+      "어느 금융회사 소속이고 등록 정보는 어디서 확인하나요?",
+      "독점 계약을 어디서 확인할 수 있나요?",
+      "상장이 미뤄져 손실이 생기면 어떻게 되나요?",
+      "왜 회사 계좌로 보내야 하나요?"
+    ],
     "fallbackByTopic": {
       "source": "해외 투자사와의 계약은 공개 범위가 제한돼 있지만 참여가 확정되면 배정 확인서를 제공한다고 안내받았습니다.",
       "identity": "투자 관련 등록 정보는 확인하실 수 있습니다. 다만 이번 건은 일반 중개가 아니라 별도 계약에 따른 배정 업무입니다.",
@@ -50,25 +60,81 @@
     }
   },
   "sceneCues": [
-    { "id": "first-trace", "app": "calls", "sender": "국제 번호", "title": "수신 전화", "detail": "메신저 상담원이 통화로만 배정 절차를 설명하겠다며 전화를 걸었습니다.", "icon": "calls", "tone": "warning", "minuteOffset": 4, "stage": "signal", "interference": false, "presentation": "incoming-call" },
-    { "id": "call-only", "app": "calls", "sender": "전화", "title": "통화로만 설명 요구", "detail": "상담원이 기록을 남기지 않는 통화로 절차를 안내하겠다고 합니다.", "icon": "calls", "tone": "warning", "minuteOffset": 9, "stage": "pressure", "interference": false, "silenceMs": 1800 },
-    { "id": "issuer-gap", "app": "stocks", "sender": "채움증권", "title": "공식 배정 기록 없음", "detail": "청약·배정 절차와 연결되는 공식 기록은 확인되지 않습니다.", "icon": "stocks", "tone": "routine", "minuteOffset": 15, "stage": "decision", "interference": false }
+    {
+      "id": "first-trace",
+      "app": "calls",
+      "sender": "국제 번호",
+      "title": "수신 전화",
+      "detail": "메신저 상담원이 통화로만 배정 절차를 설명하겠다며 전화를 걸었습니다.",
+      "icon": "calls",
+      "tone": "warning",
+      "minuteOffset": 4,
+      "stage": "signal",
+      "interference": false,
+      "presentation": "incoming-call"
+    },
+    {
+      "id": "call-only",
+      "app": "calls",
+      "sender": "전화",
+      "title": "통화로만 설명 요구",
+      "detail": "상담원이 기록을 남기지 않는 통화로 절차를 안내하겠다고 합니다.",
+      "icon": "calls",
+      "tone": "warning",
+      "minuteOffset": 9,
+      "stage": "pressure",
+      "interference": false,
+      "silenceMs": 1800
+    },
+    {
+      "id": "issuer-gap",
+      "app": "stocks",
+      "sender": "채움증권",
+      "title": "공식 배정 기록 없음",
+      "detail": "청약·배정 절차와 연결되는 공식 기록은 확인되지 않습니다.",
+      "icon": "stocks",
+      "tone": "routine",
+      "minuteOffset": 15,
+      "stage": "decision",
+      "interference": false
+    }
   ],
   "checks": {
     "library": "공시와 공식 증권사 청약 일정에서 주장한 해외 기업과 배정 계약을 확인할 수 없습니다.",
     "bank": "입금 요청은 증권사 청약 계좌가 아니라 상담 업체 명의의 일반 법인 계좌입니다.",
     "police": "독점 계약과 공모주 대행을 내세워 원금과 수익금을 돌려주지 않은 유사 신고가 확인됩니다."
   },
-  "clueLabels": ["공시로 확인되지 않는 독점 배정 계약", "공식 증권사 청약이 아닌 회사 계좌 입금", "배정 확인서를 입금 뒤에만 제공"],
+  "clueLabels": [
+    "공시로 확인되지 않는 독점 배정 계약",
+    "공식 증권사 청약이 아닌 회사 계좌 입금",
+    "배정 확인서를 입금 뒤에만 제공"
+  ],
   "debrief": "해외 비상장주식과 기관 명의 공모주 청약 대행을 내세워 투자금을 받는 사기입니다. 등록된 회사처럼 보여도 허용된 업무와 실제 계약은 별도로 확인해야 합니다.",
   "safeAction": "입금을 중단하고 공식 증권사와 공시에서 청약 여부를 확인한 뒤 금융당국에 상담·신고합니다.",
   "review": {
-    "sourceBasis": ["금융감독원이 2026년 6월 소비자경보에서 알린 해외 비상장주식 투자·회사 명의 공모주 청약 대행 편취 유형"],
+    "sourceBasis": [
+      "금융감독원이 2026년 6월 소비자경보에서 알린 해외 비상장주식 투자·회사 명의 공모주 청약 대행 편취 유형"
+    ],
     "adaptationScope": "실존 금융회사, 해외 기업, 계약서, 계좌와 금액은 사용하지 않고 독점 계약 주장과 회사 계좌 입금 구조만 합성했습니다.",
     "verdictReason": "공시와 공식 증권사 청약에서 계약을 확인할 수 없고 입금 뒤에만 배정 확인을 제공한다며 일반 회사 계좌로 자금을 요구합니다.",
-    "verificationPaths": ["공시와 공식 증권사에서 청약·상장 일정 확인", "금융회사 등록 업종과 실제 허용 업무 비교", "입금 계좌 성격과 계약 당사자 대조"],
-    "misdirection": ["기관·독점 계약이라는 전문 표현", "위험도 설명하겠다는 신중한 태도", "회사 명의 계좌면 안전하다는 오해"],
-    "learningObjectives": ["등록 회사 여부와 제안한 거래의 적법성·실재성을 분리해 확인한다", "공모주는 공식 증권사와 공시 경로에서 직접 확인한다"],
-    "safetyAudit": { "containsPersonalData": false, "containsLiveUrl": false, "containsOperationalCrimeInfo": false }
+    "verificationPaths": [
+      "공시와 공식 증권사에서 청약·상장 일정 확인",
+      "금융회사 등록 업종과 실제 허용 업무 비교",
+      "입금 계좌 성격과 계약 당사자 대조"
+    ],
+    "misdirection": [
+      "기관·독점 계약이라는 전문 표현",
+      "위험도 설명하겠다는 신중한 태도",
+      "회사 명의 계좌면 안전하다는 오해"
+    ],
+    "learningObjectives": [
+      "등록 회사 여부와 제안한 거래의 적법성·실재성을 분리해 확인한다",
+      "공모주는 공식 증권사와 공시 경로에서 직접 확인한다"
+    ],
+    "safetyAudit": {
+      "containsPersonalData": false,
+      "containsLiveUrl": false,
+      "containsOperationalCrimeInfo": false
+    }
   }
 }

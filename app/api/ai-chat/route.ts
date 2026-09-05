@@ -1,3 +1,4 @@
+import { reserveSharedBudget } from '../ai-budget';
 import { buildSystemPrompt, inferDialogueEmotion, inferDialogueReplyMode, sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
 import { cases } from '../../game-data';
 
@@ -72,6 +73,9 @@ function validateRequestEnvelope(request: Request) {
 
 
 function json(payload: unknown, status = 200, headers: HeadersInit = {}) {
+  const outcome = payload as { code?: string; provider?: string };
+  // Only application-defined categorical outcomes; no request content/identity.
+  console.info(JSON.stringify({ event: 'ai_chat_result', status, outcome: outcome.code ?? outcome.provider ?? 'status' }));
   return Response.json(payload, {
     status,
     headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', ...headers },
@@ -148,7 +152,7 @@ export async function GET() {
   return json({
     enabled: aiEnabled() && Boolean(process.env.GEMINI_API_KEY?.trim()),
     mode: aiEnabled() ? 'selective' : 'scripted',
-    limiterScope: 'isolate',
+    limiterScope: 'shared-d1-budget-and-isolate-throttle',
     provider: 'gemini',
     model: GEMINI_MODEL,
     fallback: true,
@@ -243,6 +247,9 @@ async function handleChat(request: Request, body: ChatBody) {
   activeProviderRequests += 1;
 
   try {
+    const budget = await reserveSharedBudget();
+    if (budget !== 'allowed') return json({ code: budget === 'exhausted' ? 'budget_exhausted' : 'budget_unavailable' }, budget === 'exhausted' ? 429 : 503, { 'Retry-After': '60' });
+    if (controller.signal.aborted) return json({ code: 'provider_timeout' }, 504);
     const response = await fetch(GEMINI_ENDPOINT, {
       method: 'POST',
       headers: {

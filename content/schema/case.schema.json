@@ -5,118 +5,498 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "id", "sender", "handle", "channel", "mode", "preview", "verdict", "category",
-    "initialMessages", "role", "npcGoal", "allowedClaims", "sceneCues", "checks", "clueLabels",
-    "debrief", "safeAction", "review"
+    "id",
+    "sender",
+    "handle",
+    "channel",
+    "mode",
+    "preview",
+    "verdict",
+    "category",
+    "initialMessages",
+    "role",
+    "npcGoal",
+    "allowedClaims",
+    "sceneCues",
+    "checks",
+    "clueLabels",
+    "debrief",
+    "safeAction",
+    "review",
+    "training"
   ],
   "properties": {
-    "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
-    "sender": { "type": "string", "minLength": 1 },
-    "handle": { "type": "string", "minLength": 1 },
-    "channel": { "enum": ["메신저", "문자", "앱 알림", "SNS"] },
-    "mode": { "enum": ["chat", "notice", "link"] },
-    "preview": { "type": "string", "minLength": 1 },
-    "verdict": { "enum": ["normal", "caution", "scam"] },
-    "category": { "type": "string", "minLength": 1 },
-    "initialMessages": { "$ref": "#/$defs/nonEmptyStringArray" },
-    "role": { "type": "string", "minLength": 1 },
-    "npcGoal": { "type": "string", "minLength": 1 },
-    "allowedClaims": { "$ref": "#/$defs/nonEmptyStringArray" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "sender": {
+      "type": "string",
+      "minLength": 1
+    },
+    "handle": {
+      "type": "string",
+      "minLength": 1
+    },
+    "channel": {
+      "enum": [
+        "메신저",
+        "문자",
+        "앱 알림",
+        "SNS"
+      ]
+    },
+    "mode": {
+      "enum": [
+        "chat",
+        "notice",
+        "link"
+      ]
+    },
+    "preview": {
+      "type": "string",
+      "minLength": 1
+    },
+    "verdict": {
+      "enum": [
+        "normal",
+        "caution",
+        "scam"
+      ]
+    },
+    "category": {
+      "type": "string",
+      "minLength": 1
+    },
+    "initialMessages": {
+      "$ref": "#/$defs/nonEmptyStringArray"
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "npcGoal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "allowedClaims": {
+      "$ref": "#/$defs/nonEmptyStringArray"
+    },
     "sceneCues": {
       "type": "array",
       "minItems": 1,
       "maxItems": 5,
-      "items": { "$ref": "#/$defs/sceneCue" }
+      "items": {
+        "$ref": "#/$defs/sceneCue"
+      }
     },
-    "fallbackReplies": { "$ref": "#/$defs/nonEmptyStringArray" },
-    "dialogue": { "$ref": "#/$defs/dialogue" },
+    "fallbackReplies": {
+      "$ref": "#/$defs/nonEmptyStringArray"
+    },
+    "dialogue": {
+      "$ref": "#/$defs/dialogue"
+    },
     "checks": {
       "type": "object",
       "minProperties": 2,
       "additionalProperties": false,
       "properties": {
-        "home": { "type": "string", "minLength": 1 },
-        "bank": { "type": "string", "minLength": 1 },
-        "cafe": { "type": "string", "minLength": 1 },
-        "police": { "type": "string", "minLength": 1 },
-        "library": { "type": "string", "minLength": 1 }
+        "home": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bank": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cafe": {
+          "type": "string",
+          "minLength": 1
+        },
+        "police": {
+          "type": "string",
+          "minLength": 1
+        },
+        "library": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
-    "clueLabels": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1 } },
-    "debrief": { "type": "string", "minLength": 1 },
-    "safeAction": { "type": "string", "minLength": 1 },
-    "review": { "$ref": "#/$defs/review" },
-    "displayUrl": { "type": "string", "pattern": "^[a-z0-9.-]+\\.invalid(?:/[^\\s]*)?$" },
-    "linkLabel": { "type": "string", "minLength": 1 },
-    "landingTitle": { "type": "string", "minLength": 1 },
-    "landingCopy": { "type": "string", "minLength": 1 },
-    "landingCta": { "type": "string", "minLength": 1 }
+    "clueLabels": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "debrief": {
+      "type": "string",
+      "minLength": 1
+    },
+    "safeAction": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review": {
+      "$ref": "#/$defs/review"
+    },
+    "displayUrl": {
+      "type": "string",
+      "pattern": "^[a-z0-9.-]+\\.invalid(?:/[^\\s]*)?$"
+    },
+    "linkLabel": {
+      "type": "string",
+      "minLength": 1
+    },
+    "landingTitle": {
+      "type": "string",
+      "minLength": 1
+    },
+    "landingCopy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "landingCta": {
+      "type": "string",
+      "minLength": 1
+    },
+    "training": {
+      "type": "object",
+      "required": [
+        "claims",
+        "evidence",
+        "appropriateActions",
+        "optimalSources",
+        "riskConsequence",
+        "takeaway",
+        "weakness",
+        "variant"
+      ],
+      "properties": {
+        "claims": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "text"
+            ]
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "source",
+              "kind",
+              "key",
+              "claimIds",
+              "text",
+              "explanation",
+              "supports",
+              "availableAt"
+            ]
+          }
+        },
+        "appropriateActions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {
+            "enum": [
+              "verify",
+              "pause",
+              "block",
+              "report"
+            ]
+          }
+        },
+        "optimalSources": {
+          "type": "array",
+          "minItems": 2
+        },
+        "riskConsequence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "takeaway": {
+          "type": "string",
+          "minLength": 1
+        },
+        "weakness": {
+          "type": "string",
+          "minLength": 1
+        },
+        "variant": {
+          "type": "object",
+          "required": [
+            "sender",
+            "preview"
+          ]
+        }
+      }
+    }
   },
   "allOf": [
     {
-      "if": { "properties": { "mode": { "const": "chat" } }, "required": ["mode"] },
-      "then": { "required": ["fallbackReplies", "dialogue"] },
-      "else": { "not": { "anyOf": [{ "required": ["fallbackReplies"] }, { "required": ["dialogue"] }] } }
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "chat"
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
+      "then": {
+        "required": [
+          "fallbackReplies",
+          "dialogue"
+        ]
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "fallbackReplies"
+              ]
+            },
+            {
+              "required": [
+                "dialogue"
+              ]
+            }
+          ]
+        }
+      }
     },
     {
-      "if": { "properties": { "mode": { "const": "link" } }, "required": ["mode"] },
-      "then": { "required": ["displayUrl", "linkLabel", "landingTitle", "landingCopy", "landingCta"] }
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "link"
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
+      "then": {
+        "required": [
+          "displayUrl",
+          "linkLabel",
+          "landingTitle",
+          "landingCopy",
+          "landingCta"
+        ]
+      }
     }
   ],
   "$defs": {
     "sceneCue": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "app", "sender", "title", "detail", "icon", "tone", "minuteOffset", "stage", "interference"],
+      "required": [
+        "id",
+        "app",
+        "sender",
+        "title",
+        "detail",
+        "icon",
+        "tone",
+        "minuteOffset",
+        "stage",
+        "interference"
+      ],
       "properties": {
-        "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
-        "app": { "enum": ["messages", "calls", "bank", "stocks", "browser", "social", "calendar", "notes", "contacts", "safety", "settings", "photos"] },
-        "sender": { "type": "string", "minLength": 1 },
-        "title": { "type": "string", "minLength": 1 },
-        "detail": { "type": "string", "minLength": 1 },
-        "icon": { "type": "string", "minLength": 1 },
-        "tone": { "enum": ["routine", "social", "warning"] },
-        "minuteOffset": { "type": "integer", "minimum": 1, "maximum": 59 },
-        "stage": { "enum": ["signal", "pressure", "decision"] },
-        "interference": { "type": "boolean" },
-        "presentation": { "enum": ["notification", "incoming-call", "bank-overlay", "message-status"] },
-        "silenceMs": { "type": "integer", "minimum": 0, "maximum": 3000 },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "app": {
+          "enum": [
+            "messages",
+            "calls",
+            "bank",
+            "stocks",
+            "browser",
+            "social",
+            "calendar",
+            "notes",
+            "contacts",
+            "safety",
+            "settings",
+            "photos"
+          ]
+        },
+        "sender": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1
+        },
+        "icon": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tone": {
+          "enum": [
+            "routine",
+            "social",
+            "warning"
+          ]
+        },
+        "minuteOffset": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 59
+        },
+        "stage": {
+          "enum": [
+            "signal",
+            "pressure",
+            "decision"
+          ]
+        },
+        "interference": {
+          "type": "boolean"
+        },
+        "presentation": {
+          "enum": [
+            "notification",
+            "incoming-call",
+            "bank-overlay",
+            "message-status"
+          ]
+        },
+        "silenceMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3000
+        },
         "messageState": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind", "text"],
+          "required": [
+            "kind",
+            "text"
+          ],
           "properties": {
-            "kind": { "enum": ["edited", "deleted"] },
-            "text": { "type": "string", "minLength": 1 }
+            "kind": {
+              "enum": [
+                "edited",
+                "deleted"
+              ]
+            },
+            "text": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
-        "condition": { "enum": ["opened-link-before", "prolonged-chat-before", "unsafe-action-before", "any-risk-exposure"] }
+        "condition": {
+          "enum": [
+            "opened-link-before",
+            "prolonged-chat-before",
+            "unsafe-action-before",
+            "any-risk-exposure"
+          ]
+        }
       }
     },
     "nonEmptyStringArray": {
       "type": "array",
       "minItems": 1,
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "dialogue": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["voice", "progression", "boundaries", "quickQuestions", "fallbackByTopic"],
+      "required": [
+        "voice",
+        "progression",
+        "boundaries",
+        "quickQuestions",
+        "fallbackByTopic"
+      ],
       "properties": {
-        "voice": { "type": "string", "minLength": 1 },
-        "progression": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1 } },
-        "boundaries": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1 } },
-        "quickQuestions": { "type": "array", "minItems": 3, "items": { "type": "string", "minLength": 1 } },
+        "voice": {
+          "type": "string",
+          "minLength": 1
+        },
+        "progression": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "boundaries": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "quickQuestions": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "fallbackByTopic": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["source", "identity", "risk", "money", "default"],
+          "required": [
+            "source",
+            "identity",
+            "risk",
+            "money",
+            "default"
+          ],
           "properties": {
-            "source": { "type": "string", "minLength": 1 },
-            "identity": { "type": "string", "minLength": 1 },
-            "risk": { "type": "string", "minLength": 1 },
-            "money": { "type": "string", "minLength": 1 },
-            "default": { "type": "string", "minLength": 1 }
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "identity": {
+              "type": "string",
+              "minLength": 1
+            },
+            "risk": {
+              "type": "string",
+              "minLength": 1
+            },
+            "money": {
+              "type": "string",
+              "minLength": 1
+            },
+            "default": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         }
       }
@@ -125,24 +505,74 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "sourceBasis", "adaptationScope", "verdictReason", "verificationPaths",
-        "misdirection", "learningObjectives", "safetyAudit"
+        "sourceBasis",
+        "adaptationScope",
+        "verdictReason",
+        "verificationPaths",
+        "misdirection",
+        "learningObjectives",
+        "safetyAudit"
       ],
       "properties": {
-        "sourceBasis": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
-        "adaptationScope": { "type": "string", "minLength": 1 },
-        "verdictReason": { "type": "string", "minLength": 1 },
-        "verificationPaths": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
-        "misdirection": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
-        "learningObjectives": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1 } },
+        "sourceBasis": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "adaptationScope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verdictReason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verificationPaths": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "misdirection": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "learningObjectives": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "safetyAudit": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["containsPersonalData", "containsLiveUrl", "containsOperationalCrimeInfo"],
+          "required": [
+            "containsPersonalData",
+            "containsLiveUrl",
+            "containsOperationalCrimeInfo"
+          ],
           "properties": {
-            "containsPersonalData": { "const": false },
-            "containsLiveUrl": { "const": false },
-            "containsOperationalCrimeInfo": { "const": false }
+            "containsPersonalData": {
+              "const": false
+            },
+            "containsLiveUrl": {
+              "const": false
+            },
+            "containsOperationalCrimeInfo": {
+              "const": false
+            }
           }
         }
       }

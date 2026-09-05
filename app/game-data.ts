@@ -54,7 +54,19 @@ export type ContentReview = {
   };
 };
 
+export type TrainingProfile = {
+  claims: { id: string; text: string }[];
+  evidence: { id: string; source: LocationId; kind: 'decisive' | 'signal' | 'neutral' | 'misleading'; key: boolean; claimIds: string[]; text: string; explanation: string; supports: Verdict[]; availableAt: number }[];
+  appropriateActions: ('verify' | 'pause' | 'block' | 'report')[];
+  optimalSources: LocationId[];
+  riskConsequence: string;
+  takeaway: string;
+  weakness: string;
+  variant: { sender: string; preview: string };
+};
+
 export type CaseData = {
+  training: TrainingProfile;
   id: string;
   sender: string;
   handle: string;
