@@ -25,11 +25,13 @@ const request = (text = 'この質問', session = 'test-session-000001', overrid
 let calls = 0;
 const originalFetch = globalThis.fetch;
 const originalKey = process.env.GEMINI_API_KEY;
+const originalEnabled = process.env.GEMINI_ENABLED;
 const originalNow = Date.now;
 let clock = 1_800_000_000_000;
 Date.now = () => clock;
 const successful = () => Response.json({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '조금 더 확인해 볼게.' }] } }] });
 try {
+  process.env.GEMINI_ENABLED = 'true';
   process.env.GEMINI_API_KEY = 'mock-only-not-a-real-key';
   globalThis.fetch = async () => { calls++; return successful(); };
   let route = await freshRoute();
@@ -56,7 +58,7 @@ try {
   calls = 0;
   route = await freshRoute();
   globalThis.fetch = async () => { calls++; return successful(); };
-  assert.equal((await route.POST(new Request('https://example.invalid/api/ai-chat', { method: 'POST', body: 'x'.repeat(12001) }))).status, 400);
+  assert.equal((await route.POST(new Request('https://example.invalid/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: 'x'.repeat(12001) }))).status, 400);
   assert.equal((await route.POST(request('확인', 'test-session-000003', { caseId: 'official-etf-fill' }))).status, 400);
   assert.equal((await route.POST(request('확인', 'test-session-000004', { userTurnCount: 25 }))).status, 400);
   assert.equal(calls, 0, 'invalid requests must not generate');
@@ -128,8 +130,11 @@ try {
   const statusCheck = clientSource.slice(clientSource.indexOf('async function checkModel'), clientSource.indexOf('async function sendMessage'));
   assert.ok(!statusCheck.includes('requestGemini('), 'settings check must not generate');
   await testClientCancellation();
+  await testSecurity();
   console.log('AI call tests passed: status, coalescing, isolation, cooldown, body limit, invalid inputs, missing key, truncation, topic continuity.');
 } finally {
+  if (originalEnabled === undefined) delete process.env.GEMINI_ENABLED;
+  else process.env.GEMINI_ENABLED = originalEnabled;
   globalThis.fetch = originalFetch;
   Date.now = originalNow;
   if (originalKey === undefined) delete process.env.GEMINI_API_KEY;
@@ -181,4 +186,85 @@ async function testClientCancellation() {
     assert.equal(state.chats[friend.id].filter(message=>message.role==='assistant').length,0,'late reply must not reach chat');
     if(action==='block') assert.equal(state.blocked[friend.id],true);
   }
+}
+
+async function testSecurity() {
+  let route = await freshRoute();
+  calls = 0;
+  globalThis.fetch = async () => { calls++; return successful(); };
+  const withHeaders = (headers, text = '새 질문입니다') => {
+    const value = request(text);
+    for (const [key, content] of Object.entries(headers)) value.headers.set(key, content);
+    return value;
+  };
+  for (const [headers, status] of [
+    [{ Origin: 'https://other.invalid' }, 403],
+    [{ Origin: 'null' }, 403],
+    [{ 'sec-fetch-site': 'cross-site' }, 403],
+    [{ 'sec-fetch-site': 'same-site' }, 403],
+    [{ 'Content-Type': 'text/plain' }, 415],
+    [{ 'Content-Length': '12001' }, 400],
+  ]) assert.equal((await route.POST(withHeaders(headers))).status, status);
+  assert.equal((await route.POST(request('a'.repeat(501)))).status, 400);
+  assert.equal((await route.POST(request('질문', undefined, { extra: 'unknown' }))).status, 400);
+  assert.equal((await route.POST(request('질문', undefined, { messages: [{ role: 'user', content: '하나' }, { role: 'user', content: '둘' }], userTurnCount: 2 }))).status, 400);
+  assert.equal(calls, 0, 'rejected envelopes and messages must not generate');
+  const stalled = new Request('https://example.invalid/api/ai-chat', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: new ReadableStream({ start() {} }), duplex: 'half',
+  });
+  assert.equal((await route.POST(stalled)).status, 408, 'slow body must time out before provider access');
+  assert.equal(calls, 0);
+  const ok = await route.POST(withHeaders({ Origin: 'https://example.invalid', 'sec-fetch-site': 'same-origin' }));
+  assert.equal(ok.status, 200);
+  assert.equal(ok.headers.get('X-Content-Type-Options'), 'nosniff');
+  assert.equal(ok.headers.get('Cache-Control'), 'no-store');
+  // Changing untrusted forwarding headers cannot create a new quota identity.
+  clock += 1_000;
+  const forwarded = withHeaders({ 'x-forwarded-for': '198.51.100.88' }, '또 다른 질문');
+  forwarded.headers.delete('cf-connecting-ip');
+  route = await freshRoute();
+  await route.POST(forwarded);
+  const changed = withHeaders({ 'x-forwarded-for': '198.51.100.99' }, '다음 질문');
+  changed.headers.delete('cf-connecting-ip');
+  assert.equal((await route.POST(changed)).status, 429);
+
+  route = await freshRoute();
+  calls = 0;
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  globalThis.fetch = async () => { calls++; await gate; return successful(); };
+  const first = route.POST(request('서로 다른 질문 하나', 'concurrency-session-01'));
+  const second = route.POST(request('서로 다른 질문 둘', 'concurrency-session-02'));
+  for (let i = 0; i < 100 && calls < 2; i++) await new Promise(resolve => setTimeout(resolve, 1));
+  assert.equal(calls, 2);
+  const third = await route.POST(request('서로 다른 질문 셋', 'concurrency-session-03'));
+  assert.equal((await third.json()).code, 'provider_busy');
+  assert.equal(calls, 2);
+  release();
+  await Promise.all([first, second]);
+  assert.equal((await route.POST(request('서로 다른 질문 셋', 'concurrency-session-03'))).status, 200, 'busy errors must not occupy the response cache');
+  assert.equal(calls, 3);
+
+  process.env.GEMINI_ENABLED = 'false';
+  const disabled = await route.POST(request('새로운 질문', 'disable-session-0001'));
+  assert.equal((await disabled.json()).code, 'ai_disabled');
+  assert.equal((await (await route.GET()).json()).enabled, false);
+  assert.equal((await (await route.POST(request('네'))).json()).provider, 'scripted');
+  assert.equal(calls, 3, 'operator switch must not disable scripted gameplay or call provider');
+  process.env.GEMINI_ENABLED = 'true';
+
+  route = await freshRoute();
+  let providerBody;
+  globalThis.fetch = async (_url, options) => { providerBody = options.body; return successful(); };
+  await route.POST(request('질문', 'privacy-session-0001', {
+    messages: [{ role: 'user', content: 'abc@example.invalid 내용은?' }, { role: 'assistant', content: 'https://example.invalid 010-1234-5678' }, { role: 'user', content: '설명 부탁드립니다' }],
+    userTurnCount: 2,
+  }));
+  assert.ok(providerBody);
+  assert.ok(!providerBody.includes('abc@example.invalid') && !providerBody.includes('https://example.invalid') && !providerBody.includes('010-1234-5678'), 'sanitize both roles before provider access');
+  assert.equal(dialogue.validateAiReply('abc@example.invalid로 연락하세요'), false);
+  assert.notEqual(dialogue.inferDialogueEmotion([{ role: 'user', content: '어떻게 생각해?' }]), 'disappointed');
+  assert.equal(dialogue.inferDialogueEmotion([{ role: 'user', content: '생각해 볼게' }]), 'disappointed');
+  console.log('Security request tests passed: origin, media type, body deadline, schema, forwarding, concurrency, kill switch, privacy.');
 }

@@ -55,3 +55,7 @@ Git 기록에서 문자열을 지우는 것만으로 키가 무효화되지는 �
 - https://ai.google.dev/gemini-api/docs/billing
 - https://ai.google.dev/gemini-api/docs/rate-limits
 - https://ai.google.dev/gemini-api/docs/pricing
+
+## 운영 보안 보완
+
+GEMINI_ENABLED=false는 생성만 중지하는 서버 설정입니다. 미설정이면 기존 연결을 유지합니다. 실제 설정은 이번 작업에서 바꾸지 않습니다. 인스턴스당 동시 생성 2개 및 합산 분당 20회/24시간 240회 제한을 추가하며, 전역 과금 상한은 아닙니다. 요청 출처 검사와 입력 수신 2초 제한, 양쪽 역할 개인정보 정제를 적용합니다. 실응답 평가에는 --allow-live가 필요하고 내장 응답은 Gemini 성공으로 집계하지 않습니다. 운영·복구·전역 제한 후속 계획은 OPERATIONS.md를 참고하세요.
