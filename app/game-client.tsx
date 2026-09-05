@@ -301,7 +301,7 @@ function fallbackReply(gameCase: CaseData, userText: string, messages: ChatMessa
   const topic = classifyDialogueTopic(userText);
   const emotion = inferDialogueEmotion(messages);
   const emotionFirst = emotion === 'disappointed' || emotion === 'closed' || (topic === 'default' && emotion === 'pressuring');
-  const topicReply = gameCase.dialogue && topic !== 'default' ? gameCase.dialogue.fallbackByTopic[topic] : null;
+  const topicReply = gameCase.dialogue && (topic !== 'default' || gameCase.dialogue.quickQuestions.includes(userText.trim())) ? gameCase.dialogue.fallbackByTopic[topic] : null;
   const emotionReply = gameCase.dialogue?.fallbackByEmotion[emotion] ?? null;
   const replies = [
     ...(emotionFirst ? [emotionReply, topicReply] : [topicReply, emotionReply]).filter((reply): reply is string => Boolean(reply)),

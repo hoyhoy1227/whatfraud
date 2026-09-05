@@ -1,7 +1,7 @@
 name: Validate game
 on:
   push:
-    branches: [main, "codex/ai-call-efficiency"]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:

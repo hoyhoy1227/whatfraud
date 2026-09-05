@@ -78,6 +78,8 @@ try {
     const previous = gameCase.dialogue.fallbackByTopic.risk;
     assert.equal(fallbackModule.fallbackReply(gameCase, text, [{ role: 'assistant', content: previous }, { role: 'user', content: text }]), previous);
   }
+  const vip = cases.find((item) => item.id === 'vip-research-room');
+  assert.equal(fallbackModule.fallbackReply(vip, '왜 무료로 알려 주나요?', [{ role: 'user', content: '왜 무료로 알려 주나요?' }]), vip.dialogue.fallbackByTopic.default);
   assert.ok(clientSource.includes('gameCase.dialogue.quickQuestions.includes(latest)'));
   const statusCheck = clientSource.slice(clientSource.indexOf('async function checkModel'), clientSource.indexOf('async function sendMessage'));
   assert.ok(!statusCheck.includes('requestGemini('), 'settings check must not generate');
