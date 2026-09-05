@@ -29,6 +29,8 @@ jobs:
       - run: pnpm patch image-size@2.0.2 --edit-dir /tmp/whatfraud-image-patch
       - run: node scripts/prepare-image-patch.mjs /tmp/whatfraud-image-patch
       - run: pnpm patch-commit /tmp/whatfraud-image-patch --patches-dir patches
+        env:
+          CI: 'false'
       - name: Return generated patch and lock
         run: |
           node --input-type=module -e 'import {readFileSync,readdirSync} from "node:fs"; for(const path of ["pnpm-lock.yaml","pnpm-workspace.yaml","package.json",...readdirSync("patches").map(file=>"patches/"+file)]){const value=readFileSync(path,"utf8");for(let i=0;i<value.length;i+=4000)console.log("PATCHCHUNK "+JSON.stringify({path,offset:i,text:value.slice(i,i+4000)}));}'
@@ -39,6 +41,7 @@ jobs:
       - run: node scripts/test-budget.mjs
       - run: node scripts/test-training.mjs
       - run: node scripts/test-progress.mjs
+      - run: node scripts/test-training-ui.mjs
       - run: pnpm lint
       - run: pnpm exec tsc --noEmit
       - run: pnpm build
