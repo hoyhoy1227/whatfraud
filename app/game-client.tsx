@@ -431,7 +431,7 @@ export default function GameClient() {
   const followUpCue: CinematicCue | null = previousResult && previousCase && activeIndex === availableCount - 1
     ? previousCase.verdict === 'scam'
       ? previousResult.actionCorrect
-        ? { app: 'safety', sender: '안전센터', title: '의심 계정 차단 완료', detail: `${previousCase.sender}의 후속 접근이 차단되었습니다.`, icon: 'safety', tone: 'routine' }
+        ? { app: 'safety', sender: '안전센터', title: previousResult.action === 'report' ? '신고용 기록을 보관함' : '의심 계정 차단 선택', detail: previousResult.action === 'report' ? '신고 경험을 다음 낯선 연락에서도 활용할 수 있습니다. 신고가 곧 회복을 보장하지는 않습니다.' : `${previousCase.sender}에게 더 응답하지 않기로 했습니다.`, icon: 'safety', tone: 'routine' }
         : { app: 'social', sender: '모임', title: '비슷한 계정이 다시 접근함', detail: `${previousCase.sender}와 유사한 홍보 계정이 새 요청을 보냈습니다.`, icon: 'social', tone: 'warning' }
       : previousCase.verdict === 'caution'
         ? previousResult.actionCorrect
