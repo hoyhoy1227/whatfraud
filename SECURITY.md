@@ -24,3 +24,7 @@
 image-size 2.0.2의 ICNS와 JXL/HEIF 무한 반복 취약점(GHSA-w3rx-r6r6-pgpr, GHSA-5p2g-fcmc-qvqq)은 공식 수정 버전이 없어 프로젝트의 pnpm 패치로 보완합니다. 모든 CJS/ESM 배포 사본의 박스·엔트리 크기가 최소 8바이트이고 입력 범위를 넘지 않도록 검사합니다. 모호한 0길이 박스는 거부하며 PNG 동작을 회귀 검증합니다.
 
 원본 버전 기반 audit에는 두 경고가 남습니다. check-dependencies.mjs는 패치 적용·악성 입력 종료 시험을 먼저 통과한 경우에만 이 두 ID를 보완됨으로 분류합니다. 다른 경고와 감사 통신 실패는 CI 실패입니다. 공식 패치 버전이나 image-size가 제거된 vinext로 이동할 때 이 예외·패치를 함께 제거해야 합니다. 감사 경고 0건 또는 전체 보안 감사 완료라고 표현하지 않습니다.
+
+## 의존성 설치 스크립트
+
+pnpm allowBuilds는 Sites/Vinext 빌드에 필요한 esbuild, sharp, unrs-resolver, workerd만 허용합니다. 고정 lockfile과 의존성 검사 없이 새 패키지의 설치 스크립트를 허용하지 않습니다.
