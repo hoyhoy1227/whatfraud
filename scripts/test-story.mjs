@@ -81,3 +81,10 @@ s=e.createRun('demo');assert.equal(s.chapter,1);assert.equal(s.mode,'demo');
 s=finish(s,'paused');assert.ok(e.recoveryContext(s).includes('참여한 적 없는'));
 s=e.createRun('demo');s=step(s,'advance');s=finish(s,'paused');assert.ok(e.recoveryContext(s).includes('돈을 보내지는'));
 console.log('Story tests passed: 80 path combinations, no forced loss, idempotency, verification/report gates, privacy, restore, rewind, contextual recovery.');
+
+const {budgetKey,restoreBudget}=await import('../app/story/session-budget.js');
+assert.notEqual(budgetKey('full'),budgetKey('demo'),'demo budget must not overwrite campaign budget');
+const used=restoreBudget({session:'test-session-0000001',counts:[1,2,1],last:12,cooldown:0},'replacement');
+assert.deepEqual(used.counts,[1,2,1]);
+assert.deepEqual(restoreBudget({session:'bad',counts:[9,9,9]},'replacement').counts,[0,0,0]);
+console.log('Separate campaign/demo budget restore passed.');
