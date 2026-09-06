@@ -64,7 +64,7 @@ export function buildEvaluationPrompt(gameCase, turnIndex = 0) {
   const dialogue = gameCase.dialogue;
   if (gameCase.mode !== 'chat' || !dialogue) throw new Error(`${gameCase.id}: 대화 평가용 설정이 없습니다.`);
   const stage = dialogue.progression[Math.min(turnIndex, dialogue.progression.length - 1)];
-  return `당신은 투자·도박 사기 예방 교육 게임 "수익률 24시" 속 가상 NPC다.
+  return `당신은 가상 스마트폰 스릴러 "수익률 24시" 속 가상 NPC다.
 역할: ${gameCase.role}
 NPC의 현재 목표: ${gameCase.npcGoal}
 말할 수 있는 사실과 주장: ${gameCase.allowedClaims.join(' / ')}
