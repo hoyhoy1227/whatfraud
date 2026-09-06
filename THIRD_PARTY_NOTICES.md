@@ -2,21 +2,31 @@
 
 이 문서는 WhatFraud가 직접 사용하거나 사용자가 선택적으로 연결할 수 있는 주요 제3자 구성 요소를 안내합니다. 정확한 의존성 버전은 `package.json`과 `pnpm-lock.yaml`에서 확인할 수 있으며, 각 구성 요소의 원본 배포물과 라이선스 파일이 최종 기준입니다.
 
+## 공모전 제출 시 적용
+
+상금이 있는 공모전에 제출하더라도 각 제3자 구성 요소의 이용·재배포·고지 조건은 유지됩니다. 프로젝트 자체의 권리 유보 문서로 제3자 권리를 변경하지 않습니다. 아래 표는 주요 항목이며 전체 라이선스 감사 완료를 의미하지 않습니다. 제출 빌드의 전이 의존성과 자산 증빙은 [CONTEST_SUBMISSION.md](CONTEST_SUBMISSION.md)에서 관리합니다.
+
 ## 외부 AI 서비스
 
-공개 게임의 선택적 보조 대화는 Google Gemini API의 안정 모델 `gemini-3.6-flash`를 사용합니다. Gemini 모델 가중치나 Google SDK는 이 저장소에 포함하지 않으며, 서버가 HTTPS REST API를 호출합니다. 이용에는 [Gemini API 추가 서비스 약관](https://ai.google.dev/gemini-api/terms)과 [요금·무료 등급 조건](https://ai.google.dev/gemini-api/docs/pricing)이 적용됩니다. 무료 등급의 입력·출력 데이터 취급 조건은 유료 서비스와 다를 수 있으므로 실제 개인정보를 입력하지 않아야 합니다.
+공개 게임의 선택적 보조 대화는 Google Gemini API를 사용하며 현재 저장소의 설정 모델 ID는 `gemini-3.5-flash-lite`입니다. 모델 제공 상태와 사용 가능 여부는 해당 프로젝트에서 별도로 확인합니다. 게임은 선택적 대화에 이 API를 호출합니다. Gemini 모델 가중치나 Google SDK는 이 저장소에 포함하지 않으며, 서버가 HTTPS REST API를 호출합니다. 이용에는 [Gemini API 추가 서비스 약관](https://ai.google.dev/gemini-api/terms)과 [요금·무료 등급 조건](https://ai.google.dev/gemini-api/docs/pricing)이 적용됩니다. 무료 등급의 입력·출력 데이터 취급 조건은 유료 서비스와 다를 수 있으므로 실제 개인정보를 입력하지 않아야 합니다.
+
+약관 확인일: 2026-09-06. Google의 생성물 소유권 비주장은 독점적 저작권이나 비침해 보장이 아닙니다. 공모전의 AI 사용·표기 조건은 별도로 확인합니다. 현재 약관에는 API 이용자 및 API 클라이언트의 대상 연령, 서비스 지역 제한이 있으므로 청소년 대상 또는 일반 공개 시연의 적합성을 출품 전에 확인해야 합니다. 유료 프로젝트의 사용량 제한이 추가 과금 면제를 뜻하지는 않으며, 결제 조건과 앱의 D1 요청 예산은 별개입니다.
 
 ## 주요 웹 애플리케이션 의존성
 
 | 구성 요소 | 현재 선언 버전 | 라이선스 | 공식 정보 |
 | --- | ---: | --- | --- |
-| React / React DOM | 19.2.6 | MIT License | [React 라이선스](https://github.com/facebook/react/blob/main/LICENSE) |
-| Next.js | 16.2.6 | MIT License | [Next.js 패키지 정보](https://github.com/vercel/next.js/blob/canary/packages/next/package.json) |
+| React / React DOM | 19.2.8 | MIT License | [React 라이선스](https://github.com/facebook/react/blob/main/LICENSE) |
+| Next.js | 16.2.11 | MIT License | [Next.js 라이선스](https://github.com/vercel/next.js/blob/canary/license.md) |
 | Vinext | 1.0.0-beta.3 | MIT License | [Vinext 공식 저장소](https://github.com/cloudflare/vinext) |
-| Vite | 8.0.13 | MIT License | [Vite 라이선스](https://github.com/vitejs/vite/blob/main/LICENSE) |
+| Vite | 8.0.16 | MIT License | [Vite 라이선스](https://github.com/vitejs/vite/blob/main/LICENSE) |
 | Tailwind CSS | 4.2.1 | MIT License | [Tailwind CSS 공식 저장소](https://github.com/tailwindlabs/tailwindcss) |
 
 위 표는 이해를 돕기 위한 주요 항목 요약이며 전체 전이 의존성 목록을 대신하지 않습니다. 빌드 결과나 의존성 자체를 배포하기 전에는 설치된 각 패키지에 포함된 `LICENSE`, `NOTICE`, `COPYING` 파일과 패키지 메타데이터를 확인하고 필요한 고지를 함께 제공해야 합니다. 특히 프레임워크가 묶어 배포하는 전이 의존성에는 서로 다른 라이선스가 적용될 수 있습니다.
+
+## 생성 이미지 및 기타 자산
+
+public/assets/pixel/README.md에는 기존 PNG 자산이 생성 이미지라고 기록되어 있습니다. 이 기록만으로 생성 서비스의 이용 조건, 저작권 성립 또는 공모전 AI 규정 충족이 증명되지는 않습니다. 생성 도구·시점·당시 약관·수정 이력과 실제 배포 포함 여부를 확인해야 합니다. 기타 OG 이미지, 글꼴, 음향을 포함한 전체 자산 감사는 아직 완료하지 않았습니다.
 
 ## 프로젝트 자료와 제3자 자료의 관계
 
