@@ -22,7 +22,7 @@ const commonKeys = new Set([
   'id', 'sender', 'handle', 'channel', 'mode', 'preview', 'verdict', 'category',
   'initialMessages', 'role', 'npcGoal', 'allowedClaims', 'sceneCues', 'fallbackReplies', 'dialogue',
   'checks', 'clueLabels', 'debrief', 'safeAction', 'displayUrl', 'linkLabel',
-  'landingTitle', 'landingCopy', 'landingCta', 'review', 'training',
+  'landingTitle', 'landingCopy', 'landingCta', 'review', 'training', 'story',
 ]);
 
 function isRecord(value) {
@@ -193,6 +193,32 @@ function validateCase(data, file, errors) {
   if (/\b\d{2,4}[- ]\d{3,4}[- ]\d{4}\b/.test(JSON.stringify(data))) addError(errors, file, '실존 개인정보로 오인할 수 있는 전화번호 형태가 포함되어 있습니다.');
 }
 
+
+function validateStory(c,errors){
+  const fail=message=>errors.push(c.id+': '+message),s=c.story;
+  if(!s||typeof s!=='object'){fail('story missing');return;}
+  for(const key of ['title','tone','intro','recipient','purpose'])if(typeof s[key]!=='string'||!s[key].trim())fail(key+' missing');
+  if(!Number.isInteger(s.time)||s.time<0||s.time>1439)fail('invalid time');
+  if(!Number.isInteger(s.amount)||s.amount<=0||s.amount>680000)fail('invalid amount');
+  if(s.aiLimit!==(c.id==='paper-profit'?2:1))fail('AI budget must be 1/2/1');
+  if(!Array.isArray(s.evidence)||s.evidence.length<3||s.evidence.length>5){fail('evidence count');return;}
+  const eids=new Set();
+  for(const e of s.evidence){
+    if(eids.has(e.id)||!['messages','calls','bank','browser'].includes(e.app)||typeof e.key!=='boolean'||!e.title||!e.text)fail('invalid evidence');
+    eids.add(e.id);
+  }
+  if(s.evidence.filter(e=>e.key).length<2||!s.evidence.some(e=>!e.key))fail('independent and neutral records required');
+  if(!Array.isArray(s.stages)||s.stages.length<3){fail('stages missing');return;}
+  const ids=s.stages.map(stage=>stage.id),allowed=['advance','platform','withdraw','transfer','help','stop','finish'];
+  if(new Set(ids).size!==ids.length||ids[0]!=='arrival'||!ids.includes('paid'))fail('stage IDs');
+  for(const stage of s.stages){
+    if(!Array.isArray(stage.messages)||!stage.messages.length||stage.messages.some(m=>typeof m.text!=='string'||!m.text.trim()||!m.speaker))fail('stage messages');
+    if(!Array.isArray(stage.actions)||!stage.actions.length||stage.actions.some(a=>!allowed.includes(a.type)||!a.label))fail('stage actions');
+    if(stage.next&&!ids.includes(stage.next))fail('dangling stage');
+    if(stage.actions.some(a=>a.type==='advance')&&!stage.next)fail('advance without target');
+  }
+}
+
 async function main() {
   const fileNames = (await readdir(casesDirectory)).filter((file) => file.endsWith('.json')).sort();
   const errors = [];
@@ -219,13 +245,8 @@ async function main() {
     cases.push(data);
   }
 
-  for (const [verdict, count] of Object.entries(verdictCounts)) {
-    if (count < 2) errors.push(`${verdict}: 판정 사례가 2개 미만입니다.`);
-  }
-  for (const [mode, count] of Object.entries(modeCounts)) {
-    if (count < 2) errors.push(`${mode}: 연락 표현 사례가 2개 미만입니다.`);
-  }
-
+  if(cases.map(c=>c.id).join(',')!=='familiar-request,paper-profit,recovery-team')errors.push('승인된 세 이야기의 순서가 아닙니다.');
+  for (const c of cases) validateStory(c,errors);
   if (errors.length) throw new Error(`콘텐츠 검증 실패:\n- ${errors.join('\n- ')}`);
 
   const output = `${JSON.stringify(cases, null, 2)}\n`;

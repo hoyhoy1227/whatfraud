@@ -1,0 +1,326 @@
+{
+  "id": "familiar-request",
+  "sender": "준호",
+  "handle": "junho_today · 새 대화",
+  "channel": "메신저",
+  "mode": "chat",
+  "preview": "나야. 오늘 약속 기억하지?",
+  "verdict": "scam",
+  "category": "준호에게 온 부탁",
+  "initialMessages": [
+    "나야. 오늘 약속 기억하지?",
+    "그 전에 잠깐만 부탁해도 될까?"
+  ],
+  "role": "준호에게 온 부탁 속 가상 연락 상대",
+  "npcGoal": "정해진 대화 소재 안에서 상대 역할을 표현한다. 거래 결과나 플레이어의 과거를 추측하지 않는다.",
+  "allowedClaims": [
+    "이 계정은 저장된 준호의 연락처와 연결되지 않았다.",
+    "저장된 연락처의 진짜 준호는 대리 결제를 요청한 적이 없다.",
+    "송금 수취인은 준호가 아닌 한별 서비스다."
+  ],
+  "sceneCues": [
+    {
+      "id": "routine",
+      "app": "messages",
+      "sender": "일상",
+      "title": "오늘의 연락",
+      "detail": "익숙한 이름이 화면에 뜬다. 오늘 저녁에 보기로 했던 준호다.",
+      "icon": "messages",
+      "tone": "routine",
+      "minuteOffset": 1,
+      "stage": "signal",
+      "interference": false
+    }
+  ],
+  "fallbackReplies": [
+    "상세 내용은 내가 정리해서 보낼게. 지금은 부탁한 내용만 먼저 봐 줘.",
+    "준호야. 평소 쓰던 연락처와는 다른 계정으로 이야기하고 있어.",
+    "급하게 느껴지면 조금 기다려도 돼. 나는 답장을 보고 있을게.",
+    "내 이름이 아니라 서비스 쪽에 보내는 부탁이야. 받는 이름은 안내 화면에 적어 뒀어.",
+    "오늘 약속 전에 처리하려던 일이야. 어디가 헷갈리는지 말해 줘."
+  ],
+  "dialogue": {
+    "voice": "친구처럼 짧은 반말. 실제 준호인 것처럼 말하지만 새로운 사실은 만들지 않는다.",
+    "progression": [
+      "처음 설명을 듣는 단계",
+      "자료의 내용을 비교하는 단계",
+      "추가 설명을 마무리하는 단계"
+    ],
+    "boundaries": [
+      "실제 회사·연락처·URL·계좌를 생성하지 않는다.",
+      "플레이어의 손실·입금·신원을 추측하지 않는다."
+    ],
+    "quickQuestions": [
+      "지금 누구와 이야기하는 거야?",
+      "그 부탁의 근거는 어디서 확인해?",
+      "돈을 보내야 하는 이유는 뭐야?"
+    ],
+    "fallbackByTopic": {
+      "source": "상세 내용은 내가 정리해서 보낼게. 지금은 부탁한 내용만 먼저 봐 줘.",
+      "identity": "준호야. 평소 쓰던 연락처와는 다른 계정으로 이야기하고 있어.",
+      "risk": "급하게 느껴지면 조금 기다려도 돼. 나는 답장을 보고 있을게.",
+      "money": "내 이름이 아니라 서비스 쪽에 보내는 부탁이야. 받는 이름은 안내 화면에 적어 뒀어.",
+      "default": "오늘 약속 전에 처리하려던 일이야. 어디가 헷갈리는지 말해 줘."
+    },
+    "fallbackByEmotion": {
+      "friendly": "저녁 약속 전에 잠깐 부탁할 게 있어.",
+      "evasive": "여기 계정으로 이야기하면 편해서 그래.",
+      "deflecting": "기존 연락처는 따로 확인해 봐도 돼.",
+      "pressuring": "처리가 늦어지면 일정이 바뀔 수도 있어.",
+      "disappointed": "알겠어. 부탁을 못 들어주는 건 조금 아쉽네.",
+      "closed": "이 대화는 여기서 마치겠어."
+    }
+  },
+  "checks": {
+    "bank": "준호: 오늘 저녁 약속은 맞는데, 결제를 부탁한 적은 없어. 새 계정도 내 것이 아니야.",
+    "library": "요청한 수취인은 한별 서비스. 저장된 준호와의 거래 기록에는 이 이름이 없다.",
+    "home": "준호: 내일 저녁 일곱 시, 역 앞에서 보자. 늦으면 원래 번호로 전화해.",
+    "cafe": "표시 이름 준호 · 친구로 등록되지 않음 · 프로필 사진과 이름은 계정 사용자가 설정함."
+  },
+  "clueLabels": [
+    "저장된 준호와 통화",
+    "수취인 안내 상세"
+  ],
+  "debrief": "아는 이름과 아는 사람은 다르다. 저장해 둔 연락처에서 다시 확인할 수 있었다.",
+  "safeAction": "독립된 경로에서 확인하고 필요한 기록을 보관한다.",
+  "review": {
+    "sourceBasis": [
+      "공식 메신저피싱·투자리딩방·손실보상 사칭 예방 자료. ROADMAP.md의 유형 근거 참조."
+    ],
+    "adaptationScope": "모든 인물·금액·서비스는 창작한 가상 정보이며 실제 접속·송금은 없다.",
+    "verdictReason": "이 계정은 저장된 준호의 연락처와 연결되지 않았다. 저장된 연락처의 진짜 준호는 대리 결제를 요청한 적이 없다. 송금 수취인은 준호가 아닌 한별 서비스다.",
+    "verificationPaths": [
+      "저장된 준호와 통화",
+      "수취인 안내 상세"
+    ],
+    "misdirection": [
+      "이름의 친숙함과 정돈된 화면은 실제 신원·거래의 증거와 다르다."
+    ],
+    "learningObjectives": [
+      "확인한 기록과 주장을 구분한다.",
+      "추가 행동 전에 독립 확인한다."
+    ],
+    "safetyAudit": {
+      "containsPersonalData": false,
+      "containsLiveUrl": false,
+      "containsOperationalCrimeInfo": false
+    }
+  },
+  "training": {
+    "claims": [
+      {
+        "id": "claim-1",
+        "text": "이 계정은 저장된 준호의 연락처와 연결되지 않았다."
+      },
+      {
+        "id": "claim-2",
+        "text": "저장된 연락처의 진짜 준호는 대리 결제를 요청한 적이 없다."
+      },
+      {
+        "id": "claim-3",
+        "text": "송금 수취인은 준호가 아닌 한별 서비스다."
+      }
+    ],
+    "evidence": [
+      {
+        "id": "saved-contact",
+        "source": "bank",
+        "kind": "decisive",
+        "key": true,
+        "claimIds": [
+          "claim-1"
+        ],
+        "text": "준호: 오늘 저녁 약속은 맞는데, 결제를 부탁한 적은 없어. 새 계정도 내 것이 아니야.",
+        "explanation": "독립된 경로에서 확인한 기록을 대화의 주장과 비교할 수 있습니다.",
+        "supports": [
+          "scam"
+        ],
+        "availableAt": 0
+      },
+      {
+        "id": "recipient",
+        "source": "library",
+        "kind": "decisive",
+        "key": true,
+        "claimIds": [
+          "claim-2"
+        ],
+        "text": "요청한 수취인은 한별 서비스. 저장된 준호와의 거래 기록에는 이 이름이 없다.",
+        "explanation": "독립된 경로에서 확인한 기록을 대화의 주장과 비교할 수 있습니다.",
+        "supports": [
+          "scam"
+        ],
+        "availableAt": 0
+      },
+      {
+        "id": "old-chat",
+        "source": "home",
+        "kind": "neutral",
+        "key": false,
+        "claimIds": [
+          "claim-3"
+        ],
+        "text": "준호: 내일 저녁 일곱 시, 역 앞에서 보자. 늦으면 원래 번호로 전화해.",
+        "explanation": "그럴듯해 보이지만 이 자료만으로 상대나 거래를 확인할 수 없습니다.",
+        "supports": [],
+        "availableAt": 0
+      },
+      {
+        "id": "profile",
+        "source": "cafe",
+        "kind": "misleading",
+        "key": false,
+        "claimIds": [
+          "claim-3"
+        ],
+        "text": "표시 이름 준호 · 친구로 등록되지 않음 · 프로필 사진과 이름은 계정 사용자가 설정함.",
+        "explanation": "그럴듯해 보이지만 이 자료만으로 상대나 거래를 확인할 수 없습니다.",
+        "supports": [],
+        "availableAt": 0
+      }
+    ],
+    "appropriateActions": [
+      "verify",
+      "pause"
+    ],
+    "optimalSources": [
+      "bank",
+      "library"
+    ],
+    "riskConsequence": "가상 잔액이 줄고 미해결 연락이 남는다.",
+    "takeaway": "아는 이름과 아는 사람은 다르다. 저장해 둔 연락처에서 다시 확인할 수 있었다.",
+    "weakness": "준호에게 온 부탁",
+    "variant": {
+      "sender": "준호",
+      "preview": "나야. 오늘 약속 기억하지?"
+    }
+  },
+  "story": {
+    "title": "준호에게 온 부탁",
+    "time": 550,
+    "tone": "morning",
+    "intro": "익숙한 이름이 화면에 뜬다. 오늘 저녁에 보기로 했던 준호다.",
+    "amount": 80000,
+    "recipient": "한별 서비스",
+    "purpose": "대리 결제",
+    "aiLimit": 1,
+    "evidence": [
+      {
+        "id": "saved-contact",
+        "app": "calls",
+        "title": "저장된 준호와 통화",
+        "text": "준호: 오늘 저녁 약속은 맞는데, 결제를 부탁한 적은 없어. 새 계정도 내 것이 아니야.",
+        "key": true
+      },
+      {
+        "id": "recipient",
+        "app": "bank",
+        "title": "수취인 안내 상세",
+        "text": "요청한 수취인은 한별 서비스. 저장된 준호와의 거래 기록에는 이 이름이 없다.",
+        "key": true
+      },
+      {
+        "id": "old-chat",
+        "app": "messages",
+        "title": "어제의 대화",
+        "text": "준호: 내일 저녁 일곱 시, 역 앞에서 보자. 늦으면 원래 번호로 전화해.",
+        "key": false
+      },
+      {
+        "id": "profile",
+        "app": "messages",
+        "title": "현재 계정 정보",
+        "text": "표시 이름 준호 · 친구로 등록되지 않음 · 프로필 사진과 이름은 계정 사용자가 설정함.",
+        "key": false
+      }
+    ],
+    "stages": [
+      {
+        "id": "arrival",
+        "messages": [
+          {
+            "speaker": "준호",
+            "text": "나야. 오늘 약속 기억하지?"
+          },
+          {
+            "speaker": "준호",
+            "text": "그 전에 잠깐만 부탁해도 될까?"
+          }
+        ],
+        "actions": [
+          {
+            "type": "advance",
+            "label": "무슨 일인지 듣기"
+          }
+        ],
+        "next": "request"
+      },
+      {
+        "id": "request",
+        "messages": [
+          {
+            "speaker": "준호",
+            "text": "예약 결제를 해야 하는데 내가 지금 처리가 어려워."
+          },
+          {
+            "speaker": "준호",
+            "text": "서비스 쪽에 먼저 보내주면 저녁에 만나서 정리할게."
+          },
+          {
+            "speaker": "준호",
+            "text": "받는 이름이 내 이름은 아닐 거야. 안내를 남겨둘게."
+          }
+        ],
+        "actions": [
+          {
+            "type": "transfer",
+            "label": "결제 안내 보기"
+          },
+          {
+            "type": "advance",
+            "label": "대화 더 읽기"
+          }
+        ],
+        "next": "waiting"
+      },
+      {
+        "id": "waiting",
+        "messages": [
+          {
+            "speaker": "준호",
+            "text": "메시지는 볼 수 있어. 궁금한 게 있으면 여기로 물어봐."
+          },
+          {
+            "speaker": "준호",
+            "text": "저녁에는 이야기 길게 하자."
+          }
+        ],
+        "actions": [
+          {
+            "type": "transfer",
+            "label": "결제 안내 보기"
+          }
+        ]
+      },
+      {
+        "id": "paid",
+        "messages": [
+          {
+            "speaker": "준호",
+            "text": "처리 화면은 봤어. 조금만 기다려 줘."
+          },
+          {
+            "speaker": "알림",
+            "text": "메시지는 읽음으로 표시됐지만 답장은 더 오지 않는다."
+          }
+        ],
+        "actions": [
+          {
+            "type": "finish",
+            "label": "연락 기록 남기고 넘어가기"
+          }
+        ]
+      }
+    ]
+  }
+}

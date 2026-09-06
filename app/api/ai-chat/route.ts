@@ -235,7 +235,7 @@ async function handleChat(request: Request, body: ChatBody) {
 
   const caseKey = `case:${ip}:${session}:${gameCase.id}`;
   // Supplemental isolate-local throttle; not a project-wide quota or billing cap.
-  if (!consumeRateLimit(caseKey, 5, 4)) {
+  if (!consumeRateLimit(caseKey, gameCase.story.aiLimit, gameCase.story.aiLimit)) {
     return json({ code: 'rate_limit' }, 429, { 'Retry-After': '60' });
   }
   // Aggregate brake remains isolate-local and does not claim a billing cap.

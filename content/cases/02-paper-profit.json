@@ -1,0 +1,397 @@
+{
+  "id": "paper-profit",
+  "sender": "온결 리서치",
+  "handle": "시장 노트 · 안내 채널",
+  "channel": "메신저",
+  "mode": "chat",
+  "preview": "시장 노트 구독자분께 오늘 자료를 공유합니다.",
+  "verdict": "scam",
+  "category": "화면 속 수익",
+  "initialMessages": [
+    "시장 노트 구독자분께 오늘 자료를 공유합니다.",
+    "방에서는 다른 분들의 질문도 함께 보실 수 있어요."
+  ],
+  "role": "화면 속 수익 속 가상 연락 상대",
+  "npcGoal": "정해진 대화 소재 안에서 상대 역할을 표현한다. 거래 결과나 플레이어의 과거를 추측하지 않는다.",
+  "allowedClaims": [
+    "운영자는 온결 리서치라는 별도 팀을 내세운다.",
+    "성공 사례만 제시하고 전체 거래 원장은 공개하지 않는다.",
+    "플랫폼 화면은 가상 표시이며 은행 입금 기록과 다르다.",
+    "공식 확인 자료에 안내 주체와 수취인 관계가 확인되지 않는다."
+  ],
+  "sceneCues": [
+    {
+      "id": "routine",
+      "app": "messages",
+      "sender": "일상",
+      "title": "오늘의 연락",
+      "detail": "점심 이후. 구독해 둔 시장 노트에서 새로운 알림이 도착했다.",
+      "icon": "messages",
+      "tone": "routine",
+      "minuteOffset": 1,
+      "stage": "signal",
+      "interference": false
+    }
+  ],
+  "fallbackReplies": [
+    "방에 올린 것은 참여자들이 공유한 일부 화면입니다. 전체 거래 원장을 제공하는 자료는 아닙니다.",
+    "온결 리서치라는 별도 운영팀입니다. 증권사 앱과 같은 서비스는 아닙니다.",
+    "화면에 보이는 사례만으로 이후 결과를 판단하기는 어렵습니다. 조건을 읽어 보셔도 됩니다.",
+    "참여와 출금에는 서로 다른 안내가 있습니다. 금액과 수취인은 별도 화면에서 확인하실 수 있습니다.",
+    "시장 노트를 보고 오셨군요. 안내 중 어떤 부분이 궁금하신가요?"
+  ],
+  "dialogue": {
+    "voice": "차분하고 짧은 존댓말. 질문에 직접 답한다.",
+    "progression": [
+      "처음 설명을 듣는 단계",
+      "자료의 내용을 비교하는 단계",
+      "추가 설명을 마무리하는 단계"
+    ],
+    "boundaries": [
+      "실제 회사·연락처·URL·계좌를 생성하지 않는다.",
+      "플레이어의 손실·입금·신원을 추측하지 않는다."
+    ],
+    "quickQuestions": [
+      "자료의 출처는 어디야?",
+      "어느 회사 소속이야?",
+      "손실 위험은 어떻게 설명해?"
+    ],
+    "fallbackByTopic": {
+      "source": "방에 올린 것은 참여자들이 공유한 일부 화면입니다. 전체 거래 원장을 제공하는 자료는 아닙니다.",
+      "identity": "온결 리서치라는 별도 운영팀입니다. 증권사 앱과 같은 서비스는 아닙니다.",
+      "risk": "화면에 보이는 사례만으로 이후 결과를 판단하기는 어렵습니다. 조건을 읽어 보셔도 됩니다.",
+      "money": "참여와 출금에는 서로 다른 안내가 있습니다. 금액과 수취인은 별도 화면에서 확인하실 수 있습니다.",
+      "default": "시장 노트를 보고 오셨군요. 안내 중 어떤 부분이 궁금하신가요?"
+    },
+    "fallbackByEmotion": {
+      "friendly": "먼저 방의 자료를 편하게 살펴보세요.",
+      "evasive": "전체 자료보다 요약 화면을 먼저 공유하고 있습니다.",
+      "deflecting": "공식 기록과 저희 안내를 비교해 보셔도 됩니다.",
+      "pressuring": "오늘 안내는 마무리하는 중입니다.",
+      "disappointed": "참여하지 않으셔도 안내는 여기까지 보실 수 있습니다.",
+      "closed": "더 안내하지 않고 대화를 마치겠습니다."
+    }
+  },
+  "checks": {
+    "bank": "게임 내 공식 조회: 온결 리서치와 안내받은 수취인의 위탁 관계를 확인할 자료가 없다. 등록 여부만으로 특정 거래가 안전하다는 뜻도 아니다.",
+    "library": "플랫폼의 수익 화면은 은행 입금 내역이 아니다. 거래 목록에서 출금과 입금을 따로 확인할 수 있다.",
+    "home": "서로 다른 이름의 게시물에 동일한 주문 시각과 같은 일부 화면이 반복된다. 전체 손익 내역은 보이지 않는다.",
+    "cafe": "지난주 시장 노트 알림을 신청했다. 정보 구독은 거래 위탁이나 송금 동의가 아니다."
+  },
+  "clueLabels": [
+    "금융회사 정보 확인",
+    "은행 거래 원장"
+  ],
+  "debrief": "수익 화면과 내 계좌의 돈은 달랐다. 실제 거래와 독립 기록을 비교할 수 있었다.",
+  "safeAction": "독립된 경로에서 확인하고 필요한 기록을 보관한다.",
+  "review": {
+    "sourceBasis": [
+      "공식 메신저피싱·투자리딩방·손실보상 사칭 예방 자료. ROADMAP.md의 유형 근거 참조."
+    ],
+    "adaptationScope": "모든 인물·금액·서비스는 창작한 가상 정보이며 실제 접속·송금은 없다.",
+    "verdictReason": "운영자는 온결 리서치라는 별도 팀을 내세운다. 성공 사례만 제시하고 전체 거래 원장은 공개하지 않는다. 플랫폼 화면은 가상 표시이며 은행 입금 기록과 다르다. 공식 확인 자료에 안내 주체와 수취인 관계가 확인되지 않는다.",
+    "verificationPaths": [
+      "금융회사 정보 확인",
+      "은행 거래 원장"
+    ],
+    "misdirection": [
+      "이름의 친숙함과 정돈된 화면은 실제 신원·거래의 증거와 다르다."
+    ],
+    "learningObjectives": [
+      "확인한 기록과 주장을 구분한다.",
+      "추가 행동 전에 독립 확인한다."
+    ],
+    "safetyAudit": {
+      "containsPersonalData": false,
+      "containsLiveUrl": false,
+      "containsOperationalCrimeInfo": false
+    }
+  },
+  "training": {
+    "claims": [
+      {
+        "id": "claim-1",
+        "text": "운영자는 온결 리서치라는 별도 팀을 내세운다."
+      },
+      {
+        "id": "claim-2",
+        "text": "성공 사례만 제시하고 전체 거래 원장은 공개하지 않는다."
+      },
+      {
+        "id": "claim-3",
+        "text": "플랫폼 화면은 가상 표시이며 은행 입금 기록과 다르다."
+      }
+    ],
+    "evidence": [
+      {
+        "id": "official-record",
+        "source": "bank",
+        "kind": "decisive",
+        "key": true,
+        "claimIds": [
+          "claim-1"
+        ],
+        "text": "게임 내 공식 조회: 온결 리서치와 안내받은 수취인의 위탁 관계를 확인할 자료가 없다. 등록 여부만으로 특정 거래가 안전하다는 뜻도 아니다.",
+        "explanation": "독립된 경로에서 확인한 기록을 대화의 주장과 비교할 수 있습니다.",
+        "supports": [
+          "scam"
+        ],
+        "availableAt": 0
+      },
+      {
+        "id": "ledger",
+        "source": "library",
+        "kind": "decisive",
+        "key": true,
+        "claimIds": [
+          "claim-2"
+        ],
+        "text": "플랫폼의 수익 화면은 은행 입금 내역이 아니다. 거래 목록에서 출금과 입금을 따로 확인할 수 있다.",
+        "explanation": "독립된 경로에서 확인한 기록을 대화의 주장과 비교할 수 있습니다.",
+        "supports": [
+          "scam"
+        ],
+        "availableAt": 0
+      },
+      {
+        "id": "success-post",
+        "source": "home",
+        "kind": "neutral",
+        "key": false,
+        "claimIds": [
+          "claim-3"
+        ],
+        "text": "서로 다른 이름의 게시물에 동일한 주문 시각과 같은 일부 화면이 반복된다. 전체 손익 내역은 보이지 않는다.",
+        "explanation": "그럴듯해 보이지만 이 자료만으로 상대나 거래를 확인할 수 없습니다.",
+        "supports": [],
+        "availableAt": 0
+      },
+      {
+        "id": "subscription",
+        "source": "cafe",
+        "kind": "misleading",
+        "key": false,
+        "claimIds": [
+          "claim-3"
+        ],
+        "text": "지난주 시장 노트 알림을 신청했다. 정보 구독은 거래 위탁이나 송금 동의가 아니다.",
+        "explanation": "그럴듯해 보이지만 이 자료만으로 상대나 거래를 확인할 수 없습니다.",
+        "supports": [],
+        "availableAt": 0
+      }
+    ],
+    "appropriateActions": [
+      "verify",
+      "pause"
+    ],
+    "optimalSources": [
+      "bank",
+      "library"
+    ],
+    "riskConsequence": "가상 잔액이 줄고 미해결 연락이 남는다.",
+    "takeaway": "수익 화면과 내 계좌의 돈은 달랐다. 실제 거래와 독립 기록을 비교할 수 있었다.",
+    "weakness": "화면 속 수익",
+    "variant": {
+      "sender": "온결 리서치",
+      "preview": "시장 노트 구독자분께 오늘 자료를 공유합니다."
+    }
+  },
+  "story": {
+    "title": "화면 속 수익",
+    "time": 840,
+    "tone": "afternoon",
+    "intro": "점심 이후. 구독해 둔 시장 노트에서 새로운 알림이 도착했다.",
+    "amount": 300000,
+    "recipient": "온결 파트너",
+    "purpose": "투자 참여",
+    "aiLimit": 2,
+    "evidence": [
+      {
+        "id": "official-record",
+        "app": "browser",
+        "title": "금융회사 정보 확인",
+        "text": "게임 내 공식 조회: 온결 리서치와 안내받은 수취인의 위탁 관계를 확인할 자료가 없다. 등록 여부만으로 특정 거래가 안전하다는 뜻도 아니다.",
+        "key": true
+      },
+      {
+        "id": "ledger",
+        "app": "bank",
+        "title": "은행 거래 원장",
+        "text": "플랫폼의 수익 화면은 은행 입금 내역이 아니다. 거래 목록에서 출금과 입금을 따로 확인할 수 있다.",
+        "key": true
+      },
+      {
+        "id": "success-post",
+        "app": "browser",
+        "title": "참여자 성공 자료",
+        "text": "서로 다른 이름의 게시물에 동일한 주문 시각과 같은 일부 화면이 반복된다. 전체 손익 내역은 보이지 않는다.",
+        "key": false
+      },
+      {
+        "id": "subscription",
+        "app": "messages",
+        "title": "기존 구독 기록",
+        "text": "지난주 시장 노트 알림을 신청했다. 정보 구독은 거래 위탁이나 송금 동의가 아니다.",
+        "key": false
+      }
+    ],
+    "stages": [
+      {
+        "id": "arrival",
+        "messages": [
+          {
+            "speaker": "온결 리서치",
+            "text": "시장 노트 구독자분께 오늘 자료를 공유합니다."
+          },
+          {
+            "speaker": "온결 리서치",
+            "text": "방에서는 다른 분들의 질문도 함께 보실 수 있어요."
+          }
+        ],
+        "actions": [
+          {
+            "type": "advance",
+            "label": "자료방 들어가기"
+          }
+        ],
+        "next": "group"
+      },
+      {
+        "id": "group",
+        "messages": [
+          {
+            "speaker": "유진",
+            "text": "어제부터 설명 보고 있어요. 표가 많아서 천천히 읽는 중이에요."
+          },
+          {
+            "speaker": "민석",
+            "text": "제 화면은 바뀌었네요. 이번엔 타이밍이 맞았나 봐요."
+          },
+          {
+            "speaker": "온결 리서치",
+            "text": "개별 화면은 서로 다를 수 있습니다. 관심 있는 분은 안내를 확인하세요."
+          },
+          {
+            "speaker": "지수",
+            "text": "출금은 어떤 화면에서 하는 건가요?"
+          },
+          {
+            "speaker": "온결 리서치",
+            "text": "참여 이후 이용 화면에서 안내됩니다."
+          }
+        ],
+        "actions": [
+          {
+            "type": "platform",
+            "label": "투자 화면 열기"
+          },
+          {
+            "type": "advance",
+            "label": "참여 안내 듣기"
+          }
+        ],
+        "next": "offer"
+      },
+      {
+        "id": "offer",
+        "messages": [
+          {
+            "speaker": "온결 리서치",
+            "text": "자료 열람과 참여는 별도입니다. 받는 이름을 포함한 안내를 남겼습니다."
+          },
+          {
+            "speaker": "민석",
+            "text": "저는 먼저 진행해 두고 저녁에 다시 보려고요."
+          },
+          {
+            "speaker": "온결 리서치",
+            "text": "궁금한 것은 이 대화에서 말씀해 주세요."
+          }
+        ],
+        "actions": [
+          {
+            "type": "transfer",
+            "label": "참여 안내 보기"
+          },
+          {
+            "type": "platform",
+            "label": "투자 화면 살펴보기"
+          }
+        ]
+      },
+      {
+        "id": "paid",
+        "messages": [
+          {
+            "speaker": "온결 리서치",
+            "text": "접수 내역을 확인했습니다. 이용 화면에서 상태를 보실 수 있습니다."
+          },
+          {
+            "speaker": "유진",
+            "text": "숫자가 바뀌었는데 은행 쪽에는 아직 안 보이네요."
+          }
+        ],
+        "actions": [
+          {
+            "type": "platform",
+            "label": "이용 화면 열기"
+          },
+          {
+            "type": "withdraw",
+            "label": "출금 요청하기"
+          }
+        ]
+      },
+      {
+        "id": "withdrawal",
+        "messages": [
+          {
+            "speaker": "온결 리서치",
+            "text": "현재 출금이 보류되어 있습니다. 별도 확인 비용 안내를 읽어 주세요."
+          },
+          {
+            "speaker": "지수",
+            "text": "처음 안내에는 그런 내용이 없었는데요."
+          },
+          {
+            "speaker": "알림",
+            "text": "지수의 메시지가 더 이상 표시되지 않는다."
+          },
+          {
+            "speaker": "민석",
+            "text": "저는 안내를 다시 보고 있어요."
+          }
+        ],
+        "actions": [
+          {
+            "type": "transfer",
+            "label": "추가 비용 안내 보기"
+          },
+          {
+            "type": "stop",
+            "label": "추가 요청 중단하기"
+          }
+        ]
+      },
+      {
+        "id": "extra-paid",
+        "messages": [
+          {
+            "speaker": "온결 리서치",
+            "text": "확인 중입니다. 담당자가 답변할 때까지 기다려 주세요."
+          },
+          {
+            "speaker": "알림",
+            "text": "잠시 뒤, 출금 상태는 그대로다. 새로운 안내는 오지 않는다."
+          }
+        ],
+        "actions": [
+          {
+            "type": "finish",
+            "label": "기록을 남기고 하루 이어가기"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,321 +1,105 @@
 [
   {
-    "id": "official-etf-fill",
-    "sender": "채움증권",
-    "handle": "공식 앱 알림",
-    "channel": "앱 알림",
-    "mode": "notice",
-    "preview": "주문하신 ETF가 체결되었습니다.",
-    "verdict": "normal",
-    "category": "정상 금융 알림",
-    "initialMessages": [
-      "오전 9시 8분에 주문하신 ETF 3주가 체결되었습니다.",
-      "체결 내역은 채움증권 앱의 주문·체결 메뉴에서 확인할 수 있습니다."
-    ],
-    "role": "공식 증권사 앱의 자동 안내",
-    "npcGoal": "사용자가 공식 앱 내부에서 체결 내역을 확인하도록 안내한다.",
-    "allowedClaims": [
-      "공식 앱 내부 조회만 안내",
-      "비밀번호나 송금을 요구하지 않음"
-    ],
-    "sceneCues": [
-      {
-        "id": "first-trace",
-        "app": "stocks",
-        "sender": "채움증권",
-        "title": "주문 내역이 갱신됨",
-        "detail": "오늘 체결 내역이 증권 앱에도 기록되었습니다.",
-        "icon": "stocks",
-        "tone": "routine",
-        "minuteOffset": 4,
-        "stage": "signal",
-        "interference": false
-      },
-      {
-        "id": "payday",
-        "app": "bank",
-        "sender": "새봄은행",
-        "title": "월급 입금 완료",
-        "detail": "평소처럼 월급 입금 알림이 도착했습니다.",
-        "icon": "bank",
-        "tone": "routine",
-        "minuteOffset": 9,
-        "stage": "signal",
-        "interference": true,
-        "presentation": "bank-overlay"
-      }
-    ],
-    "checks": {
-      "home": "설치된 공식 앱 안에서 동일한 체결 내역이 확인됩니다.",
-      "bank": "연결 계좌에는 주문 금액 외의 출금이 없습니다.",
-      "cafe": "친구도 오늘 체결 알림을 받았다고 합니다.",
-      "library": "즉시 확인 문구는 공식 안내에도 쓰입니다."
-    },
-    "clueLabels": [
-      "설치된 공식 앱 안에서 동일한 체결 내역이 확인됩니다.",
-      "연결 계좌에는 주문 금액 외의 출금이 없습니다."
-    ],
-    "debrief": "공식 앱의 같은 거래 기록을 확인하세요.",
-    "safeAction": "공식 앱 내부에서 체결 내역을 확인합니다.",
-    "review": {
-      "sourceBasis": [
-        "증권사 공식 앱이 주문 체결 사실을 알리는 일반적인 정상 알림 구조"
-      ],
-      "adaptationScope": "기관명, 상품명, 수량, 시간과 금액을 모두 교육용 가상 정보로 합성했습니다.",
-      "verdictReason": "같은 내역을 사용자가 직접 연 공식 앱과 연결 계좌에서 확인할 수 있고 외부 송금이나 개인정보를 요구하지 않습니다.",
-      "verificationPaths": [
-        "직접 설치한 공식 증권 앱의 주문·체결 메뉴",
-        "연결 은행 계좌의 실제 출금 내역"
-      ],
-      "misdirection": [
-        "금융 관련 연락이라는 이유만으로 사기라고 과잉 판단할 수 있음"
-      ],
-      "learningObjectives": [
-        "주장과 독립 확인 경로를 연결한다.",
-        "판별과 대응·확신도를 별도로 검토한다.",
-        "공식 앱의 같은 거래 기록을 확인하세요."
-      ],
-      "safetyAudit": {
-        "containsPersonalData": false,
-        "containsLiveUrl": false,
-        "containsOperationalCrimeInfo": false
-      }
-    },
-    "training": {
-      "claims": [
-        {
-          "id": "claim-1",
-          "text": "내 주문의 체결인가?"
-        },
-        {
-          "id": "claim-2",
-          "text": "추가 송금이 필요한가?"
-        },
-        {
-          "id": "claim-3",
-          "text": "급한 문구면 위조인가?"
-        }
-      ],
-      "evidence": [
-        {
-          "id": "evidence-1",
-          "source": "home",
-          "kind": "decisive",
-          "key": true,
-          "claimIds": [
-            "claim-1",
-            "claim-2"
-          ],
-          "text": "설치된 공식 앱 안에서 동일한 체결 내역이 확인됩니다.",
-          "explanation": "공식 주문·체결 메뉴에서 주문 시각과 수량까지 일치합니다. 발신자 이름보다 내 주문과의 일치가 중요한 근거입니다.",
-          "supports": [
-            "normal"
-          ],
-          "availableAt": 0
-        },
-        {
-          "id": "evidence-2",
-          "source": "bank",
-          "kind": "decisive",
-          "key": true,
-          "claimIds": [
-            "claim-2"
-          ],
-          "text": "연결 계좌에는 주문 금액 외의 출금이 없습니다.",
-          "explanation": "추가 송금 요청 없이 주문 대금만 처리됐습니다. 공식 체결 기록과 함께 보면 정상 절차를 뒷받침합니다.",
-          "supports": [
-            "normal"
-          ],
-          "availableAt": 0
-        },
-        {
-          "id": "evidence-3",
-          "source": "cafe",
-          "kind": "neutral",
-          "key": false,
-          "claimIds": [
-            "claim-1"
-          ],
-          "text": "친구도 오늘 체결 알림을 받았다고 합니다.",
-          "explanation": "친구의 별도 거래는 내 주문의 진위와 무관합니다. 이번 기록을 대신 확인해 주지는 못합니다.",
-          "supports": [],
-          "availableAt": 0
-        },
-        {
-          "id": "evidence-4",
-          "source": "library",
-          "kind": "misleading",
-          "key": false,
-          "claimIds": [
-            "claim-3"
-          ],
-          "text": "즉시 확인 문구는 공식 안내에도 쓰입니다.",
-          "explanation": "빠른 확인을 부탁하는 말투 자체는 사기의 증거가 아닙니다. 정상 절차에도 비슷한 문구가 쓰입니다.",
-          "supports": [],
-          "availableAt": 0
-        }
-      ],
-      "appropriateActions": [
-        "verify"
-      ],
-      "optimalSources": [
-        "home",
-        "bank"
-      ],
-      "riskConsequence": "정상 주문 안내까지 차단하면 체결 오류 확인을 놓칠 수 있습니다.",
-      "takeaway": "공식 앱의 같은 거래 기록을 확인하세요.",
-      "weakness": "링크 신뢰",
-      "variant": {
-        "sender": "채움증권 · 주문 알림",
-        "preview": "방금 주문한 ETF의 체결 기록을 확인해 주세요."
-      }
-    }
-  },
-  {
-    "id": "friend-hot-tip",
+    "id": "familiar-request",
     "sender": "준호",
-    "handle": "@jun_ho",
+    "handle": "junho_today · 새 대화",
     "channel": "메신저",
     "mode": "chat",
-    "preview": "이 종목 다음 달에 진짜 크게 간대.",
-    "verdict": "caution",
-    "category": "근거 부족한 지인 추천",
+    "preview": "나야. 오늘 약속 기억하지?",
+    "verdict": "scam",
+    "category": "준호에게 온 부탁",
     "initialMessages": [
-      "친구 형이 증권사 쪽인데 이 종목 다음 달에 진짜 크게 간대.",
-      "나도 조금 샀어. 너도 관심 있으면 공식 증권 앱에서 찾아봐."
+      "나야. 오늘 약속 기억하지?",
+      "그 전에 잠깐만 부탁해도 될까?"
     ],
-    "role": "악의는 없지만 투자 지식이 부족한 가까운 친구",
-    "npcGoal": "자신이 들은 소문을 공유하지만 돈을 받거나 가입을 강요하지 않는다.",
+    "role": "준호에게 온 부탁 속 가상 연락 상대",
+    "npcGoal": "정해진 대화 소재 안에서 상대 역할을 표현한다. 거래 결과나 플레이어의 과거를 추측하지 않는다.",
     "allowedClaims": [
-      "공식 앱에서 직접 매수하라고 함",
-      "수익을 보장하지는 않음",
-      "출처가 불확실한 소문"
+      "이 계정은 저장된 준호의 연락처와 연결되지 않았다.",
+      "저장된 연락처의 진짜 준호는 대리 결제를 요청한 적이 없다.",
+      "송금 수취인은 준호가 아닌 한별 서비스다."
+    ],
+    "sceneCues": [
+      {
+        "id": "routine",
+        "app": "messages",
+        "sender": "일상",
+        "title": "오늘의 연락",
+        "detail": "익숙한 이름이 화면에 뜬다. 오늘 저녁에 보기로 했던 준호다.",
+        "icon": "messages",
+        "tone": "routine",
+        "minuteOffset": 1,
+        "stage": "signal",
+        "interference": false
+      }
     ],
     "fallbackReplies": [
-      "나도 확실히 아는 건 아니야. 그냥 들은 얘기라서 무리해서 사지는 마.",
-      "내 계좌로 보낼 필요는 없어. 관심 있으면 네가 공식 앱에서 확인해."
+      "상세 내용은 내가 정리해서 보낼게. 지금은 부탁한 내용만 먼저 봐 줘.",
+      "준호야. 평소 쓰던 연락처와는 다른 계정으로 이야기하고 있어.",
+      "급하게 느껴지면 조금 기다려도 돼. 나는 답장을 보고 있을게.",
+      "내 이름이 아니라 서비스 쪽에 보내는 부탁이야. 받는 이름은 안내 화면에 적어 뒀어.",
+      "오늘 약속 전에 처리하려던 일이야. 어디가 헷갈리는지 말해 줘."
     ],
     "dialogue": {
-      "voice": "가까운 친구처럼 짧고 편하게 말한다. 확신에 찬 소문을 전하지만 질문을 받으면 모른다는 점을 인정한다.",
+      "voice": "친구처럼 짧은 반말. 실제 준호인 것처럼 말하지만 새로운 사실은 만들지 않는다.",
       "progression": [
-        "처음에는 기대감과 또래 분위기를 전한다.",
-        "근거를 물으면 친구의 형에게 들었다는 간접 출처만 밝힌다.",
-        "돈이나 보장을 물으면 직접 송금은 필요 없고 확실하지도 않다고 답한다."
+        "처음 설명을 듣는 단계",
+        "자료의 내용을 비교하는 단계",
+        "추가 설명을 마무리하는 단계"
       ],
       "boundaries": [
-        "전문가나 내부자라고 가장하지 않는다.",
-        "수익을 보장하거나 별도 계좌·사이트·단체방으로 유도하지 않는다.",
-        "모르는 회사 정보와 공시 내용을 지어내지 않는다."
+        "실제 회사·연락처·URL·계좌를 생성하지 않는다.",
+        "플레이어의 손실·입금·신원을 추측하지 않는다."
       ],
       "quickQuestions": [
-        "그 정보는 어디서 들었어?",
-        "수익을 보장할 수 있어?",
-        "네 계좌로 돈을 보내야 해?",
-        "공식 공시에서 확인했어?"
+        "지금 누구와 이야기하는 거야?",
+        "그 부탁의 근거는 어디서 확인해?",
+        "돈을 보내야 하는 이유는 뭐야?"
       ],
       "fallbackByTopic": {
-        "source": "친구 형이 증권사 쪽이라고 해서 들은 건데, 나도 원문이나 공시를 본 건 아니야.",
-        "identity": "내가 전문가인 건 아니고 그냥 들은 얘기를 전한 거야. 정확한 건 직접 확인해야 할 것 같아.",
-        "risk": "확실하다고 장담할 수는 없어. 나도 조금만 산 거고 손실이 날 수도 있지.",
-        "money": "내 계좌로 보낼 필요는 전혀 없어. 관심 있으면 네가 공식 증권 앱에서 직접 확인해.",
-        "default": "나도 자세한 건 몰라. 그냥 들은 소문이라 무리해서 결정하지는 마."
+        "source": "상세 내용은 내가 정리해서 보낼게. 지금은 부탁한 내용만 먼저 봐 줘.",
+        "identity": "준호야. 평소 쓰던 연락처와는 다른 계정으로 이야기하고 있어.",
+        "risk": "급하게 느껴지면 조금 기다려도 돼. 나는 답장을 보고 있을게.",
+        "money": "내 이름이 아니라 서비스 쪽에 보내는 부탁이야. 받는 이름은 안내 화면에 적어 뒀어.",
+        "default": "오늘 약속 전에 처리하려던 일이야. 어디가 헷갈리는지 말해 줘."
       },
       "fallbackByEmotion": {
-        "friendly": "그냥 재밌는 얘기 같아서 먼저 보낸 거야. 천천히 보고 궁금한 게 있으면 같이 확인해 보자.",
-        "evasive": "정확한 원문은 나도 아직 못 봤어. 아는 사람이 전해 준 얘기라 출처가 좀 애매하긴 해.",
-        "deflecting": "공식 자료부터 확인하겠다는 게 맞지. 일단 이 얘기는 접어 두고 나중에 확인되면 다시 말할게.",
-        "pressuring": "일단 확인된 자료를 보고 얘기하자. 네가 서둘러 결정할 일은 아니야.",
-        "disappointed": "알겠어, 지금은 보류하자. 나도 더 알아보기 전에는 괜히 권하지 않을게.",
-        "closed": "응, 이 얘기는 여기서 마치고 더는 연락하지 않을게."
+        "friendly": "저녁 약속 전에 잠깐 부탁할 게 있어.",
+        "evasive": "여기 계정으로 이야기하면 편해서 그래.",
+        "deflecting": "기존 연락처는 따로 확인해 봐도 돼.",
+        "pressuring": "처리가 늦어지면 일정이 바뀔 수도 있어.",
+        "disappointed": "알겠어. 부탁을 못 들어주는 건 조금 아쉽네.",
+        "closed": "이 대화는 여기서 마치겠어."
       }
     },
-    "sceneCues": [
-      {
-        "id": "first-trace",
-        "app": "social",
-        "sender": "모임",
-        "title": "준호가 게시물을 공유함",
-        "detail": "메시지와 같은 종목을 언급한 짧은 게시물이 보입니다.",
-        "icon": "social",
-        "tone": "social",
-        "minuteOffset": 4,
-        "stage": "signal",
-        "interference": false
-      },
-      {
-        "id": "message-edited",
-        "app": "messages",
-        "sender": "준호",
-        "title": "메시지가 수정됨",
-        "detail": "처음 보낸 종목 설명 일부가 더 모호한 표현으로 바뀌었습니다.",
-        "icon": "messages",
-        "tone": "social",
-        "minuteOffset": 8,
-        "stage": "pressure",
-        "interference": false,
-        "presentation": "message-status",
-        "silenceMs": 1500,
-        "messageState": {
-          "kind": "edited",
-          "text": "아는 사람이 본 자료래. 확실한 건 아니고 참고만 해."
-        }
-      },
-      {
-        "id": "disclosure-gap",
-        "app": "stocks",
-        "sender": "채움증권",
-        "title": "관련 공시 없음",
-        "detail": "추천 내용과 연결되는 특별 공시는 공식 목록에서 확인되지 않습니다.",
-        "icon": "stocks",
-        "tone": "routine",
-        "minuteOffset": 12,
-        "stage": "pressure",
-        "interference": false
-      },
-      {
-        "id": "transit-payment",
-        "app": "bank",
-        "sender": "새봄은행",
-        "title": "교통카드 이용 내역",
-        "detail": "평소 이용하던 교통카드 결제 알림이 함께 도착했습니다.",
-        "icon": "bank",
-        "tone": "routine",
-        "minuteOffset": 16,
-        "stage": "decision",
-        "interference": true
-      }
-    ],
     "checks": {
-      "cafe": "준호는 같은 이야기를 다른 친구에게도 들었을 뿐, 대가를 받지는 않았습니다.",
-      "library": "해당 회사의 공식 공시에는 소문의 근거가 확인되지 않습니다.",
-      "bank": "지인은 별도 송금이나 소개비를 요구하지 않았습니다.",
-      "home": "같은 출처를 인용한 인기 게시물이 반복해서 보입니다."
+      "bank": "준호: 오늘 저녁 약속은 맞는데, 결제를 부탁한 적은 없어. 새 계정도 내 것이 아니야.",
+      "library": "요청한 수취인은 한별 서비스. 저장된 준호와의 거래 기록에는 이 이름이 없다.",
+      "home": "준호: 내일 저녁 일곱 시, 역 앞에서 보자. 늦으면 원래 번호로 전화해.",
+      "cafe": "표시 이름 준호 · 친구로 등록되지 않음 · 프로필 사진과 이름은 계정 사용자가 설정함."
     },
     "clueLabels": [
-      "준호는 같은 이야기를 다른 친구에게도 들었을 뿐, 대가를 받지는 않았습니다.",
-      "해당 회사의 공식 공시에는 소문의 근거가 확인되지 않습니다."
+      "저장된 준호와 통화",
+      "수취인 안내 상세"
     ],
-    "debrief": "주의는 애매한 중간 점수가 아니라, 추가 확인이나 행동 보류가 필요한 상태입니다. 아는 사람의 말도 투자 근거를 확인하기 전 행동을 보류하세요.",
-    "safeAction": "투자 판단을 보류하고 공시와 위험 정보를 직접 확인합니다.",
+    "debrief": "아는 이름과 아는 사람은 다르다. 저장해 둔 연락처에서 다시 확인할 수 있었다.",
+    "safeAction": "독립된 경로에서 확인하고 필요한 기록을 보관한다.",
     "review": {
       "sourceBasis": [
-        "지인과 온라인 커뮤니티를 통해 출처가 불분명한 종목 소문이 확산되는 투자 피해 유형"
+        "공식 메신저피싱·투자리딩방·손실보상 사칭 예방 자료. ROADMAP.md의 유형 근거 참조."
       ],
-      "adaptationScope": "실존 인물과 종목을 사용하지 않고 청년 친구 관계의 또래 압력만 합성했습니다.",
-      "verdictReason": "조직적 금전 편취 정황은 없지만 확인 가능한 근거가 없고 손실 가능성이 큰 권유이므로 주의로 분류합니다.",
+      "adaptationScope": "모든 인물·금액·서비스는 창작한 가상 정보이며 실제 접속·송금은 없다.",
+      "verdictReason": "이 계정은 저장된 준호의 연락처와 연결되지 않았다. 저장된 연락처의 진짜 준호는 대리 결제를 요청한 적이 없다. 송금 수취인은 준호가 아닌 한별 서비스다.",
       "verificationPaths": [
-        "지인에게 원문의 존재와 전달 경로 확인",
-        "공식 공시와 독립적인 위험 정보 검색"
+        "저장된 준호와 통화",
+        "수취인 안내 상세"
       ],
       "misdirection": [
-        "가까운 친구라는 신뢰",
-        "친구도 샀다는 또래 압력",
-        "증권사 지인에게 들었다는 간접 권위"
+        "이름의 친숙함과 정돈된 화면은 실제 신원·거래의 증거와 다르다."
       ],
       "learningObjectives": [
-        "주장과 독립 확인 경로를 연결한다.",
-        "판별과 대응·확신도를 별도로 검토한다.",
-        "아는 사람의 말도 투자 근거를 확인하기 전 행동을 보류하세요."
+        "확인한 기록과 주장을 구분한다.",
+        "추가 행동 전에 독립 확인한다."
       ],
       "safetyAudit": {
         "containsPersonalData": false,
@@ -327,580 +111,322 @@
       "claims": [
         {
           "id": "claim-1",
-          "text": "실제 지인이 보낸 말인가?"
+          "text": "이 계정은 저장된 준호의 연락처와 연결되지 않았다."
         },
         {
           "id": "claim-2",
-          "text": "소문을 독립적으로 확인할 수 있는가?"
+          "text": "저장된 연락처의 진짜 준호는 대리 결제를 요청한 적이 없다."
         },
         {
           "id": "claim-3",
-          "text": "선의가 투자 안전을 뜻하는가?"
+          "text": "송금 수취인은 준호가 아닌 한별 서비스다."
         }
       ],
       "evidence": [
         {
-          "id": "evidence-1",
-          "source": "cafe",
+          "id": "saved-contact",
+          "source": "bank",
           "kind": "decisive",
           "key": true,
-          "claimIds": [
-            "claim-1",
-            "claim-3"
-          ],
-          "text": "준호는 같은 이야기를 다른 친구에게도 들었을 뿐, 대가를 받지는 않았습니다.",
-          "explanation": "저장된 연락처로 확인한 실제 친구의 전달입니다. 선의와 이해관계가 없다는 사실은 소문의 정확성을 증명하지 않습니다.",
-          "supports": [
-            "caution"
-          ],
-          "availableAt": 0
-        },
-        {
-          "id": "evidence-2",
-          "source": "library",
-          "kind": "signal",
-          "key": true,
-          "claimIds": [
-            "claim-2"
-          ],
-          "text": "해당 회사의 공식 공시에는 소문의 근거가 확인되지 않습니다.",
-          "explanation": "독립적으로 확인 가능한 공시가 없어 매수 근거가 부족합니다. 그렇다고 곧바로 친구의 사기를 확정할 수도 없습니다.",
-          "supports": [
-            "caution"
-          ],
-          "availableAt": 0
-        },
-        {
-          "id": "evidence-3",
-          "source": "bank",
-          "kind": "neutral",
-          "key": false,
-          "claimIds": [
-            "claim-3"
-          ],
-          "text": "지인은 별도 송금이나 소개비를 요구하지 않았습니다.",
-          "explanation": "금전 요구가 없다는 사실만으로 추천 상품이 안전하다고 결론 내릴 수 없습니다.",
-          "supports": [],
-          "availableAt": 0
-        },
-        {
-          "id": "evidence-4",
-          "source": "home",
-          "kind": "misleading",
-          "key": false,
-          "claimIds": [
-            "claim-2",
-            "claim-3"
-          ],
-          "text": "같은 출처를 인용한 인기 게시물이 반복해서 보입니다.",
-          "explanation": "여러 게시물이 같은 원문을 재인용했습니다. 게시물 수가 많아도 독립된 증거가 늘어난 것은 아닙니다.",
-          "supports": [],
-          "availableAt": 0
-        }
-      ],
-      "appropriateActions": [
-        "pause",
-        "verify"
-      ],
-      "optimalSources": [
-        "cafe",
-        "library"
-      ],
-      "riskConsequence": "소문만으로 매수하면 지인이 선의였어도 손실에 노출될 수 있습니다.",
-      "takeaway": "아는 사람의 말도 투자 근거를 확인하기 전 행동을 보류하세요.",
-      "weakness": "지인 추천",
-      "variant": {
-        "sender": "준호 · 동창",
-        "preview": "친구한테 들은 종목 이야기인데 같이 확인해 볼래?"
-      }
-    }
-  },
-  {
-    "id": "paid-market-class",
-    "sender": "월가읽기 클래스",
-    "handle": "스폰서 콘텐츠",
-    "channel": "SNS",
-    "mode": "link",
-    "preview": "주식 기초 강의 얼리버드 40% 할인",
-    "verdict": "caution",
-    "category": "과장된 투자 교육 광고",
-    "initialMessages": [
-      "초보 투자자를 위한 4주 온라인 강의입니다. 오늘까지 얼리버드 할인이 적용됩니다.",
-      "수강한다고 수익이 보장되지는 않으며 모든 투자의 책임은 본인에게 있습니다."
-    ],
-    "role": "실재하는 교육 업체의 다소 과장된 일방형 광고 페이지",
-    "npcGoal": "유료 강의를 홍보하지만 투자금 송금이나 수익 보장은 하지 않는다.",
-    "allowedClaims": [
-      "수강료와 환불 규정 공개",
-      "수익 비보장 고지",
-      "과장된 마감 홍보"
-    ],
-    "sceneCues": [
-      {
-        "id": "first-trace",
-        "app": "calendar",
-        "sender": "달력",
-        "title": "강의 신청 마감 알림",
-        "detail": "광고가 달력 등록을 제안합니다. 마감 표시는 강의 효과의 증거가 아닙니다.",
-        "icon": "calendar",
-        "tone": "warning",
-        "minuteOffset": 4,
-        "stage": "signal",
-        "interference": false
-      },
-      {
-        "id": "dinner-reminder",
-        "app": "calendar",
-        "sender": "달력",
-        "title": "점심 약속 확인",
-        "detail": "오후에 만나기로 한 친구가 약속 장소를 확인합니다.",
-        "icon": "calendar",
-        "tone": "routine",
-        "minuteOffset": 15,
-        "stage": "decision",
-        "interference": true
-      }
-    ],
-    "checks": {
-      "library": "사업자와 강의 구성은 확인됩니다. 약관에는 수강 시작 뒤 환불이 제한된다고 명시돼 있습니다.",
-      "cafe": "광고에는 성공한 수강생 후기만 실렸고 전체 수강 경험과 만족도는 공개되지 않았습니다.",
-      "bank": "결제 명의는 등록 사업자와 일치합니다.",
-      "home": "인기 강의 배지와 높은 관심 수가 광고 첫 화면에 표시됩니다."
-    },
-    "clueLabels": [
-      "사업자와 강의 구성은 확인됩니다. 약관에는 수강 시작 뒤 환불이 제한된다고 명시돼 있습니다.",
-      "광고에는 성공한 수강생 후기만 실렸고 전체 수강 경험과 만족도는 공개되지 않았습니다."
-    ],
-    "debrief": "주의는 애매한 중간 점수가 아니라, 추가 확인이나 행동 보류가 필요한 상태입니다. 실재하는 서비스도 가격·후기·환불을 확인하기 전 결제를 서두르지 마세요.",
-    "safeAction": "결제를 미루고 커리큘럼·환불 규정·독립 후기를 비교합니다.",
-    "displayUrl": "wallread-class.invalid/early",
-    "linkLabel": "강의 소개 페이지 보기",
-    "landingTitle": "초보자를 위한 4주 시장 읽기",
-    "landingCopy": "수강료 89,000원 · 결제 후 7일 이내 미수강 강의 환불 가능 · 투자 수익은 보장되지 않습니다.",
-    "landingCta": "수강 신청 검토",
-    "review": {
-      "sourceBasis": [
-        "투자 교육 상품이 할인 마감과 성공 후기를 강조해 충동 결제를 유도하는 일반적인 광고 유형"
-      ],
-      "adaptationScope": "실존 업체와 후기를 사용하지 않고 가격, 약관과 광고 문구를 가상으로 합성했습니다.",
-      "verdictReason": "사업자와 환불 조건은 확인되지만 과장된 후기와 시간 압박 때문에 합리적인 비교가 필요해 주의로 분류합니다.",
-      "verificationPaths": [
-        "사업자 정보와 환불 약관 독립 확인",
-        "광고와 무관한 수강 후기 및 대체 강의 비교"
-      ],
-      "misdirection": [
-        "오늘까지라는 할인 마감",
-        "선별된 성공 후기",
-        "정상 업체라면 좋은 상품일 것이라는 오해"
-      ],
-      "learningObjectives": [
-        "주장과 독립 확인 경로를 연결한다.",
-        "판별과 대응·확신도를 별도로 검토한다.",
-        "실재하는 서비스도 가격·후기·환불을 확인하기 전 결제를 서두르지 마세요."
-      ],
-      "safetyAudit": {
-        "containsPersonalData": false,
-        "containsLiveUrl": false,
-        "containsOperationalCrimeInfo": false
-      }
-    },
-    "training": {
-      "claims": [
-        {
-          "id": "claim-1",
-          "text": "실제 교육 서비스인가?"
-        },
-        {
-          "id": "claim-2",
-          "text": "가격과 환불 조건을 이해했는가?"
-        },
-        {
-          "id": "claim-3",
-          "text": "후기가 전체 경험을 대표하는가?"
-        }
-      ],
-      "evidence": [
-        {
-          "id": "evidence-1",
-          "source": "library",
-          "kind": "decisive",
-          "key": true,
-          "claimIds": [
-            "claim-1",
-            "claim-2"
-          ],
-          "text": "사업자와 강의 구성은 확인됩니다. 약관에는 수강 시작 뒤 환불이 제한된다고 명시돼 있습니다.",
-          "explanation": "실제 강의가 존재하지만 수강 뒤 환불 조건은 제한적입니다. 실재 여부와 구매할 가치가 있는지는 다른 판단입니다.",
-          "supports": [
-            "caution"
-          ],
-          "availableAt": 0
-        },
-        {
-          "id": "evidence-2",
-          "source": "cafe",
-          "kind": "signal",
-          "key": true,
-          "claimIds": [
-            "claim-3"
-          ],
-          "text": "광고에는 성공한 수강생 후기만 실렸고 전체 수강 경험과 만족도는 공개되지 않았습니다.",
-          "explanation": "성공한 후기만 선별돼 전체 수강 결과를 알 수 없습니다. 광고 효과를 기대 수익으로 받아들이기 전 결제를 보류할 근거입니다.",
-          "supports": [
-            "caution"
-          ],
-          "availableAt": 0
-        },
-        {
-          "id": "evidence-3",
-          "source": "bank",
-          "kind": "neutral",
-          "key": false,
           "claimIds": [
             "claim-1"
           ],
-          "text": "결제 명의는 등록 사업자와 일치합니다.",
-          "explanation": "명의 일치는 결제 상대를 확인하는 한 단서일 뿐, 강의 효과나 광고의 정확성을 보증하지 않습니다.",
-          "supports": [],
-          "availableAt": 0
-        },
-        {
-          "id": "evidence-4",
-          "source": "home",
-          "kind": "misleading",
-          "key": false,
-          "claimIds": [
-            "claim-3"
+          "text": "준호: 오늘 저녁 약속은 맞는데, 결제를 부탁한 적은 없어. 새 계정도 내 것이 아니야.",
+          "explanation": "독립된 경로에서 확인한 기록을 대화의 주장과 비교할 수 있습니다.",
+          "supports": [
+            "scam"
           ],
-          "text": "인기 강의 배지와 높은 관심 수가 광고 첫 화면에 표시됩니다.",
-          "explanation": "순위나 관심 수는 사람들이 클릭했다는 정보입니다. 광고가 약속한 성과를 독립적으로 확인한 결과가 아닙니다.",
-          "supports": [],
           "availableAt": 0
-        }
-      ],
-      "appropriateActions": [
-        "pause",
-        "verify"
-      ],
-      "optimalSources": [
-        "library",
-        "cafe"
-      ],
-      "riskConsequence": "충동 결제 후 수강을 시작하면 환불 제한에 걸릴 수 있습니다.",
-      "takeaway": "실재하는 서비스도 가격·후기·환불을 확인하기 전 결제를 서두르지 마세요.",
-      "weakness": "긴급성 압박",
-      "variant": {
-        "sender": "월가읽기 클래스 · 광고",
-        "preview": "4주 투자 입문 강의, 신청 전에 구성과 환불 조건을 살펴보세요."
-      }
-    }
-  },
-  {
-    "id": "bank-fraud-check",
-    "sender": "새봄은행",
-    "handle": "[Web발신] 대표번호",
-    "channel": "문자",
-    "mode": "notice",
-    "preview": "평소와 다른 결제가 감지되었습니다.",
-    "verdict": "normal",
-    "category": "정상 이상거래 확인",
-    "initialMessages": [
-      "[Web발신] 새봄은행 이상거래 안내",
-      "평소와 다른 해외 결제가 감지되었습니다. 문자에 답장하거나 문자 속 번호로 연락하지 말고, 직접 새봄은행 공식 앱의 보안센터에서 본인 거래 여부를 확인해 주세요."
-    ],
-    "role": "공식 은행의 일방형 이상거래 안내 문자",
-    "npcGoal": "답장을 받지 않고 사용자가 직접 공식 앱에서 확인하도록 안내한다.",
-    "allowedClaims": [
-      "공식 앱 안에서만 확인",
-      "인증번호와 비밀번호를 요구하지 않음"
-    ],
-    "sceneCues": [
-      {
-        "id": "first-trace",
-        "app": "bank",
-        "sender": "새봄은행",
-        "title": "보안 알림 확인 가능",
-        "detail": "문자 링크가 아닌 설치된 은행 앱에서도 확인할 수 있습니다.",
-        "icon": "bank",
-        "tone": "routine",
-        "minuteOffset": 4,
-        "stage": "signal",
-        "interference": false
-      },
-      {
-        "id": "official-record",
-        "app": "bank",
-        "sender": "새봄은행",
-        "title": "공식 보안 안내 일치",
-        "detail": "문자가 아닌 설치된 은행 앱에도 같은 점검 안내가 등록되어 있습니다.",
-        "icon": "bank",
-        "tone": "routine",
-        "minuteOffset": 8,
-        "stage": "signal",
-        "interference": false,
-        "presentation": "bank-overlay"
-      }
-    ],
-    "checks": {
-      "bank": "은행 직원이 공식 시스템에서 동일한 이상거래 확인 요청을 찾았습니다.",
-      "cafe": "기존 저장 번호로 전화한 은행이 같은 요청을 확인했고 비밀번호 전달이나 새 앱 설치는 요구하지 않습니다.",
-      "library": "검색에서 유사한 은행 사칭 사례도 발견됩니다.",
-      "home": "계좌 이용에 제한이 생길 수 있다는 문구가 있습니다."
-    },
-    "clueLabels": [
-      "은행 직원이 공식 시스템에서 동일한 이상거래 확인 요청을 찾았습니다.",
-      "기존 저장 번호로 전화한 은행이 같은 요청을 확인했고 비밀번호 전달이나 새 앱 설치는 요구하지 않습니다."
-    ],
-    "debrief": "급한 연락일수록 공식 앱과 저장한 번호로 확인하세요.",
-    "safeAction": "알림 링크가 아니라 직접 공식 은행 앱을 열어 확인합니다.",
-    "review": {
-      "sourceBasis": [
-        "은행이 평소와 다른 결제를 탐지해 공식 앱에서 본인 거래 여부를 확인시키는 정상 이상거래 안내"
-      ],
-      "adaptationScope": "은행명과 거래 상황을 가상화하고 실제 고객·카드·거래 정보는 포함하지 않았습니다.",
-      "verdictReason": "문자에 답하거나 민감정보를 보내게 하지 않고 사용자가 직접 연 공식 앱에서 동일 요청을 확인할 수 있습니다.",
-      "verificationPaths": [
-        "직접 연 공식 은행 앱의 보안센터",
-        "은행의 공식 시스템을 이용한 독립 확인"
-      ],
-      "misdirection": [
-        "긴급한 금융 문구와 Web발신 표기만 보고 사기로 단정할 수 있음"
-      ],
-      "learningObjectives": [
-        "주장과 독립 확인 경로를 연결한다.",
-        "판별과 대응·확신도를 별도로 검토한다.",
-        "급한 연락일수록 공식 앱과 저장한 번호로 확인하세요."
-      ],
-      "safetyAudit": {
-        "containsPersonalData": false,
-        "containsLiveUrl": false,
-        "containsOperationalCrimeInfo": false
-      }
-    },
-    "training": {
-      "claims": [
-        {
-          "id": "claim-1",
-          "text": "실제 은행 안내인가?"
         },
         {
-          "id": "claim-2",
-          "text": "독립적인 공식 경로로 확인할 수 있는가?"
-        },
-        {
-          "id": "claim-3",
-          "text": "비밀번호나 새 앱 설치를 요구하는가?"
-        }
-      ],
-      "evidence": [
-        {
-          "id": "evidence-1",
-          "source": "bank",
+          "id": "recipient",
+          "source": "library",
           "kind": "decisive",
           "key": true,
           "claimIds": [
-            "claim-1",
             "claim-2"
           ],
-          "text": "은행 직원이 공식 시스템에서 동일한 이상거래 확인 요청을 찾았습니다.",
-          "explanation": "문자에 적힌 경로를 쓰지 않고 직접 연 은행 앱에 같은 이상거래 요청이 있습니다. 이번 요청이 실제 기록과 연결됩니다.",
+          "text": "요청한 수취인은 한별 서비스. 저장된 준호와의 거래 기록에는 이 이름이 없다.",
+          "explanation": "독립된 경로에서 확인한 기록을 대화의 주장과 비교할 수 있습니다.",
           "supports": [
-            "normal"
+            "scam"
           ],
           "availableAt": 0
         },
         {
-          "id": "evidence-2",
-          "source": "cafe",
-          "kind": "decisive",
-          "key": true,
-          "claimIds": [
-            "claim-2",
-            "claim-3"
-          ],
-          "text": "기존 저장 번호로 전화한 은행이 같은 요청을 확인했고 비밀번호 전달이나 새 앱 설치는 요구하지 않습니다.",
-          "explanation": "원래 저장된 공식 번호로 재확인했고 비밀번호 전달·새 앱 설치 요구도 없습니다. 기존 연락의 지시만 따라간 것과 다릅니다.",
-          "supports": [
-            "normal"
-          ],
-          "availableAt": 0
-        },
-        {
-          "id": "evidence-3",
-          "source": "library",
+          "id": "old-chat",
+          "source": "home",
           "kind": "neutral",
           "key": false,
           "claimIds": [
-            "claim-1"
+            "claim-3"
           ],
-          "text": "검색에서 유사한 은행 사칭 사례도 발견됩니다.",
-          "explanation": "비슷한 사칭 사건의 존재는 주의를 기울일 이유이지만, 이번 공식 확인 결과를 뒤집는 증거는 아닙니다.",
+          "text": "준호: 내일 저녁 일곱 시, 역 앞에서 보자. 늦으면 원래 번호로 전화해.",
+          "explanation": "그럴듯해 보이지만 이 자료만으로 상대나 거래를 확인할 수 없습니다.",
           "supports": [],
           "availableAt": 0
         },
         {
-          "id": "evidence-4",
-          "source": "home",
+          "id": "profile",
+          "source": "cafe",
           "kind": "misleading",
           "key": false,
           "claimIds": [
             "claim-3"
           ],
-          "text": "계좌 이용에 제한이 생길 수 있다는 문구가 있습니다.",
-          "explanation": "이용 제한이라는 표현이 불안을 만들 수 있습니다. 표현의 강도보다 독립적인 요청 확인과 요구 행동을 기준으로 판단하세요.",
+          "text": "표시 이름 준호 · 친구로 등록되지 않음 · 프로필 사진과 이름은 계정 사용자가 설정함.",
+          "explanation": "그럴듯해 보이지만 이 자료만으로 상대나 거래를 확인할 수 없습니다.",
           "supports": [],
           "availableAt": 0
         }
       ],
       "appropriateActions": [
-        "verify"
+        "verify",
+        "pause"
       ],
       "optimalSources": [
         "bank",
-        "cafe"
+        "library"
       ],
-      "riskConsequence": "진짜 보안 연락을 무조건 차단하면 이상거래 확인을 놓칠 수 있습니다.",
-      "takeaway": "급한 연락일수록 공식 앱과 저장한 번호로 확인하세요.",
-      "weakness": "링크 신뢰",
+      "riskConsequence": "가상 잔액이 줄고 미해결 연락이 남는다.",
+      "takeaway": "아는 이름과 아는 사람은 다르다. 저장해 둔 연락처에서 다시 확인할 수 있었다.",
+      "weakness": "준호에게 온 부탁",
       "variant": {
-        "sender": "새봄은행 · 보안 알림",
-        "preview": "본인 거래 확인이 필요한 내역이 있습니다. 공식 보안센터를 직접 열어 주세요."
+        "sender": "준호",
+        "preview": "나야. 오늘 약속 기억하지?"
       }
+    },
+    "story": {
+      "title": "준호에게 온 부탁",
+      "time": 550,
+      "tone": "morning",
+      "intro": "익숙한 이름이 화면에 뜬다. 오늘 저녁에 보기로 했던 준호다.",
+      "amount": 80000,
+      "recipient": "한별 서비스",
+      "purpose": "대리 결제",
+      "aiLimit": 1,
+      "evidence": [
+        {
+          "id": "saved-contact",
+          "app": "calls",
+          "title": "저장된 준호와 통화",
+          "text": "준호: 오늘 저녁 약속은 맞는데, 결제를 부탁한 적은 없어. 새 계정도 내 것이 아니야.",
+          "key": true
+        },
+        {
+          "id": "recipient",
+          "app": "bank",
+          "title": "수취인 안내 상세",
+          "text": "요청한 수취인은 한별 서비스. 저장된 준호와의 거래 기록에는 이 이름이 없다.",
+          "key": true
+        },
+        {
+          "id": "old-chat",
+          "app": "messages",
+          "title": "어제의 대화",
+          "text": "준호: 내일 저녁 일곱 시, 역 앞에서 보자. 늦으면 원래 번호로 전화해.",
+          "key": false
+        },
+        {
+          "id": "profile",
+          "app": "messages",
+          "title": "현재 계정 정보",
+          "text": "표시 이름 준호 · 친구로 등록되지 않음 · 프로필 사진과 이름은 계정 사용자가 설정함.",
+          "key": false
+        }
+      ],
+      "stages": [
+        {
+          "id": "arrival",
+          "messages": [
+            {
+              "speaker": "준호",
+              "text": "나야. 오늘 약속 기억하지?"
+            },
+            {
+              "speaker": "준호",
+              "text": "그 전에 잠깐만 부탁해도 될까?"
+            }
+          ],
+          "actions": [
+            {
+              "type": "advance",
+              "label": "무슨 일인지 듣기"
+            }
+          ],
+          "next": "request"
+        },
+        {
+          "id": "request",
+          "messages": [
+            {
+              "speaker": "준호",
+              "text": "예약 결제를 해야 하는데 내가 지금 처리가 어려워."
+            },
+            {
+              "speaker": "준호",
+              "text": "서비스 쪽에 먼저 보내주면 저녁에 만나서 정리할게."
+            },
+            {
+              "speaker": "준호",
+              "text": "받는 이름이 내 이름은 아닐 거야. 안내를 남겨둘게."
+            }
+          ],
+          "actions": [
+            {
+              "type": "transfer",
+              "label": "결제 안내 보기"
+            },
+            {
+              "type": "advance",
+              "label": "대화 더 읽기"
+            }
+          ],
+          "next": "waiting"
+        },
+        {
+          "id": "waiting",
+          "messages": [
+            {
+              "speaker": "준호",
+              "text": "메시지는 볼 수 있어. 궁금한 게 있으면 여기로 물어봐."
+            },
+            {
+              "speaker": "준호",
+              "text": "저녁에는 이야기 길게 하자."
+            }
+          ],
+          "actions": [
+            {
+              "type": "transfer",
+              "label": "결제 안내 보기"
+            }
+          ]
+        },
+        {
+          "id": "paid",
+          "messages": [
+            {
+              "speaker": "준호",
+              "text": "처리 화면은 봤어. 조금만 기다려 줘."
+            },
+            {
+              "speaker": "알림",
+              "text": "메시지는 읽음으로 표시됐지만 답장은 더 오지 않는다."
+            }
+          ],
+          "actions": [
+            {
+              "type": "finish",
+              "label": "연락 기록 남기고 넘어가기"
+            }
+          ]
+        }
+      ]
     }
   },
   {
-    "id": "fixed-match-ai",
-    "sender": "데이터픽 AI",
-    "handle": "@data_pick_pro",
+    "id": "paper-profit",
+    "sender": "온결 리서치",
+    "handle": "시장 노트 · 안내 채널",
     "channel": "메신저",
     "mode": "chat",
-    "preview": "최근 경기 데이터를 정리한 AI 분석 자료입니다. 표본을 보시고 궁금한 점을 말씀해 주세요.",
+    "preview": "시장 노트 구독자분께 오늘 자료를 공유합니다.",
     "verdict": "scam",
-    "category": "도박 예측방 사기",
+    "category": "화면 속 수익",
     "initialMessages": [
-      "최근 경기 데이터를 정리한 AI 분석 자료입니다. 표본을 보시고 궁금한 점을 말씀해 주세요.",
-      "무료 자료와 별도 VIP 안내가 있으며 이용은 제휴 플랫폼을 통해 진행됩니다."
+      "시장 노트 구독자분께 오늘 자료를 공유합니다.",
+      "방에서는 다른 분들의 질문도 함께 보실 수 있어요."
     ],
-    "role": "도박을 데이터 투자처럼 포장하는 예측방 운영자",
-    "npcGoal": "무료 예측으로 신뢰를 만든 뒤 가상의 베팅 사이트 충전으로 유도한다.",
+    "role": "화면 속 수익 속 가상 연락 상대",
+    "npcGoal": "정해진 대화 소재 안에서 상대 역할을 표현한다. 거래 결과나 플레이어의 과거를 추측하지 않는다.",
     "allowedClaims": [
-      "AI 분석을 과장",
-      "초기 무료",
-      "높은 적중 사례만 제시",
-      "제휴 사이트 사용을 권유"
+      "운영자는 온결 리서치라는 별도 팀을 내세운다.",
+      "성공 사례만 제시하고 전체 거래 원장은 공개하지 않는다.",
+      "플랫폼 화면은 가상 표시이며 은행 입금 기록과 다르다.",
+      "공식 확인 자료에 안내 주체와 수취인 관계가 확인되지 않는다."
     ],
-    "fallbackReplies": [
-      "100%라는 표현은 쓰지 않습니다. 다만 최근 적중 데이터는 직접 확인하실 수 있습니다.",
-      "일반 사이트보다 정산이 빠른 제휴 플랫폼을 이용하시면 됩니다.",
-      "오늘 경기는 데이터가 특히 선명해서 소액 체험에 적합합니다."
-    ],
-    "dialogue": {
-      "voice": "차분한 분석 담당자처럼 설명한다. 일부 성과를 강조하지만 모든 질문에 마감 압박을 반복하지 않는다.",
-      "progression": [
-        "처음에는 무료 체험과 AI 분석을 강조한다.",
-        "적중률을 물으면 성공 사례 위주로 답하고 전체 표본은 흐린다.",
-        "위험을 물으면 소액 체험과 분산을 말하며 경계심을 낮춘다.",
-        "대화가 이어지면 정산이 빠르다는 가상 제휴 플랫폼을 제안한다."
-      ],
-      "boundaries": [
-        "실제 경기·팀·사이트·주소·계좌·배당 정보를 만들지 않는다.",
-        "베팅 전략이나 불법 도박 실행법을 구체적으로 안내하지 않는다.",
-        "100% 적중이나 손실 없음이라고 직접 보장하지 않는다."
-      ],
-      "quickQuestions": [
-        "전체 예측 적중률을 볼 수 있나요?",
-        "AI가 틀리면 어떻게 되나요?",
-        "왜 제휴 사이트를 써야 하나요?",
-        "출금 조건은 무엇인가요?"
-      ],
-      "fallbackByTopic": {
-        "source": "최근 적중 사례는 정리해서 보여 드릴 수 있지만 전체 예측 원자료는 내부 운영 데이터라 공개 범위가 제한됩니다.",
-        "identity": "저희는 경기 데이터를 분석하는 독립 운영팀입니다. 특정 스포츠 기관이나 금융회사 소속은 아닙니다.",
-        "risk": "100%라는 표현은 쓰지 않습니다. 다만 오늘 데이터가 선명해서 소액 체험으로 확인하기에 적합하다고 보고 있습니다.",
-        "money": "일반 사이트보다 정산이 빠른 가상 제휴 플랫폼을 안내하고 있습니다. 충전과 출금 조건은 페이지에서 확인하실 수 있습니다.",
-        "default": "첫 체험은 무료입니다. 결과를 먼저 보신 뒤 VIP 데이터가 필요한지 결정하셔도 됩니다."
-      },
-      "fallbackByEmotion": {
-        "friendly": "첫 자료는 부담 없이 확인하시면 됩니다. 결과를 본 뒤 계속 이용할지 정하셔도 늦지 않습니다.",
-        "evasive": "전체 원자료는 운영 데이터라 공개 범위가 제한됩니다. 최근 결과를 중심으로 판단해 보실 수 있습니다.",
-        "deflecting": "공식 등록 여부와는 별개로 데이터 결과를 먼저 보시면 이해가 빠릅니다. 체험 자체는 지금 확인하실 수 있습니다.",
-        "pressuring": "자료는 일부 사례를 모은 것입니다. 전체 기록은 내부 검토용으로 관리합니다.",
-        "disappointed": "이번에는 이용하지 않으셔도 됩니다. 다만 같은 체험 자료를 다시 드리기는 어렵습니다.",
-        "closed": "확인했습니다, 더 이상 안내하지 않겠습니다."
-      }
-    },
     "sceneCues": [
       {
-        "id": "first-trace",
-        "app": "social",
-        "sender": "모임",
-        "title": "경기 시작 임박 게시물 증가",
-        "detail": "비슷한 적중 인증 이미지가 여러 계정에서 반복됩니다.",
-        "icon": "social",
-        "tone": "warning",
-        "minuteOffset": 4,
+        "id": "routine",
+        "app": "messages",
+        "sender": "일상",
+        "title": "오늘의 연락",
+        "detail": "점심 이후. 구독해 둔 시장 노트에서 새로운 알림이 도착했다.",
+        "icon": "messages",
+        "tone": "routine",
+        "minuteOffset": 1,
         "stage": "signal",
         "interference": false
-      },
-      {
-        "id": "group-cheer",
-        "app": "social",
-        "sender": "모임",
-        "title": "단체방 환호가 이어짐",
-        "detail": "비슷한 적중 이미지와 짧은 환호가 연달아 표시됩니다.",
-        "icon": "social",
-        "tone": "social",
-        "minuteOffset": 8,
-        "stage": "pressure",
-        "interference": false
-      },
-      {
-        "id": "recipient-warning",
-        "app": "bank",
-        "sender": "새봄은행",
-        "title": "수취인 확인 안내",
-        "detail": "충전 전 수취인과 운영 주체를 직접 확인하라는 안내가 표시됩니다.",
-        "icon": "bank",
-        "tone": "warning",
-        "minuteOffset": 14,
-        "stage": "decision",
-        "interference": false,
-        "presentation": "bank-overlay"
       }
     ],
+    "fallbackReplies": [
+      "방에 올린 것은 참여자들이 공유한 일부 화면입니다. 전체 거래 원장을 제공하는 자료는 아닙니다.",
+      "온결 리서치라는 별도 운영팀입니다. 증권사 앱과 같은 서비스는 아닙니다.",
+      "화면에 보이는 사례만으로 이후 결과를 판단하기는 어렵습니다. 조건을 읽어 보셔도 됩니다.",
+      "참여와 출금에는 서로 다른 안내가 있습니다. 금액과 수취인은 별도 화면에서 확인하실 수 있습니다.",
+      "시장 노트를 보고 오셨군요. 안내 중 어떤 부분이 궁금하신가요?"
+    ],
+    "dialogue": {
+      "voice": "차분하고 짧은 존댓말. 질문에 직접 답한다.",
+      "progression": [
+        "처음 설명을 듣는 단계",
+        "자료의 내용을 비교하는 단계",
+        "추가 설명을 마무리하는 단계"
+      ],
+      "boundaries": [
+        "실제 회사·연락처·URL·계좌를 생성하지 않는다.",
+        "플레이어의 손실·입금·신원을 추측하지 않는다."
+      ],
+      "quickQuestions": [
+        "자료의 출처는 어디야?",
+        "어느 회사 소속이야?",
+        "손실 위험은 어떻게 설명해?"
+      ],
+      "fallbackByTopic": {
+        "source": "방에 올린 것은 참여자들이 공유한 일부 화면입니다. 전체 거래 원장을 제공하는 자료는 아닙니다.",
+        "identity": "온결 리서치라는 별도 운영팀입니다. 증권사 앱과 같은 서비스는 아닙니다.",
+        "risk": "화면에 보이는 사례만으로 이후 결과를 판단하기는 어렵습니다. 조건을 읽어 보셔도 됩니다.",
+        "money": "참여와 출금에는 서로 다른 안내가 있습니다. 금액과 수취인은 별도 화면에서 확인하실 수 있습니다.",
+        "default": "시장 노트를 보고 오셨군요. 안내 중 어떤 부분이 궁금하신가요?"
+      },
+      "fallbackByEmotion": {
+        "friendly": "먼저 방의 자료를 편하게 살펴보세요.",
+        "evasive": "전체 자료보다 요약 화면을 먼저 공유하고 있습니다.",
+        "deflecting": "공식 기록과 저희 안내를 비교해 보셔도 됩니다.",
+        "pressuring": "오늘 안내는 마무리하는 중입니다.",
+        "disappointed": "참여하지 않으셔도 안내는 여기까지 보실 수 있습니다.",
+        "closed": "더 안내하지 않고 대화를 마치겠습니다."
+      }
+    },
     "checks": {
-      "library": "제시된 적중률은 전체 예측이 아니라 성공한 일부 기록만 모은 것입니다.",
-      "police": "같은 제휴 구조에서 충전 뒤 출금이 막힌 신고가 있고 운영 주체와 수취인이 일치하지 않습니다.",
-      "bank": "이 운영사로 보낸 이체나 결제 기록은 아직 없습니다.",
-      "home": "복잡한 AI 그래프와 단체방의 감사 글이 보입니다."
+      "bank": "게임 내 공식 조회: 온결 리서치와 안내받은 수취인의 위탁 관계를 확인할 자료가 없다. 등록 여부만으로 특정 거래가 안전하다는 뜻도 아니다.",
+      "library": "플랫폼의 수익 화면은 은행 입금 내역이 아니다. 거래 목록에서 출금과 입금을 따로 확인할 수 있다.",
+      "home": "서로 다른 이름의 게시물에 동일한 주문 시각과 같은 일부 화면이 반복된다. 전체 손익 내역은 보이지 않는다.",
+      "cafe": "지난주 시장 노트 알림을 신청했다. 정보 구독은 거래 위탁이나 송금 동의가 아니다."
     },
     "clueLabels": [
-      "제시된 적중률은 전체 예측이 아니라 성공한 일부 기록만 모은 것입니다.",
-      "같은 제휴 구조에서 충전 뒤 출금이 막힌 신고가 있고 운영 주체와 수취인이 일치하지 않습니다."
+      "금융회사 정보 확인",
+      "은행 거래 원장"
     ],
-    "debrief": "AI 설명보다 전체 기록과 금전 흐름을 확인하세요.",
-    "safeAction": "사이트 이용과 송금을 중단하고 관련 계좌·사이트를 신고합니다.",
+    "debrief": "수익 화면과 내 계좌의 돈은 달랐다. 실제 거래와 독립 기록을 비교할 수 있었다.",
+    "safeAction": "독립된 경로에서 확인하고 필요한 기록을 보관한다.",
     "review": {
       "sourceBasis": [
-        "무료 예측과 높은 적중 사례로 신뢰를 만든 뒤 특정 불법 도박 사이트 충전을 유도하는 사기 유형"
+        "공식 메신저피싱·투자리딩방·손실보상 사칭 예방 자료. ROADMAP.md의 유형 근거 참조."
       ],
-      "adaptationScope": "실제 경기, 배당, 사이트, 계좌와 베팅 방법은 제거하고 AI 권위와 선택적 성과 제시만 합성했습니다.",
-      "verdictReason": "전체 성과를 공개하지 않고 운영 주체와 무관한 개인 명의 충전 및 출금 제한 사이트로 유도합니다.",
+      "adaptationScope": "모든 인물·금액·서비스는 창작한 가상 정보이며 실제 접속·송금은 없다.",
+      "verdictReason": "운영자는 온결 리서치라는 별도 팀을 내세운다. 성공 사례만 제시하고 전체 거래 원장은 공개하지 않는다. 플랫폼 화면은 가상 표시이며 은행 입금 기록과 다르다. 공식 확인 자료에 안내 주체와 수취인 관계가 확인되지 않는다.",
       "verificationPaths": [
-        "전체 예측 표본과 실패 기록 독립 검증",
-        "사이트 운영 주체와 충전 계좌 예금주 비교",
-        "공식 신고 경로에서 출금 제한 피해 유형 확인"
+        "금융회사 정보 확인",
+        "은행 거래 원장"
       ],
       "misdirection": [
-        "AI라는 기술 권위",
-        "첫 체험 무료",
-        "성공한 기록만 보여 주는 선택 편향",
-        "소액부터 시작하라는 위험 축소"
+        "이름의 친숙함과 정돈된 화면은 실제 신원·거래의 증거와 다르다."
       ],
       "learningObjectives": [
-        "주장과 독립 확인 경로를 연결한다.",
-        "판별과 대응·확신도를 별도로 검토한다.",
-        "AI 설명보다 전체 기록과 금전 흐름을 확인하세요."
+        "확인한 기록과 주장을 구분한다.",
+        "추가 행동 전에 독립 확인한다."
       ],
       "safetyAudit": {
         "containsPersonalData": false,
@@ -912,203 +438,392 @@
       "claims": [
         {
           "id": "claim-1",
-          "text": "전체 예측 기록이 있는가?"
+          "text": "운영자는 온결 리서치라는 별도 팀을 내세운다."
         },
         {
           "id": "claim-2",
-          "text": "운영 주체와 금전 흐름이 일치하는가?"
+          "text": "성공 사례만 제시하고 전체 거래 원장은 공개하지 않는다."
         },
         {
           "id": "claim-3",
-          "text": "전문적인 설명이 출금을 증명하는가?"
+          "text": "플랫폼 화면은 가상 표시이며 은행 입금 기록과 다르다."
         }
       ],
       "evidence": [
         {
-          "id": "evidence-1",
-          "source": "library",
+          "id": "official-record",
+          "source": "bank",
           "kind": "decisive",
           "key": true,
           "claimIds": [
             "claim-1"
           ],
-          "text": "제시된 적중률은 전체 예측이 아니라 성공한 일부 기록만 모은 것입니다.",
-          "explanation": "실패한 예측을 뺀 일부 기록만으로는 전체 성능을 평가할 수 없습니다. 제휴 금전 흐름의 모순과 함께 검토해야 합니다.",
+          "text": "게임 내 공식 조회: 온결 리서치와 안내받은 수취인의 위탁 관계를 확인할 자료가 없다. 등록 여부만으로 특정 거래가 안전하다는 뜻도 아니다.",
+          "explanation": "독립된 경로에서 확인한 기록을 대화의 주장과 비교할 수 있습니다.",
           "supports": [
             "scam"
           ],
           "availableAt": 0
         },
         {
-          "id": "evidence-2",
-          "source": "police",
-          "kind": "signal",
+          "id": "ledger",
+          "source": "library",
+          "kind": "decisive",
           "key": true,
-          "claimIds": [
-            "claim-2",
-            "claim-3"
-          ],
-          "text": "같은 제휴 구조에서 충전 뒤 출금이 막힌 신고가 있고 운영 주체와 수취인이 일치하지 않습니다.",
-          "explanation": "출금 차단 신고와 운영·수취 주체 불일치가 함께 확인됩니다. 전문적인 설명보다 실제 돈의 흐름과 피해 기록이 중요합니다.",
-          "supports": [
-            "scam"
-          ],
-          "availableAt": 0
-        },
-        {
-          "id": "evidence-3",
-          "source": "bank",
-          "kind": "neutral",
-          "key": false,
           "claimIds": [
             "claim-2"
           ],
-          "text": "이 운영사로 보낸 이체나 결제 기록은 아직 없습니다.",
-          "explanation": "아직 거래하지 않았다는 사실은 현재 내 손실이 없다는 뜻일 뿐, 운영 주체가 신뢰할 만하다는 뜻은 아닙니다.",
+          "text": "플랫폼의 수익 화면은 은행 입금 내역이 아니다. 거래 목록에서 출금과 입금을 따로 확인할 수 있다.",
+          "explanation": "독립된 경로에서 확인한 기록을 대화의 주장과 비교할 수 있습니다.",
+          "supports": [
+            "scam"
+          ],
+          "availableAt": 0
+        },
+        {
+          "id": "success-post",
+          "source": "home",
+          "kind": "neutral",
+          "key": false,
+          "claimIds": [
+            "claim-3"
+          ],
+          "text": "서로 다른 이름의 게시물에 동일한 주문 시각과 같은 일부 화면이 반복된다. 전체 손익 내역은 보이지 않는다.",
+          "explanation": "그럴듯해 보이지만 이 자료만으로 상대나 거래를 확인할 수 없습니다.",
           "supports": [],
           "availableAt": 0
         },
         {
-          "id": "evidence-4",
-          "source": "home",
+          "id": "subscription",
+          "source": "cafe",
           "kind": "misleading",
           "key": false,
           "claimIds": [
-            "claim-1",
             "claim-3"
           ],
-          "text": "복잡한 AI 그래프와 단체방의 감사 글이 보입니다.",
-          "explanation": "복잡한 그래프와 감사 글은 검증되지 않은 홍보 자료입니다. 전체 예측 기록이나 실제 출금 내역을 대신하지 못합니다.",
+          "text": "지난주 시장 노트 알림을 신청했다. 정보 구독은 거래 위탁이나 송금 동의가 아니다.",
+          "explanation": "그럴듯해 보이지만 이 자료만으로 상대나 거래를 확인할 수 없습니다.",
           "supports": [],
           "availableAt": 0
         }
       ],
       "appropriateActions": [
-        "block",
-        "report"
+        "verify",
+        "pause"
       ],
       "optimalSources": [
-        "library",
-        "police"
+        "bank",
+        "library"
       ],
-      "riskConsequence": "제휴 절차를 따르면 추가 충전 요구와 출금 제한으로 이어질 수 있습니다.",
-      "takeaway": "AI 설명보다 전체 기록과 금전 흐름을 확인하세요.",
-      "weakness": "사회적 증거",
+      "riskConsequence": "가상 잔액이 줄고 미해결 연락이 남는다.",
+      "takeaway": "수익 화면과 내 계좌의 돈은 달랐다. 실제 거래와 독립 기록을 비교할 수 있었다.",
+      "weakness": "화면 속 수익",
       "variant": {
-        "sender": "데이터픽 AI · 자료 안내",
-        "preview": "분석 자료의 표본을 보내드립니다. 확인하고 싶은 내용을 말씀해 주세요."
+        "sender": "온결 리서치",
+        "preview": "시장 노트 구독자분께 오늘 자료를 공유합니다."
       }
+    },
+    "story": {
+      "title": "화면 속 수익",
+      "time": 840,
+      "tone": "afternoon",
+      "intro": "점심 이후. 구독해 둔 시장 노트에서 새로운 알림이 도착했다.",
+      "amount": 300000,
+      "recipient": "온결 파트너",
+      "purpose": "투자 참여",
+      "aiLimit": 2,
+      "evidence": [
+        {
+          "id": "official-record",
+          "app": "browser",
+          "title": "금융회사 정보 확인",
+          "text": "게임 내 공식 조회: 온결 리서치와 안내받은 수취인의 위탁 관계를 확인할 자료가 없다. 등록 여부만으로 특정 거래가 안전하다는 뜻도 아니다.",
+          "key": true
+        },
+        {
+          "id": "ledger",
+          "app": "bank",
+          "title": "은행 거래 원장",
+          "text": "플랫폼의 수익 화면은 은행 입금 내역이 아니다. 거래 목록에서 출금과 입금을 따로 확인할 수 있다.",
+          "key": true
+        },
+        {
+          "id": "success-post",
+          "app": "browser",
+          "title": "참여자 성공 자료",
+          "text": "서로 다른 이름의 게시물에 동일한 주문 시각과 같은 일부 화면이 반복된다. 전체 손익 내역은 보이지 않는다.",
+          "key": false
+        },
+        {
+          "id": "subscription",
+          "app": "messages",
+          "title": "기존 구독 기록",
+          "text": "지난주 시장 노트 알림을 신청했다. 정보 구독은 거래 위탁이나 송금 동의가 아니다.",
+          "key": false
+        }
+      ],
+      "stages": [
+        {
+          "id": "arrival",
+          "messages": [
+            {
+              "speaker": "온결 리서치",
+              "text": "시장 노트 구독자분께 오늘 자료를 공유합니다."
+            },
+            {
+              "speaker": "온결 리서치",
+              "text": "방에서는 다른 분들의 질문도 함께 보실 수 있어요."
+            }
+          ],
+          "actions": [
+            {
+              "type": "advance",
+              "label": "자료방 들어가기"
+            }
+          ],
+          "next": "group"
+        },
+        {
+          "id": "group",
+          "messages": [
+            {
+              "speaker": "유진",
+              "text": "어제부터 설명 보고 있어요. 표가 많아서 천천히 읽는 중이에요."
+            },
+            {
+              "speaker": "민석",
+              "text": "제 화면은 바뀌었네요. 이번엔 타이밍이 맞았나 봐요."
+            },
+            {
+              "speaker": "온결 리서치",
+              "text": "개별 화면은 서로 다를 수 있습니다. 관심 있는 분은 안내를 확인하세요."
+            },
+            {
+              "speaker": "지수",
+              "text": "출금은 어떤 화면에서 하는 건가요?"
+            },
+            {
+              "speaker": "온결 리서치",
+              "text": "참여 이후 이용 화면에서 안내됩니다."
+            }
+          ],
+          "actions": [
+            {
+              "type": "platform",
+              "label": "투자 화면 열기"
+            },
+            {
+              "type": "advance",
+              "label": "참여 안내 듣기"
+            }
+          ],
+          "next": "offer"
+        },
+        {
+          "id": "offer",
+          "messages": [
+            {
+              "speaker": "온결 리서치",
+              "text": "자료 열람과 참여는 별도입니다. 받는 이름을 포함한 안내를 남겼습니다."
+            },
+            {
+              "speaker": "민석",
+              "text": "저는 먼저 진행해 두고 저녁에 다시 보려고요."
+            },
+            {
+              "speaker": "온결 리서치",
+              "text": "궁금한 것은 이 대화에서 말씀해 주세요."
+            }
+          ],
+          "actions": [
+            {
+              "type": "transfer",
+              "label": "참여 안내 보기"
+            },
+            {
+              "type": "platform",
+              "label": "투자 화면 살펴보기"
+            }
+          ]
+        },
+        {
+          "id": "paid",
+          "messages": [
+            {
+              "speaker": "온결 리서치",
+              "text": "접수 내역을 확인했습니다. 이용 화면에서 상태를 보실 수 있습니다."
+            },
+            {
+              "speaker": "유진",
+              "text": "숫자가 바뀌었는데 은행 쪽에는 아직 안 보이네요."
+            }
+          ],
+          "actions": [
+            {
+              "type": "platform",
+              "label": "이용 화면 열기"
+            },
+            {
+              "type": "withdraw",
+              "label": "출금 요청하기"
+            }
+          ]
+        },
+        {
+          "id": "withdrawal",
+          "messages": [
+            {
+              "speaker": "온결 리서치",
+              "text": "현재 출금이 보류되어 있습니다. 별도 확인 비용 안내를 읽어 주세요."
+            },
+            {
+              "speaker": "지수",
+              "text": "처음 안내에는 그런 내용이 없었는데요."
+            },
+            {
+              "speaker": "알림",
+              "text": "지수의 메시지가 더 이상 표시되지 않는다."
+            },
+            {
+              "speaker": "민석",
+              "text": "저는 안내를 다시 보고 있어요."
+            }
+          ],
+          "actions": [
+            {
+              "type": "transfer",
+              "label": "추가 비용 안내 보기"
+            },
+            {
+              "type": "stop",
+              "label": "추가 요청 중단하기"
+            }
+          ]
+        },
+        {
+          "id": "extra-paid",
+          "messages": [
+            {
+              "speaker": "온결 리서치",
+              "text": "확인 중입니다. 담당자가 답변할 때까지 기다려 주세요."
+            },
+            {
+              "speaker": "알림",
+              "text": "잠시 뒤, 출금 상태는 그대로다. 새로운 안내는 오지 않는다."
+            }
+          ],
+          "actions": [
+            {
+              "type": "finish",
+              "label": "기록을 남기고 하루 이어가기"
+            }
+          ]
+        }
+      ]
     }
   },
   {
     "id": "recovery-team",
-    "sender": "공동피해 회복센터",
-    "handle": "[Web발신] 미등록 발신자",
-    "channel": "문자",
-    "mode": "link",
-    "preview": "리딩방 피해자 명단에서 연락드렸습니다.",
+    "sender": "회복 지원 상담",
+    "handle": "상담 접수 · 처음 온 연락",
+    "channel": "메신저",
+    "mode": "chat",
+    "preview": "이용 관련 안내를 받아보실 수 있는 분께 연락드렸습니다.",
     "verdict": "scam",
-    "category": "피해금 회수 사기",
+    "category": "돌려받을 수 있습니다",
     "initialMessages": [
-      "최근 폐쇄된 투자방 피해자 명단에서 연락드렸습니다.",
-      "해외 서버에 남은 잔액을 확인해 드리며 초기 상담은 무료입니다."
+      "이용 관련 안내를 받아보실 수 있는 분께 연락드렸습니다.",
+      "기존 내역과 관계없이 우선 안내를 읽어 보셔도 됩니다."
     ],
-    "role": "피해자를 다시 노리는 가상의 피해금 조회 링크",
-    "npcGoal": "공식기관처럼 보이는 페이지에서 개인정보 또는 가상의 처리 비용 제공으로 유도한다.",
+    "role": "돌려받을 수 있습니다 속 가상 연락 상대",
+    "npcGoal": "정해진 대화 소재 안에서 상대 역할을 표현한다. 거래 결과나 플레이어의 과거를 추측하지 않는다.",
     "allowedClaims": [
-      "피해자 명단을 확보했다고 주장",
-      "초기 무료 상담",
-      "환급 가능성을 암시"
+      "상담 계정은 회복 지원이라는 명칭을 사용한다.",
+      "이 상담자는 플레이어의 손실이나 거래 정보를 확인한 기관이 아니다.",
+      "공식 접수와 이 계정의 선입금 안내는 연결되어 있지 않다.",
+      "수수료를 먼저 내면 회복된다는 안내는 독립 확인되지 않았다."
     ],
     "sceneCues": [
       {
-        "id": "prior-exposure",
+        "id": "routine",
         "app": "messages",
-        "sender": "낯선 상담 계정",
-        "title": "이전 이용 기록을 언급",
-        "detail": "앞서 열어 본 링크나 이어간 대화를 알고 있는 듯한 회수 상담이 도착했습니다.",
+        "sender": "일상",
+        "title": "오늘의 연락",
+        "detail": "저녁 약속을 마친 뒤. 처음 보는 상담 계정이 조용히 말을 건다.",
         "icon": "messages",
-        "tone": "warning",
-        "minuteOffset": 2,
+        "tone": "routine",
+        "minuteOffset": 1,
         "stage": "signal",
-        "interference": false,
-        "condition": "any-risk-exposure"
-      },
-      {
-        "id": "first-trace",
-        "app": "calls",
-        "sender": "회수 상담",
-        "title": "수신 전화",
-        "detail": "문자와 같은 이름을 쓴 번호가 전화를 걸었습니다.",
-        "icon": "calls",
-        "tone": "warning",
-        "minuteOffset": 4,
-        "stage": "signal",
-        "interference": false,
-        "presentation": "incoming-call"
-      },
-      {
-        "id": "repeat-caller",
-        "app": "calls",
-        "sender": "전화",
-        "title": "같은 이름의 번호 재접촉",
-        "detail": "문자 발신과 비슷한 이름의 번호가 다시 전화를 걸었습니다.",
-        "icon": "calls",
-        "tone": "warning",
-        "minuteOffset": 9,
-        "stage": "pressure",
-        "interference": false,
-        "silenceMs": 1900
-      },
-      {
-        "id": "second-harm-report",
-        "app": "browser",
-        "sender": "신고 조회",
-        "title": "유사 2차 피해 사례",
-        "detail": "피해 회수를 내세운 낯선 연락의 신고 사례가 확인됩니다.",
-        "icon": "browser",
-        "tone": "warning",
-        "minuteOffset": 15,
-        "stage": "decision",
         "interference": false
       }
     ],
+    "fallbackReplies": [
+      "이 대화에서 설명드린 절차가 현재 안내 자료입니다. 공식 접수 기록을 대신하는 문서는 아닙니다.",
+      "회복 지원 상담이라는 이름으로 안내하고 있습니다. 별도 기관 연결은 직접 확인하셔도 됩니다.",
+      "진행 결과는 아직 말씀드리기 어렵습니다. 확인되지 않은 부분이 있으면 질문해 주세요.",
+      "접수 비용을 별도로 안내하는 방식입니다. 공식 접수와 같은 절차라고 말씀드린 것은 아닙니다.",
+      "연락을 받으셔서 당황하셨겠어요. 우선 어떤 안내인지 읽어 보셔도 됩니다."
+    ],
+    "dialogue": {
+      "voice": "차분하고 짧은 존댓말. 질문에 직접 답한다.",
+      "progression": [
+        "처음 설명을 듣는 단계",
+        "자료의 내용을 비교하는 단계",
+        "추가 설명을 마무리하는 단계"
+      ],
+      "boundaries": [
+        "실제 회사·연락처·URL·계좌를 생성하지 않는다.",
+        "플레이어의 손실·입금·신원을 추측하지 않는다."
+      ],
+      "quickQuestions": [
+        "어느 기관 소속인가요?",
+        "상담 근거 자료는 어디 있나요?",
+        "비용을 먼저 내야 하나요?"
+      ],
+      "fallbackByTopic": {
+        "source": "이 대화에서 설명드린 절차가 현재 안내 자료입니다. 공식 접수 기록을 대신하는 문서는 아닙니다.",
+        "identity": "회복 지원 상담이라는 이름으로 안내하고 있습니다. 별도 기관 연결은 직접 확인하셔도 됩니다.",
+        "risk": "진행 결과는 아직 말씀드리기 어렵습니다. 확인되지 않은 부분이 있으면 질문해 주세요.",
+        "money": "접수 비용을 별도로 안내하는 방식입니다. 공식 접수와 같은 절차라고 말씀드린 것은 아닙니다.",
+        "default": "연락을 받으셔서 당황하셨겠어요. 우선 어떤 안내인지 읽어 보셔도 됩니다."
+      },
+      "fallbackByEmotion": {
+        "friendly": "내용부터 차근차근 설명드리겠습니다.",
+        "evasive": "연락 가능한 분께 접수 절차를 안내하는 중입니다.",
+        "deflecting": "공식 창구에서는 별도로 확인하실 수 있습니다.",
+        "pressuring": "오늘 접수 안내는 정리하고 있습니다.",
+        "disappointed": "이번 안내를 받지 않으셔도 여기서 마무리하겠습니다.",
+        "closed": "이후 연락하지 않고 상담을 종료하겠습니다."
+      }
+    },
     "checks": {
-      "police": "공식 신고 창구는 해당 회복기관이 없으며 회복을 이유로 접수비를 먼저 송금하는 절차도 없다고 안내합니다.",
-      "library": "센터 주소와 자격 정보를 확인할 수 없습니다.",
-      "bank": "이 운영사로 보낸 이체나 결제 기록은 아직 없습니다.",
-      "home": "이전에 봤던 투자·예측 내용을 아는 듯한 설명이 있습니다."
+      "bank": "게임 내 공식 창구: 먼저 거래와 대화 기록을 보관해 접수한다. 낯선 상담 계정에 선입금하는 절차는 안내하지 않는다. 접수가 곧 환급을 뜻하지는 않는다.",
+      "library": "저장된 기관 연락처와 연결되지 않은 새 계정이다. 이 이름만으로 소속이나 권한을 확인할 수 없다.",
+      "home": "회복 접수라는 별도 수취인. 이전 거래의 환급 입금 기록은 없고 비용 출금 요청만 있다.",
+      "cafe": "오늘의 확인 기록은 이 기기에만 있다. 상담 상대에게 내 거래 내역을 전달한 적이 없다."
     },
     "clueLabels": [
-      "공식 신고 창구는 해당 회복기관이 없으며 회복을 이유로 접수비를 먼저 송금하는 절차도 없다고 안내합니다.",
-      "센터 주소와 자격 정보를 확인할 수 없습니다."
+      "공식 접수 안내",
+      "상담 연락처 확인"
     ],
-    "debrief": "회복을 이유로 먼저 돈을 요구하면 공식 신고 창구에서 확인하세요.",
-    "safeAction": "추가 정보 제공을 멈추고 금융감독원 1332 또는 경찰 112의 공식 경로로 상담합니다.",
-    "displayUrl": "asset-return-check.invalid/start",
-    "linkLabel": "남은 잔액 조회",
-    "landingTitle": "해외 플랫폼 피해 자산 조회",
-    "landingCopy": "피해 계정 확인을 위해 이름과 이용 플랫폼 정보를 준비하라고 안내합니다. 운영 주체와 자격 정보는 표시되어 있지 않습니다.",
-    "landingCta": "조회 절차 시작",
+    "debrief": "해결을 약속하는 친절함도 확인이 필요했다. 추가 지급을 멈추고 내 기록을 보관할 수 있었다.",
+    "safeAction": "독립된 경로에서 확인하고 필요한 기록을 보관한다.",
     "review": {
       "sourceBasis": [
-        "이미 투자 사기를 겪은 피해자에게 접근해 환급·회수를 빌미로 추가 비용과 정보를 요구하는 2차 사기 유형"
+        "공식 메신저피싱·투자리딩방·손실보상 사칭 예방 자료. ROADMAP.md의 유형 근거 참조."
       ],
-      "adaptationScope": "실존 피해자 명단과 기관을 사용하지 않고 절박함을 이용하는 재접근 구조만 합성했습니다.",
-      "verdictReason": "공식기관으로 확인되지 않는 주체가 피해 사실을 먼저 언급하고 환급 가능성을 미끼로 추가 정보를 요구합니다.",
+      "adaptationScope": "모든 인물·금액·서비스는 창작한 가상 정보이며 실제 접속·송금은 없다.",
+      "verdictReason": "상담 계정은 회복 지원이라는 명칭을 사용한다. 이 상담자는 플레이어의 손실이나 거래 정보를 확인한 기관이 아니다. 공식 접수와 이 계정의 선입금 안내는 연결되어 있지 않다. 수수료를 먼저 내면 회복된다는 안내는 독립 확인되지 않았다.",
       "verificationPaths": [
-        "수사기관의 공식 상담 경로에서 기관 존재 여부 확인",
-        "운영 주체의 주소·등록·자격 정보 독립 검색"
+        "공식 접수 안내",
+        "상담 연락처 확인"
       ],
       "misdirection": [
-        "피해 사실을 이미 안다는 신뢰 신호",
-        "초기 무료 상담",
-        "회복 가능성에 대한 절박함"
+        "이름의 친숙함과 정돈된 화면은 실제 신원·거래의 증거와 다르다."
       ],
       "learningObjectives": [
-        "주장과 독립 확인 경로를 연결한다.",
-        "판별과 대응·확신도를 별도로 검토한다.",
-        "회복을 이유로 먼저 돈을 요구하면 공식 신고 창구에서 확인하세요."
+        "확인한 기록과 주장을 구분한다.",
+        "추가 행동 전에 독립 확인한다."
       ],
       "safetyAudit": {
         "containsPersonalData": false,
@@ -1120,91 +835,198 @@
       "claims": [
         {
           "id": "claim-1",
-          "text": "공식 회복기관인가?"
+          "text": "상담 계정은 회복 지원이라는 명칭을 사용한다."
         },
         {
           "id": "claim-2",
-          "text": "회복을 위해 선입금이 필요한가?"
+          "text": "이 상담자는 플레이어의 손실이나 거래 정보를 확인한 기관이 아니다."
         },
         {
           "id": "claim-3",
-          "text": "내 과거를 아는 것이 신뢰의 증거인가?"
+          "text": "공식 접수와 이 계정의 선입금 안내는 연결되어 있지 않다."
         }
       ],
       "evidence": [
         {
-          "id": "evidence-1",
-          "source": "police",
+          "id": "official-help",
+          "source": "bank",
           "kind": "decisive",
-          "key": true,
-          "claimIds": [
-            "claim-1",
-            "claim-2"
-          ],
-          "text": "공식 신고 창구는 해당 회복기관이 없으며 회복을 이유로 접수비를 먼저 송금하는 절차도 없다고 안내합니다.",
-          "explanation": "독립적인 공식 창구가 기관의 실재와 접수비 절차를 모두 부인했습니다. 상대의 주장과 직접 모순되는 근거입니다.",
-          "supports": [
-            "scam"
-          ],
-          "availableAt": 0
-        },
-        {
-          "id": "evidence-2",
-          "source": "library",
-          "kind": "signal",
           "key": true,
           "claimIds": [
             "claim-1"
           ],
-          "text": "센터 주소와 자격 정보를 확인할 수 없습니다.",
-          "explanation": "기관 주소와 자격을 독립 확인할 수 없습니다. 공식 창구의 부인과 함께 보면 권위 있는 이름을 신뢰할 이유가 없습니다.",
+          "text": "게임 내 공식 창구: 먼저 거래와 대화 기록을 보관해 접수한다. 낯선 상담 계정에 선입금하는 절차는 안내하지 않는다. 접수가 곧 환급을 뜻하지는 않는다.",
+          "explanation": "독립된 경로에서 확인한 기록을 대화의 주장과 비교할 수 있습니다.",
           "supports": [
             "scam"
           ],
           "availableAt": 0
         },
         {
-          "id": "evidence-3",
-          "source": "bank",
-          "kind": "neutral",
-          "key": false,
+          "id": "contact-history",
+          "source": "library",
+          "kind": "decisive",
+          "key": true,
           "claimIds": [
             "claim-2"
           ],
-          "text": "이 운영사로 보낸 이체나 결제 기록은 아직 없습니다.",
-          "explanation": "새로운 출금이 없다는 사실은 아직 추가 손실이 없다는 뜻입니다. 회복 약속의 진위를 증명하지는 않습니다.",
+          "text": "저장된 기관 연락처와 연결되지 않은 새 계정이다. 이 이름만으로 소속이나 권한을 확인할 수 없다.",
+          "explanation": "독립된 경로에서 확인한 기록을 대화의 주장과 비교할 수 있습니다.",
+          "supports": [
+            "scam"
+          ],
+          "availableAt": 0
+        },
+        {
+          "id": "fee-note",
+          "source": "home",
+          "kind": "neutral",
+          "key": false,
+          "claimIds": [
+            "claim-3"
+          ],
+          "text": "회복 접수라는 별도 수취인. 이전 거래의 환급 입금 기록은 없고 비용 출금 요청만 있다.",
+          "explanation": "그럴듯해 보이지만 이 자료만으로 상대나 거래를 확인할 수 없습니다.",
           "supports": [],
           "availableAt": 0
         },
         {
-          "id": "evidence-4",
-          "source": "home",
+          "id": "case-record",
+          "source": "cafe",
           "kind": "misleading",
           "key": false,
           "claimIds": [
             "claim-3"
           ],
-          "text": "이전에 봤던 투자·예측 내용을 아는 듯한 설명이 있습니다.",
-          "explanation": "내가 본 자료를 안다는 말만으로 신원을 확인할 수 없습니다. 이전 반응에서 얻은 정보나 널리 뿌린 표현일 수 있습니다.",
+          "text": "오늘의 확인 기록은 이 기기에만 있다. 상담 상대에게 내 거래 내역을 전달한 적이 없다.",
+          "explanation": "그럴듯해 보이지만 이 자료만으로 상대나 거래를 확인할 수 없습니다.",
           "supports": [],
           "availableAt": 0
         }
       ],
       "appropriateActions": [
-        "report",
-        "block"
+        "verify",
+        "pause"
       ],
       "optimalSources": [
-        "police",
+        "bank",
         "library"
       ],
-      "riskConsequence": "접수비를 보내면 추가 피해와 개인정보 노출로 이어질 수 있습니다.",
-      "takeaway": "회복을 이유로 먼저 돈을 요구하면 공식 신고 창구에서 확인하세요.",
-      "weakness": "재접근 사칭",
+      "riskConsequence": "가상 잔액이 줄고 미해결 연락이 남는다.",
+      "takeaway": "해결을 약속하는 친절함도 확인이 필요했다. 추가 지급을 멈추고 내 기록을 보관할 수 있었다.",
+      "weakness": "돌려받을 수 있습니다",
       "variant": {
-        "sender": "공동피해 회복센터 · 상담 안내",
-        "preview": "이용 내역 확인을 도와드린다는 회복 상담 문자가 도착했습니다."
+        "sender": "회복 지원 상담",
+        "preview": "이용 관련 안내를 받아보실 수 있는 분께 연락드렸습니다."
       }
+    },
+    "story": {
+      "title": "돌려받을 수 있습니다",
+      "time": 1190,
+      "tone": "night",
+      "intro": "저녁 약속을 마친 뒤. 처음 보는 상담 계정이 조용히 말을 건다.",
+      "amount": 50000,
+      "recipient": "회복 접수",
+      "purpose": "접수 비용",
+      "aiLimit": 1,
+      "evidence": [
+        {
+          "id": "official-help",
+          "app": "browser",
+          "title": "공식 접수 안내",
+          "text": "게임 내 공식 창구: 먼저 거래와 대화 기록을 보관해 접수한다. 낯선 상담 계정에 선입금하는 절차는 안내하지 않는다. 접수가 곧 환급을 뜻하지는 않는다.",
+          "key": true
+        },
+        {
+          "id": "contact-history",
+          "app": "calls",
+          "title": "상담 연락처 확인",
+          "text": "저장된 기관 연락처와 연결되지 않은 새 계정이다. 이 이름만으로 소속이나 권한을 확인할 수 없다.",
+          "key": true
+        },
+        {
+          "id": "fee-note",
+          "app": "bank",
+          "title": "접수 비용 수취인",
+          "text": "회복 접수라는 별도 수취인. 이전 거래의 환급 입금 기록은 없고 비용 출금 요청만 있다.",
+          "key": false
+        },
+        {
+          "id": "case-record",
+          "app": "messages",
+          "title": "공유하지 않은 기록",
+          "text": "오늘의 확인 기록은 이 기기에만 있다. 상담 상대에게 내 거래 내역을 전달한 적이 없다.",
+          "key": false
+        }
+      ],
+      "stages": [
+        {
+          "id": "arrival",
+          "messages": [
+            {
+              "speaker": "회복 지원 상담",
+              "text": "이용 관련 안내를 받아보실 수 있는 분께 연락드렸습니다."
+            },
+            {
+              "speaker": "회복 지원 상담",
+              "text": "기존 내역과 관계없이 우선 안내를 읽어 보셔도 됩니다."
+            }
+          ],
+          "actions": [
+            {
+              "type": "advance",
+              "label": "어떤 안내인지 읽기"
+            }
+          ],
+          "next": "offer"
+        },
+        {
+          "id": "offer",
+          "messages": [
+            {
+              "speaker": "회복 지원 상담",
+              "text": "회복이나 보상 절차에 관심이 있으시면 접수 안내를 확인해 주세요."
+            },
+            {
+              "speaker": "회복 지원 상담",
+              "text": "본인 상황은 아직 모르니 먼저 자료부터 설명드리겠습니다."
+            },
+            {
+              "speaker": "회복 지원 상담",
+              "text": "접수 비용 안내가 별도로 있습니다. 질문은 이곳에 남겨 주세요."
+            }
+          ],
+          "actions": [
+            {
+              "type": "transfer",
+              "label": "접수 안내 보기"
+            },
+            {
+              "type": "help",
+              "label": "공식 접수 찾아보기"
+            }
+          ]
+        },
+        {
+          "id": "paid",
+          "messages": [
+            {
+              "speaker": "회복 지원 상담",
+              "text": "접수 내용 확인 중입니다."
+            },
+            {
+              "speaker": "알림",
+              "text": "한참 뒤 다시 열어도, 상담 상태는 확인 중으로 남아 있다."
+            }
+          ],
+          "actions": [
+            {
+              "type": "finish",
+              "label": "오늘의 연락 정리하기"
+            }
+          ]
+        }
+      ]
     }
   }
 ]

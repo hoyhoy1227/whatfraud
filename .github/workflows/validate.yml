@@ -30,13 +30,15 @@ jobs:
       - run: node scripts/check-security.mjs
       - run: node scripts/test-ai-chat.mjs
       - run: node scripts/test-budget.mjs
-      - run: node scripts/test-training.mjs
-      - run: node scripts/test-progress.mjs
-      - run: node scripts/test-training-ui.mjs
+      - run: node scripts/test-story.mjs
+      - run: node scripts/test-story-ui.mjs
       - run: pnpm lint
-      - run: pnpm exec tsc --noEmit
-      - run: pnpm build
-      - run: node scripts/check-dependencies.mjs
+      - if: ${{ !cancelled() }}
+        run: pnpm exec tsc --noEmit
+      - if: ${{ !cancelled() }}
+        run: pnpm build
+      - if: ${{ !cancelled() }}
+        run: node scripts/check-dependencies.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: whatfraud-build
