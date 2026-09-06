@@ -5,7 +5,7 @@ import ts from 'typescript';
 const cases = JSON.parse(await readFile(new URL('../content/generated/cases.json', import.meta.url), 'utf8'));
 const dialogueSource = await readFile(new URL('../app/ai-dialogue.ts', import.meta.url), 'utf8');
 const routeSource = await readFile(new URL('../app/api/ai-chat/route.ts', import.meta.url), 'utf8');
-const clientSource = await readFile(new URL('../app/game-client.tsx', import.meta.url), 'utf8');
+const clientSource = await readFile(new URL('../app/story/story-client.tsx', import.meta.url), 'utf8');
 const compile = (source) => ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
 const moduleUrl = (source) => 'data:text/javascript;base64,' + Buffer.from(compile(source)).toString('base64');
 const dialogueUrl = moduleUrl(dialogueSource);
@@ -21,7 +21,7 @@ async function freshRoute() {
 const request = (text = 'この質問', session = 'test-session-000001', overrides = {}) => new Request('https://example.invalid/api/ai-chat', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'x-whatfraud-session': session, 'cf-connecting-ip': '192.0.2.1' },
-  body: JSON.stringify({ caseId: 'friend-hot-tip', messages: [{ role: 'user', content: text }], userTurnCount: 1, ...overrides }),
+  body: JSON.stringify({ caseId: 'paper-profit', messages: [{ role: 'user', content: text }], userTurnCount: 1, ...overrides }),
 });
 let calls = 0;
 const originalFetch = globalThis.fetch;
@@ -106,10 +106,10 @@ try {
     }
   }
   assert.equal(calls, 0, 'all recommended questions bypass Gemini on the server');
-  const friend = cases.find((item) => item.id === 'friend-hot-tip');
+  const friend = cases.find((item) => item.id === 'paper-profit');
   const prompt = dialogue.buildSystemPrompt(friend, [{ role: 'user', content: '어떻게 생각해?' }], 1);
   assert.ok(prompt.includes(friend.dialogue.progression[0]), 'first reply uses first story stage');
-  assert.ok(dialogue.buildSystemPrompt(friend, [{ role: 'user', content: '설명 부탁해' }], 5).includes('감정과 대응: friendly'));
+  assert.ok(dialogue.buildSystemPrompt(friend, [{ role: 'user', content: '설명 부탁해' }], 5).includes('새 증거·수익·조건·연락·사건을 만들어내지 않는다'));
   // Spacing applies to novel questions, but never stops a scripted reply.
   route = await freshRoute();
   await route.POST(request('새로운 질문 첫째'));
@@ -119,17 +119,14 @@ try {
   assert.equal(calls, 1);
   clock += 11_000;
   assert.equal((await route.POST(request('새로운 질문 셋째'))).status, 200, 'rejected attempt must not extend spacing');
-  for (const text of ['새로운 질문 넷째', '새로운 질문 다섯째']) {
-    clock += 12_000;
-    assert.equal((await route.POST(request(text))).status, 200);
-  }
+
   clock += 12_000;
   assert.equal((await route.POST(request('새로운 질문 여섯째'))).status, 429);
-  assert.equal(calls, 4, 'case budget allows only four generation attempts');
+  assert.equal(calls, 2, 'investment scene permits only two generation attempts');
   assert.equal((await (await route.POST(request('네'))).json()).provider, 'scripted');
-  assert.ok(clientSource.includes('getScriptedReply(activeCase, nextMessages)'));
-  const statusCheck = clientSource.slice(clientSource.indexOf('async function checkModel'), clientSource.indexOf('async function sendMessage'));
-  assert.ok(!statusCheck.includes('requestGemini('), 'settings check must not generate');
+  assert.ok(clientSource.includes('getScriptedReply(activeCase,messages)'));
+  const statusCheck = clientSource.slice(clientSource.indexOf('async function checkModel'), clientSource.indexOf('const content='));
+  assert.ok(!statusCheck.includes("method:'POST'"), 'settings check must not generate');
   await testClientCancellation();
   await testSecurity();
   for (const outcome of ['exhausted','unavailable']) {
@@ -152,51 +149,30 @@ try {
 }
 
 async function testClientCancellation() {
-  // Run the actual client handlers with deterministic React-state stand-ins.
-  const cancel = clientSource.slice(clientSource.indexOf('  function cancelPendingReply'), clientSource.indexOf('  async function requestGemini'));
-  const send = clientSource.slice(clientSource.indexOf('  async function sendMessage'), clientSource.indexOf('  function verifySource'));
-  const block = clientSource.slice(clientSource.indexOf('  function blockActiveContact'), clientSource.indexOf('  function openCase'));
-  const harnessUrl = moduleUrl(`
-    import { getScriptedReply, buildFallbackReply as fallbackReply } from ${JSON.stringify(dialogueUrl)};
-    export function harness(activeCase, pending) {
-      let draft = '자료 공개 범위는 어떻게 정해졌나요?';
-      const activeChat = [];
-      const activeResult = false, activeContactBlocked = false;
-      const sendingRef = {current:false}, requestSequence={current:0}, activeRequest={current:new AbortController()};
-      const aiPausedUntil={current:0}, lastAiRequestAt={current:0}, aiCallsByCase={current:{}}, typingCueTimers={current:[]};
-      let chats={}, blocked={}, sending=false, feedback=0, requests=0;
-      const preferences={};
-      const window={setTimeout:()=>0,clearTimeout:()=>{}};
-      const wait=async()=>{};
-      const setChats=fn=>{chats=fn(chats)}, setBlockedContacts=fn=>{blocked=fn(blocked)};
-      const setDraft=v=>{draft=v}, setSending=v=>{sending=v};
-      const clearTypingCueTimers=()=>{},setTypingPhase=()=>{},setLastResponseMs=()=>{},setFallbackReason=()=>{},setModelState=()=>{};
-      const setSelectedAction=()=>{},setNotice=()=>{},explainFallback=()=>'',playPhoneFeedback=()=>{feedback++};
-      const requestGemini=()=>{requests++;return pending};
-      ${cancel}\n${send}\n${block}
-      const controller=activeRequest.current;
-      return {send:()=>sendMessage({preventDefault(){}}),block:blockActiveContact,cancel:cancelPendingReply,
-        snapshot:()=>({chats,blocked,sending,feedback,requests,aborted:controller.signal.aborted})};
-    }`);
-  const {harness} = await import(harnessUrl);
-  const friend = cases.find(item=>item.id==='friend-hot-tip');
-  for (const action of ['block','cancel']) {
-    let resolve;
-    const pending = new Promise(done=>{resolve=done});
-    const client = harness(friend,pending);
-    const first = client.send();
-    await client.send();
-    assert.equal(client.snapshot().requests,1,'double submit must not race');
-    client[action]();
-    resolve({reply:'뒤늦게 도착한 답변',provider:'gemini'});
-    await first;
-    const state = client.snapshot();
-    assert.equal(state.aborted,true);
-    assert.equal(state.sending,false);
-    assert.equal(state.feedback,0);
-    assert.equal(state.chats[friend.id].filter(message=>message.role==='assistant').length,0,'late reply must not reach chat');
-    if(action==='block') assert.equal(state.blocked[friend.id],true);
+  const {ReplyGate}=await import('../app/story/reply-gate.js');
+  for(const context of ['block','app-switch','chapter','pause','unmount','rewind']){
+    const gate=new ReplyGate();let release,requests=0,accepted=0,signal;
+    const pending=new Promise(resolve=>{release=resolve;});
+    const first=gate.run(async value=>{signal=value;requests++;await pending;return 'late';},()=>{accepted++;});
+    await gate.run(async()=>{requests++;return 'duplicate';},()=>{accepted++;});
+    assert.equal(requests,1,context+': double submit');
+    gate.cancel();release();await first;
+    assert.equal(signal.aborted,true,context);
+    assert.equal(accepted,0,context+': stale reply');
+    assert.equal(gate.pending,null);
   }
+  const gate=new ReplyGate();let result;
+  await gate.run(async()=> 'local fallback',value=>{result=value;});
+  assert.equal(result,'local fallback');
+  for(const [caseId,limit] of [['familiar-request',1],['recovery-team',1]]){
+    const route=await freshRoute();let requests=0;
+    globalThis.fetch=async()=>{requests++;return successful();};
+    assert.equal((await route.POST(request('novel first','case-limit-session',{caseId}))).status,200);
+    clock+=12000;
+    assert.equal((await route.POST(request('novel second','case-limit-session',{caseId}))).status,429);
+    assert.equal(requests,limit);
+  }
+  globalThis.fetch=async()=>{calls++;return successful();};
 }
 
 async function testSecurity() {

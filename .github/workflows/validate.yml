@@ -30,9 +30,8 @@ jobs:
       - run: node scripts/check-security.mjs
       - run: node scripts/test-ai-chat.mjs
       - run: node scripts/test-budget.mjs
-      - run: node scripts/test-training.mjs
-      - run: node scripts/test-progress.mjs
-      - run: node scripts/test-training-ui.mjs
+      - run: node scripts/test-story.mjs
+      - run: node scripts/test-story-ui.mjs
       - run: pnpm lint
       - run: pnpm exec tsc --noEmit
       - run: pnpm build

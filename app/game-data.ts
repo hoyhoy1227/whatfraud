@@ -65,7 +65,14 @@ export type TrainingProfile = {
   variant: { sender: string; preview: string };
 };
 
+export type StoryProfile = {
+  title:string; time:number; tone:string; intro:string; amount:number; recipient:string; purpose:string; aiLimit:number;
+  evidence:{id:string;app:string;title:string;text:string;key:boolean}[];
+  stages:{id:string;messages:{speaker:string;text:string}[];actions:{type:string;label:string}[];next?:string}[];
+};
+
 export type CaseData = {
+  story: StoryProfile;
   training: TrainingProfile;
   id: string;
   sender: string;
@@ -151,13 +158,10 @@ export function validateCases(items: CaseData[]) {
     if (/https?:\/\//i.test(allText)) errors.push(`${item.id}: 검수 콘텐츠에 실제 접속 형식의 URL이 포함되어 있습니다.`);
   }
 
-  for (const verdict of Object.keys(verdictCounts) as Verdict[]) {
-    if (verdictCounts[verdict] < 2) errors.push(`${verdict}: 판정 사례가 2개 미만입니다.`);
+  if(items.map(item=>item.id).join(',')!=='familiar-request,paper-profit,recovery-team')errors.push('승인된 3막 순서가 아닙니다.');
+  for(const item of items){
+    if(item.mode!=='chat'||!item.story?.stages?.length||!item.story?.evidence?.length)errors.push(item.id+': 이야기 데이터가 없습니다.');
   }
-  for (const mode of Object.keys(modeCounts) as ContactMode[]) {
-    if (modeCounts[mode] < 2) errors.push(`${mode}: 연락 표현 사례가 2개 미만입니다.`);
-  }
-
   return errors;
 }
 
