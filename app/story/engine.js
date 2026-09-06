@@ -1,5 +1,12 @@
 import chapters from '../../content/generated/cases.json' with { type: 'json' };
 
+/**
+ * @typedef {{type:string,chapter:number,data:string}} StoryEvent
+ * @typedef {{id:string,chapter:number,amount:number,recipient:string,purpose:string,time:string}} Transaction
+ * @typedef {{chapter:number,kind:string,verified:boolean,spent:number}} Resolution
+ * @typedef {{version:number,mode:string,chapter:number,stage:string,visited:string[],events:StoryEvent[],transactions:Transaction[],inspected:string[],saved:string[],blocked:number[],calls:string[],cues:string[],read:string[],results:Resolution[],completed:boolean,joined:boolean}} Run
+ * @typedef {{type:string,chapter:number,data:string,index:number,title:string,label:string,takeaway:{title:string,seen:boolean}[]}} Pivot
+ */
 export { chapters };
 export const SAVE_KEY = 'whatfraud-story-v3';
 export const INITIAL_BALANCE = 680000;
@@ -15,6 +22,7 @@ export const gameTime = state => {
   const minute = currentCase(state).story.time + state.events.filter(e => e.chapter === state.chapter && e.type !== 'read').length;
   return String(Math.floor(minute / 60) % 24).padStart(2,'0') + ':' + String(minute % 60).padStart(2,'0');
 };
+/** @returns {Run} */
 export function createRun(mode = 'full') {
   return { version:3, mode:mode === 'demo' ? 'demo' : 'full', chapter:mode === 'demo' ? 1 : 0,
     stage:'arrival', visited:['arrival'], events:[], transactions:[], inspected:[], saved:[],
@@ -65,6 +73,7 @@ function settle(state,kind) {
   return true;
 }
 // Pure reducer: only bounded, known semantic actions are persisted. No chat text.
+/** @param {Run} input @param {StoryEvent} event @returns {Run} */
 export function transition(input,event) {
   if (!input || input.completed || !event || !validTypes.includes(event.type) || event.chapter!==input.chapter) return input;
   if (input.events.length>=600) return input;
@@ -133,6 +142,7 @@ export function serializeRun(state) {
   return JSON.stringify({version:3,mode:state.mode,events:state.events});
 }
 // Restore by replaying known actions, never by trusting saved balance or results.
+/** @returns {Run|null} */
 export function restoreRun(value) {
   try {
     const raw=typeof value==='string'?JSON.parse(value):value;
@@ -150,6 +160,7 @@ export function restoreRun(value) {
 export function replayBefore(state,eventIndex) {
   return restoreRun({version:3,mode:state.mode,events:state.events.slice(0,eventIndex)});
 }
+/** @returns {Pivot[]} */
 export function timeline(state) {
   return state.events.map((event,index)=>({...event,index})).filter(e=>['confirm','call','resolve'].includes(e.type)).map(e=>{
     const c=chapters[e.chapter];
