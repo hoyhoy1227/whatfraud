@@ -10,7 +10,7 @@ const aiRouteFile = path.join(root, 'app', 'api', 'ai-chat', 'route.ts');
 const aiDialogueFile = path.join(root, 'app', 'ai-dialogue.ts');
 const cssFile = path.join(root, 'app', 'globals.css');
 const envExampleFile = path.join(root, '.env.example');
-const apiKeyGuideFile = path.join(root, 'API_KEY_MANAGEMENT.md');
+const apiKeyGuideFile = path.join(root, 'OPERATIONS.md');
 const liveGeminiEvaluationFile = path.join(root, 'scripts', 'evaluate-live-gemini.mjs');
 
 function assert(condition, message, errors) {
