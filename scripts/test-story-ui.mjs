@@ -25,4 +25,9 @@ for(const label of ['저장된 준호에게 전화','출금 요청','보관한 �
 assert.ok(client.includes('showModal()')&&client.includes('onCancel='));
 assert.ok(client.includes('signal:providerController.signal')&&client.includes('practiceOriginal'));
 assert.ok(!/href=|tel:|mailto:|window.open|location.href/.test(client),'no external action escapes phone');
+assert.equal((rewind.match(/class="pivot"/g)||[]).length,3,'one summary per act');
+assert.ok(rewind.includes('이 순간으로 돌아가기')&&rewind.includes('pivot-details'));
+assert.ok(client.includes('message-dock')&&client.includes('보류·차단')&&client.includes("dialog==='reply'"));
+assert.ok(!client.includes('내용 확인하기'),'record titles are the affordance');
+assert.ok(client.includes("browserPage==='platform'?e.id==='success-post'"),'official records stay outside fake platform');
 console.log('Story UI SSR tests passed: ledger, endings, pivot labels and controls. Browser/device QA is separate.');
