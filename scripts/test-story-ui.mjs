@@ -21,7 +21,7 @@ const rewind=renderToStaticMarkup(createElement(ui.Rewind,{state,onReplay:noop,o
 assert.ok(rewind.includes('멈춰 세운 하루')&&rewind.includes('80,000원')&&rewind.includes('선택 직전'));
 assert.ok(rewind.includes('지나친 단서')&&!rewind.includes('정답률'));
 const client=await readFile('app/story/story-client.tsx','utf8');
-for(const label of ['저장된 준호에게 전화','출금 요청','보관한 자료로 접수','메모에 보관','가상 송금 확인','일단 보류하기','이 계정 차단하기','최근 앱','일시정지','움직임 줄이기','글자 크게'])assert.ok(client.includes(label),label);
+for(const label of ['저장된 준호에게 전화','출금 요청','보관한 자료로 접수','메모에 보관','보내기','일단 보류하기','이 계정 차단하기','최근 앱','일시정지','움직임 줄이기','글자 크게'])assert.ok(client.includes(label),label);
 assert.ok(client.includes('showModal()')&&client.includes('onCancel='));
 assert.ok(client.includes('signal:providerController.signal')&&client.includes('practiceOriginal'));
 assert.ok(!/href=|tel:|mailto:|window.open|location.href/.test(client),'no external action escapes phone');
@@ -31,3 +31,17 @@ assert.ok(client.includes('message-dock')&&client.includes('보류·차단')&&cl
 assert.ok(!client.includes('내용 확인하기'),'record titles are the affordance');
 assert.ok(client.includes("browserPage==='platform'?e.id==='success-post'"),'official records stay outside fake platform');
 console.log('Story UI SSR tests passed: ledger, endings, pivot labels and controls. Browser/device QA is separate.');
+
+assert.ok(client.includes('자유답변(개인정보는 입력하지 마세요)'));
+assert.ok(client.includes("dialog==='ai-choice'")&&client.includes('준비된 답장으로 시작'));
+assert.ok(client.includes('scheduleMessage')&&client.includes('visibleCount')&&client.includes('대화 바로 보기'));
+assert.ok(client.includes("inputMode:'free'")&&client.includes("if(!reply||"),'free failures never become unrelated NPC dialogue');
+const {scheduleMessage,messageDelay}=await import('../app/story/message-pacing.js');
+assert.ok(messageDelay('짧은 메시지')>=650);
+assert.ok(messageDelay('긴 메시지'.repeat(100))<=1600);
+assert.equal(messageDelay('문장',true),0);
+let callback,delivered=0,cleared=false;
+const cancel=scheduleMessage('문장',false,()=>delivered++,fn=>{callback=fn;return 1;},()=>{cleared=true;});
+cancel();callback();assert.equal(delivered,0);assert.equal(cleared,true);
+scheduleMessage('문장',false,()=>delivered++,fn=>{callback=fn;return 2;},()=>{});
+callback();assert.equal(delivered,1);

@@ -127,6 +127,14 @@ try {
   assert.ok(clientSource.includes('getScriptedReply(activeCase,messages)'));
   const statusCheck = clientSource.slice(clientSource.indexOf('async function checkModel'), clientSource.indexOf('const content='));
   assert.ok(!statusCheck.includes("method:'POST'"), 'settings check must not generate');
+  // Free input must use Gemini even when it resembles a canned topic.
+  route=await freshRoute();let captured;
+  globalThis.fetch=async(_url,options)=>{captured=JSON.parse(options.body);return successful();};
+  const freeReply=await (await route.POST(request('생각해 볼게','free-context-session',{inputMode:'free',stageId:'withdrawal'}))).json();
+  assert.equal(freeReply.provider,'gemini');
+  assert.ok(captured.systemInstruction.parts[0].text.includes('현재 단계: withdrawal'));
+  assert.ok(captured.systemInstruction.parts[0].text.includes('현재 출금이 보류'));
+  assert.equal((await route.POST(request('질문','invalid-scene-session',{inputMode:'free',stageId:'invented'}))).status,400);
   await testClientCancellation();
   await testSecurity();
   for (const outcome of ['exhausted','unavailable']) {

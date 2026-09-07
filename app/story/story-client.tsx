@@ -7,6 +7,7 @@ import { getScriptedReply, buildFallbackReply, sanitizePlayerText, validateAiRep
 import { chapters, createRun, currentCase, currentStage, transition, SAVE_KEY, serializeRun, restoreRun, replayBefore, evidenceFor, verified, offerFor, money, gameTime, isResolved, outcomeText, recoveryContext, chapterSpent } from './engine';
 import { budgetKey, restoreBudget } from './session-budget';
 import { ReplyGate } from './reply-gate';
+import { scheduleMessage } from './message-pacing';
 import { Ledger, Rewind } from './panels';
 type Run = ReturnType<typeof createRun>;
 type App = 'home'|'messages'|'calls'|'bank'|'browser'|'notes'|'settings';
@@ -22,9 +23,13 @@ export default function StoryClient(){
   const [chats,setChats]=useState<Record<string,Chat[]>>({}),[drafts,setDrafts]=useState<Record<string,string>>({});
   const [sending,setSending]=useState(false),[paused,setPaused]=useState(false),[note,setNote]=useState('');
   const [aiUsed,setAiUsed]=useState(0);
+  const [startRequest,setStartRequest]=useState<{mode:'full'|'demo';resume:boolean}>({mode:'full',resume:false});
+  const [aiConsent,setAiConsent]=useState(false);
+  const [revealed,setRevealed]=useState<Record<string,number>>({});
+  const [pageVisible,setPageVisible]=useState(true);
   const [aiAllowed,setAiAllowed]=useState(false),[modelStatus,setModelStatus]=useState('확인하지 않음'),[checking,setChecking]=useState(false);
   const [reduced,setReduced]=useState(false),[large,setLarge]=useState(false);
-  const [dialog,setDialog]=useState<'transfer'|'restart'|'reply'|'safety'|null>(null),[pendingOffer,setPendingOffer]=useState<ReturnType<typeof offerFor>>(null);
+  const [dialog,setDialog]=useState<'transfer'|'restart'|'reply'|'safety'|'ai-choice'|null>(null),[pendingOffer,setPendingOffer]=useState<ReturnType<typeof offerFor>>(null);
   const [practiceOriginal,setPracticeOriginal]=useState<Run|null>(null),[practiceDone,setPracticeDone]=useState(false);
   const gate=useRef(new ReplyGate()),scroll=useRef<HTMLDivElement>(null),positions=useRef<Record<string,number>>({});
   const mainSaved=useRef<Run|null>(null);
@@ -37,7 +42,19 @@ export default function StoryClient(){
   const readKey=state.chapter+':current',unread=!state.read.includes(readKey);
   const ownEvidence=evidenceFor(state).filter(e=>e.chapter===state.chapter);
   const scrollKey=state.chapter+':'+app+':'+thread+':'+browserPage;
-  const progressLocked=paused||state.completed||resolved;
+  const sceneKey=c.id+':'+state.stage;
+  const visibleCount=revealed[sceneKey]??0;
+  const sceneTyping=!resolved&&visibleCount<stage.messages.length;
+  const progressLocked=paused||state.completed||resolved||sceneTyping;
+  useEffect(()=>{
+    const update=()=>setPageVisible(!document.hidden);
+    document.addEventListener('visibilitychange',update);
+    return()=>document.removeEventListener('visibilitychange',update);
+  },[]);
+  useEffect(()=>{
+    if(!started||paused||dialog||showRecent||!pageVisible||app!=='messages'||thread!=='current'||!sceneTyping)return;
+    return scheduleMessage(stage.messages[visibleCount].text,reduced,()=>setRevealed(old=>({...old,[sceneKey]:reduced?stage.messages.length:visibleCount+1})));
+  },[started,paused,dialog,showRecent,pageVisible,app,thread,sceneTyping,stage.messages,visibleCount,reduced,sceneKey]);
   function cancelReply(){gate.current.cancel();setSending(false);}
   function act(type:string,data=''){
     if(!['inspect','save','read','cue'].includes(type))cancelReply();
@@ -74,7 +91,7 @@ export default function StoryClient(){
   },[scrollKey,app,thread]);
   useEffect(()=>{
     if(scroll.current?.classList.contains('app-messages'))scroll.current.scrollTop=scroll.current.scrollHeight;
-  },[state.stage,chat.length,resolved]);
+  },[state.stage,chat.length,resolved,visibleCount]);
   useEffect(()=>{
     if(dialog||paused||showRecent||practiceDone){if(!dialogRef.current?.open)dialogRef.current?.showModal();}
     else dialogRef.current?.close();
@@ -92,14 +109,17 @@ export default function StoryClient(){
     schedule();document.addEventListener('visibilitychange',schedule);
     return()=>{clearTimeout(timer);document.removeEventListener('visibilitychange',schedule);};
   },[started,paused,state.chapter,state.completed,resolved]);
+  function requestStart(mode:'full'|'demo',resume=false){
+    setStartRequest({mode,resume});setAiConsent(false);setDialog('ai-choice');
+  }
   function start(mode:'full'|'demo',resume=false){
     cancelReply();setNote('');setPracticeOriginal(null);setPracticeDone(false);
     if(resume&&mainSaved.current){setState(mainSaved.current);try{budget.current=restoreBudget(localStorage.getItem(budgetKey('full')),crypto.randomUUID(),'full');setAiUsed(budget.current.counts.reduce((a,b)=>a+b,0));}catch{setAiAllowed(false);}}
-    if(!resume){setState(createRun(mode));setChats({});setDrafts({});positions.current={};budget.current=restoreBudget(null,crypto.randomUUID(),mode);persistBudget();}
+    if(!resume){setRevealed({});setState(createRun(mode));setChats({});setDrafts({});positions.current={};budget.current=restoreBudget(null,crypto.randomUUID(),mode);persistBudget();}
     setStarted(true);setApp('home');setThread('current');setBrowserPage('start');setPaused(false);
   }
   function persistBudget(){setAiUsed(budget.current.counts.reduce((a,b)=>a+b,0));try{localStorage.setItem(budgetKey(budget.current.mode),JSON.stringify(budget.current));}catch{/* no chat or identity beyond random quota token */}}
-  async function send(text:string){
+  async function send(text:string,free=false){
     if(progressLocked||sending||gate.current.pending||state.blocked.includes(state.chapter)||chat.filter(m=>m.role==='user').length>=24)return;
     const clean=sanitizePlayerText(text);if(!clean)return;
     const chapter=state.chapter,id=c.id,stageId=state.stage;
@@ -107,31 +127,32 @@ export default function StoryClient(){
     for(const message of [...chat.map(({role,content})=>({role,content})),{role:'user' as const,content:clean}]){
       if(messages.at(-1)?.role===message.role)messages[messages.length-1]=message;else messages.push(message);
     }
-    const fallback=buildFallbackReply(activeCase,clean,messages),scripted=getScriptedReply(activeCase,messages);
+    const scripted=getScriptedReply(activeCase,messages);
+    const canGenerate=aiAllowed&&!practiceOriginal&&Date.now()>=budget.current.cooldown&&Date.now()-budget.current.last>=12000&&budget.current.counts[chapter]<c.story.aiLimit&&budget.current.counts.reduce((a,b)=>a+b,0)<4;
+    if(free&&!canGenerate){setNote(!aiAllowed?'자유답변은 AI 대화를 켜야 사용할 수 있습니다.':practiceOriginal?'되감기에서는 준비된 답장을 사용합니다.':budget.current.counts[chapter]>=c.story.aiLimit||aiUsed>=4?'이 장면의 AI 답장을 모두 사용했습니다. 준비된 답장으로 계속할 수 있습니다.':'AI 답장은 잠시 간격을 두고 보낼 수 있습니다. 입력은 남겨 두었습니다.');return;}
     setDrafts(old=>({...old,[id]:''}));setChats(old=>({...old,[id]:[...(old[id]??[]),{role:'user',content:clean,stage:stageId}]}));setSending(true);
     try{
       await gate.current.run(async(signal:AbortSignal)=>{
-        let reply=scripted??fallback;
-        const canGenerate=scripted===null&&aiAllowed&&!practiceOriginal&&Date.now()>=budget.current.cooldown&&Date.now()-budget.current.last>=12000&&budget.current.counts[chapter]<c.story.aiLimit&&budget.current.counts.reduce((a,b)=>a+b,0)<4;
-        if(canGenerate){
+        let reply=free?'':scripted??buildFallbackReply(activeCase,clean,messages);
+        if(free){
           budget.current.counts[chapter]++;budget.current.last=Date.now();persistBudget();
           const providerController=new AbortController();
           const abort=()=>providerController.abort();signal.addEventListener('abort',abort,{once:true});
           const timeout=setTimeout(abort,10000);
           try{
             const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':budget.current.session},signal:providerController.signal,
-              body:JSON.stringify({caseId:id,messages:messages.slice(-4),userTurnCount:chat.filter(m=>m.role==='user').length+1})});
+              body:JSON.stringify({caseId:id,stageId,inputMode:'free',messages:messages.slice(-4),userTurnCount:chat.filter(m=>m.role==='user').length+1})});
             const result=await response.json() as {reply?:unknown;provider?:string};
-            if(response.ok&&typeof result.reply==='string'&&validateAiReply(result.reply)){reply=result.reply;setModelStatus(result.provider==='gemini'?'AI 보조 응답 사용':'내장 대사 사용');}
-            else {budget.current.cooldown=Date.now()+60000;persistBudget();setModelStatus('내장 대사로 계속 진행');}
-          }catch{if(!signal.aborted){budget.current.cooldown=Date.now()+60000;persistBudget();setModelStatus('연결 없이 계속 진행');}}
+            if(!signal.aborted&&response.ok&&result.provider==='gemini'&&typeof result.reply==='string'&&validateAiReply(result.reply)){reply=result.reply;setModelStatus(result.provider==='gemini'?'AI 보조 응답 사용':'내장 대사 사용');}
+            else if(!signal.aborted){budget.current.cooldown=Date.now()+60000;persistBudget();setModelStatus('AI 답장 일시 중단');setNote('AI 답장을 받지 못했습니다. 준비된 답장을 선택하거나 잠시 뒤 다시 질문해 주세요.');setDrafts(old=>({...old,[id]:clean}));}
+          }catch{if(!signal.aborted){budget.current.cooldown=Date.now()+60000;persistBudget();setModelStatus('AI 연결 일시 중단');setNote('AI 연결이 지연되었습니다. 준비된 답장으로 계속할 수 있습니다.');setDrafts(old=>({...old,[id]:clean}));}}
           finally{clearTimeout(timeout);signal.removeEventListener('abort',abort);}
         }
         // Bounded typing pause for local lines, abortable on app/scene changes.
         if(!signal.aborted)await new Promise<void>(resolve=>{const timer=setTimeout(resolve,reduced?0:550);signal.addEventListener('abort',()=>{clearTimeout(timer);resolve();},{once:true});});
         return reply;
       },(reply:string)=>{
-        if(stateRef.current.chapter!==chapter||stateRef.current.stage!==stageId||isResolved(stateRef.current))return;
+        if(!reply||stateRef.current.chapter!==chapter||stateRef.current.stage!==stageId||isResolved(stateRef.current))return;
         setChats(old=>({...old,[id]:[...(old[id]??[]),{role:'assistant',content:reply,stage:stageId}]}));
       });
     }finally{setSending(Boolean(gate.current.pending));}
@@ -155,14 +176,14 @@ export default function StoryClient(){
   }
   function rewind(index:number){
     const original=practiceOriginal??state,value=replayBefore(original,index);if(!value)return;
-    cancelReply();setPracticeOriginal(original);setPracticeDone(false);setState(value);setChats({});setDrafts({});setApp('messages');setThread('current');setBrowserPage('start');setPaused(false);
+    cancelReply();setRevealed({});setPracticeOriginal(original);setPracticeDone(false);setState(value);setChats({});setDrafts({});setApp('messages');setThread('current');setBrowserPage('start');setPaused(false);
   }
   function exitPractice(){if(practiceOriginal){cancelReply();setState(practiceOriginal);setPracticeOriginal(null);setPracticeDone(false);setApp('home');}}
   const intro=<div className="intro"><span className="eyebrow">인터랙티브 스마트폰 스릴러</span><h1>수익률<br/><em>24시</em><span>.</span></h1><p className="intro-lead">준호에게 새 메시지가 왔다.</p>
     <div className="intro-card"><span>09:10 · 새 메시지</span><p>준호<br/><b>나야. 오늘 약속 기억하지?</b></p></div>
-    {hasSave&&<button className="primary" disabled={!ready} onClick={()=>start(state.mode==='demo'?'demo':'full',true)}>저장된 하루 이어하기</button>}
-    <button className={hasSave?'':'primary'} disabled={!ready} onClick={()=>hasSave?setDialog('restart'):start('full')}>새로운 하루 시작</button>
-    <button disabled={!ready} onClick={()=>start('demo')}>투자방부터 짧게 체험</button>
+    {hasSave&&<button className="primary" disabled={!ready} onClick={()=>requestStart('full',true)}>저장된 하루 이어하기</button>}
+    <button className={hasSave?'':'primary'} disabled={!ready} onClick={()=>hasSave?setDialog('restart'):requestStart('full')}>새로운 하루 시작</button>
+    <button disabled={!ready} onClick={()=>requestStart('demo')}>투자방부터 짧게 체험</button>
     <p className="fine">가상 사기 체험 · 실제 송금·전화는 없습니다. 언제든 멈출 수 있습니다.</p><details className="intro-help"><summary>체험·저장 안내</summary><p className="fine">모든 인물과 거래는 허구이며 압박성 연락이 등장합니다. 진행만 이 기기에 저장하고 대화 원문은 저장하지 않습니다. AI 없이도 끝까지 플레이할 수 있습니다.</p></details></div>;
   const homeContent=<div className="phone-home"><div className="home-clock"><span>오늘, 나의 하루</span><strong>{gameTime(state)}</strong><p>{state.chapter===0?'저녁 약속이 있는 날':state.chapter===1?'익숙한 화면, 낯선 숫자':'아직 남아 있는 연락'}</p></div>
       <button className="notification" onClick={()=>openApp('messages')}><span>메시지 · {unread?'새 연락':'최근 연락'}</span><strong>{c.sender}</strong><p>{stage.messages[0].text}</p></button>
@@ -172,14 +193,14 @@ export default function StoryClient(){
   const messagesContent=
 thread==='list'?<><h2>대화</h2><button className="notification" onClick={()=>setThread('current')}><strong>{c.sender}</strong><p>{c.preview}</p></button><button className="notification quiet" onClick={()=>setThread('junho')}><strong>준호 · 기존 연락처</strong><p>오늘 저녁 약속</p></button>{state.results.filter((r:{chapter:number})=>r.chapter<state.chapter).map((r:{chapter:number;kind:string;spent:number})=><article className="record" key={r.chapter}><h3>{chapters[r.chapter].story.title}</h3><p>이전 연락은 정리되었습니다. 가상 출금 {money(r.spent)}</p><button onClick={()=>openApp('notes')}>보관한 기록 보기</button></article>)}</>:thread!=='current'?<><button onClick={()=>setThread('current')}>← 새 연락으로</button><h2>준호 · 저장된 연락처</h2><div className="bubble"><small>어제</small><p>내일 저녁 일곱 시, 역 앞에서 보자. 늦으면 원래 번호로 전화해.</p></div><div className="bubble"><p>{state.chapter===2?'오늘 고마웠어. 집에 잘 들어갔어?':'퇴근하고 연락할게.'}</p></div><button onClick={()=>openApp('calls')}>저장된 번호로 통화</button></>:<><button className="chat-back" onClick={()=>setThread('list')}>‹ 대화 목록</button><div className="chat-profile"><span className="avatar">{c.sender.slice(0,1)}</span><div><h2>{c.sender}</h2><small>{state.chapter===0?'새 계정 · 친구 미등록':state.chapter===1?'시장 노트 · 자료방':'새 상담 계정'}</small></div></div>
       <details className="scene-context"><summary>이 연락이 오기 전</summary><p>{c.story.intro}{state.chapter===2&&<><br/>{recoveryContext(state)}</>}</p></details><details className="chat-records"><summary>프로필·연락 기록</summary>{evidenceCards('messages')}</details>
-      {state.visited.map((id:string)=><section className="chat-stage" key={id}>{c.story.stages.find(s=>s.id===id)?.messages.map((m,i)=><div className={m.speaker==='알림'?'system-message':'bubble'} key={id+i}>{m.speaker!=='알림'&&<small>{m.speaker}</small>}<p>{m.text}</p></div>)}
+      {state.visited.map((id:string)=><section className="chat-stage" key={id}>{c.story.stages.find(s=>s.id===id)?.messages.slice(0,id===state.stage&&!resolved?visibleCount:undefined).map((m,i)=><div className={m.speaker==='알림'?'system-message':'bubble'} key={id+i}>{m.speaker!=='알림'&&<small>{m.speaker}</small>}<p>{m.text}</p></div>)}
         {chat.filter(m=>m.stage===id).map((m,i)=><div className={'bubble '+(m.role==='user'?'mine':'')} key={'chat'+i}><small>{m.role==='user'?'나':c.sender}</small><p>{m.content}</p></div>)}</section>)}
-      {sending&&<p className="typing" role="status">상대가 입력 중…</p>}
+      {(sending||sceneTyping)&&<p className="typing" role="status">{sceneTyping?stage.messages[visibleCount]?.speaker:c.sender} 입력 중<span aria-hidden="true"> …</span></p>}
       {resolved&&<p className="resolution-line">{outcomeText(state)}</p>}</>;
   const messageDock=<div className="message-dock" aria-label="대화 행동">
     {resolved?<button className="primary" onClick={next}>{practiceOriginal?'바뀐 선택 확인':state.chapter===2?'오늘의 기록 보기':'하루 이어가기 →'}</button>:<>
-      <div className="dock-actions">{stage.actions.map((a,i)=><button className={i===0?'primary':''} key={a.type} onClick={()=>action(a.type)}>{a.type==='transfer'?'송금 안내':a.type==='platform'?'투자 화면':a.type==='withdraw'?'출금 요청':a.type==='stop'?'추가 송금 중단':a.label}</button>)}</div>
-      <div className="dock-tools"><button onClick={()=>setDialog('reply')}>답장 쓰기</button><button onClick={()=>{cancelReply();setDialog('safety');}}>보류·차단</button></div>
+      {sceneTyping&&<button className="skip-messages" onClick={()=>setRevealed(old=>({...old,[sceneKey]:stage.messages.length}))}>대화 바로 보기</button>}<div className="dock-actions">{stage.actions.map((a,i)=><button className={i===0?'primary':''} key={a.type} disabled={sceneTyping||sending} onClick={()=>action(a.type)}>{a.type==='transfer'?'송금 안내':a.type==='platform'?'투자 화면':a.type==='withdraw'?'출금 요청':a.type==='stop'?'추가 송금 중단':a.label}</button>)}</div>
+      <div className="dock-tools"><button disabled={sceneTyping||sending} onClick={()=>setDialog('reply')}>답장 쓰기</button><button onClick={()=>{cancelReply();setDialog('safety');}}>보류·차단</button></div>
     </>}
   </div>;
   const callsContent=<><span className="eyebrow">연락처</span><h2>전화</h2><article className="record"><h3>준호 <small>기존 연락처</small></h3><button onClick={()=>act('call','junho')}>저장된 준호에게 전화</button>{state.calls.includes(state.chapter+':junho')&&<p>{state.chapter===0?'준호: 오늘 약속은 맞는데, 결제 부탁은 안 했어. 새 계정도 내 것이 아니야.':'준호: 나는 그 서비스에 관해 아는 게 없어. 내 이름이 보여도 먼저 여기로 물어봐.'}</p>}</article>
@@ -206,6 +227,6 @@ thread==='list'?<><h2>대화</h2><button className="notification" onClick={()=>s
 
     </>}
     {note&&<div className="notice" role="status"><p>{note}</p><button onClick={()=>setNote('')} aria-label="안내 닫기">×</button></div>}
-    <dialog ref={dialogRef} onCancel={()=>{setDialog(null);setPaused(false);setShowRecent(false);if(practiceDone)exitPractice();}} onClose={()=>{setDialog(null);setPaused(false);setShowRecent(false);}} aria-label="휴대폰 선택 창">{paused?<><span className="eyebrow">잠시 멈춘 하루</span><h2>준비되면 이어가세요.</h2><p>멈춰 있는 동안 연락이 진행되거나 돈이 빠져나가지 않습니다.</p><button className="primary" onClick={()=>setPaused(false)}>계속하기</button><button onClick={()=>{setPaused(false);setStarted(false);setHasSave(Boolean(mainSaved.current));}}>처음 화면으로</button></>:showRecent?<><h2>최근 앱</h2>{recent.map(a=><button key={a} onClick={()=>openApp(a)}><AppIcon name={a} size="mini"/>{names[a]}</button>)}<button onClick={()=>setShowRecent(false)}>닫기</button></>:practiceDone?<><h2>이번에는 이렇게 멈췄습니다</h2><p>{outcomeText(state)}</p><p>이 연락의 가상 출금: {money(chapterSpent(state))}</p><p>원래 기록: {money(chapterSpent({...practiceOriginal!,chapter:state.chapter}))}</p><button className="primary" onClick={exitPractice}>원래 하루의 기록으로</button></>:dialog==='reply'?<><h2>답장</h2><div className="quick-questions">{activeCase.dialogue?.quickQuestions.map(q=><button key={q} disabled={sending||progressLocked} onClick={()=>{setDialog(null);void send(q);}}>{q}</button>)}</div><form onSubmit={e=>{e.preventDefault();setDialog(null);void send(draft);}} className="composer"><label className="sr-only" htmlFor="message-draft">상대에게 보낼 질문</label><textarea id="message-draft" maxLength={500} rows={2} value={draft} onChange={e=>setDrafts(old=>({...old,[c.id]:e.target.value}))} placeholder="개인정보 없이 질문하기"/><button disabled={sending||!draft.trim()||chat.filter(m=>m.role==='user').length>=24} type="submit">보내기</button></form><button onClick={()=>setDialog(null)}>닫기</button></>:dialog==='safety'?<><h2>이 연락을 어떻게 할까요?</h2><button onClick={()=>{act('resolve','paused');setDialog(null);}}>일단 보류하기</button><button onClick={()=>{act('resolve','blocked');setDialog(null);}}>이 계정 차단하기</button><button disabled={!verified(state)} onClick={()=>{act('resolve','verified');setDialog(null);}}>확인한 내용으로 요청 종료</button>{!verified(state)&&<p className="fine">확인 후 종료하려면 독립된 기록을 살펴보세요.</p>}<button onClick={()=>setDialog(null)}>대화로 돌아가기</button></>:dialog==='transfer'&&pendingOffer?<><span className="eyebrow">게임 내 송금 확인</span><h2 id="dialog-title">{money(pendingOffer.amount)}</h2><p>받는 이름 <b>{pendingOffer.recipient}</b></p><p>목적 {pendingOffer.purpose}</p><p className="fine">실제 돈은 이동하지 않습니다. 확인하면 이 하루의 잔액과 후속 이야기에 반영됩니다.</p><button className="primary" onClick={()=>{act('confirm',pendingOffer.id);setDialog(null);openApp('messages');}}>가상 송금 확인</button><button onClick={()=>setDialog(null)}>취소하고 더 확인</button></>:<><h2 id="dialog-title">새 하루를 시작할까요?</h2><p>이 기기의 기존 진행 기록을 새 기록으로 바꿉니다.</p><button className="primary" onClick={()=>{setDialog(null);start('full');}}>기존 기록 바꾸고 시작</button><button onClick={()=>setDialog(null)}>취소</button></>}</dialog>
+    <dialog ref={dialogRef} onCancel={()=>{setDialog(null);setPaused(false);setShowRecent(false);if(practiceDone)exitPractice();}} onClose={()=>{setDialog(null);setPaused(false);setShowRecent(false);}} aria-label="휴대폰 선택 창">{paused?<><span className="eyebrow">잠시 멈춘 하루</span><h2>준비되면 이어가세요.</h2><p>멈춰 있는 동안 연락이 진행되거나 돈이 빠져나가지 않습니다.</p><button className="primary" onClick={()=>setPaused(false)}>계속하기</button><button onClick={()=>{setPaused(false);setStarted(false);setHasSave(Boolean(mainSaved.current));}}>처음 화면으로</button></>:showRecent?<><h2>최근 앱</h2>{recent.map(a=><button key={a} onClick={()=>openApp(a)}><AppIcon name={a} size="mini"/>{names[a]}</button>)}<button onClick={()=>setShowRecent(false)}>닫기</button></>:practiceDone?<><h2>이번에는 이렇게 멈췄습니다</h2><p>{outcomeText(state)}</p><p>이 연락의 가상 출금: {money(chapterSpent(state))}</p><p>원래 기록: {money(chapterSpent({...practiceOriginal!,chapter:state.chapter}))}</p><button className="primary" onClick={exitPractice}>원래 하루의 기록으로</button></>:dialog==='ai-choice'?<><h2>어떻게 대화할까요?</h2><p>선택 답장만으로도 끝까지 플레이할 수 있습니다.</p><label className="setting"><input type="checkbox" checked={aiConsent} onChange={e=>setAiConsent(e.target.checked)}/>만 18세 이상이며 AI 대화 사용에 동의합니다.</label><p className="fine">AI를 켜면 자유답변과 최근 대화가 Gemini로 전송됩니다. 개인정보는 입력하지 마세요. 장면별 1·2·1회, 전체 최대 4회이며 잘못된 답변이 나올 수 있습니다.</p><button className="primary" disabled={!aiConsent} onClick={()=>{setAiAllowed(true);setDialog(null);start(startRequest.mode,startRequest.resume);}}>AI 대화로 시작</button><button onClick={()=>{setAiAllowed(false);setDialog(null);start(startRequest.mode,startRequest.resume);}}>준비된 답장으로 시작</button><button onClick={()=>setDialog(null)}>돌아가기</button></>:dialog==='reply'?<><h2>답장</h2><div className="quick-questions">{activeCase.dialogue?.quickQuestions.map(q=><button key={q} disabled={sending||progressLocked} onClick={()=>{setDialog(null);void send(q);}}>{q}</button>)}</div>{aiAllowed&&!practiceOriginal?<><p className="fine">자유답변 · 이 장면 남은 AI {Math.max(0,c.story.aiLimit-budget.current.counts[state.chapter])}회</p><form onSubmit={e=>{e.preventDefault();setDialog(null);void send(draft,true);}} className="composer"><label className="sr-only" htmlFor="message-draft">자유답변(개인정보는 입력하지 마세요)</label><textarea id="message-draft" maxLength={500} rows={2} value={draft} onChange={e=>setDrafts(old=>({...old,[c.id]:e.target.value}))} placeholder="자유답변(개인정보는 입력하지 마세요)"/><button disabled={sending||!draft.trim()||chat.filter(m=>m.role==='user').length>=24} type="submit">보내기</button></form></>:<p className="fine">{practiceOriginal?'되감기에서는 준비된 답장을 사용합니다.':'AI 미사용 중 · 위의 준비된 답장을 골라 주세요. 자유답변은 설정에서 AI를 켜면 사용할 수 있습니다.'}</p>}<button onClick={()=>setDialog(null)}>닫기</button></>:dialog==='safety'?<><h2>이 연락을 어떻게 할까요?</h2><button onClick={()=>{act('resolve','paused');setDialog(null);}}>일단 보류하기</button><button onClick={()=>{act('resolve','blocked');setDialog(null);}}>이 계정 차단하기</button><button disabled={!verified(state)} onClick={()=>{act('resolve','verified');setDialog(null);}}>확인한 내용으로 요청 종료</button>{!verified(state)&&<p className="fine">확인 후 종료하려면 독립된 기록을 살펴보세요.</p>}<button onClick={()=>setDialog(null)}>대화로 돌아가기</button></>:dialog==='transfer'&&pendingOffer?<><span className="eyebrow">송금</span><h2 id="dialog-title">{money(pendingOffer.amount)}</h2><p>받는 이름 <b>{pendingOffer.recipient}</b></p><p>목적 {pendingOffer.purpose}</p><p className="fine">실제 돈은 이동하지 않습니다. ‘보내기’를 누르면 게임 잔액에서 출금됩니다.</p><button className="primary" onClick={()=>{act('confirm',pendingOffer.id);setDialog(null);openApp('messages');}}>보내기</button><button onClick={()=>setDialog(null)}>취소하고 더 확인</button></>:<><h2 id="dialog-title">새 하루를 시작할까요?</h2><p>이 기기의 기존 진행 기록을 새 기록으로 바꿉니다.</p><button className="primary" onClick={()=>requestStart('full')}>기존 기록 바꾸고 시작</button><button onClick={()=>setDialog(null)}>취소</button></>}</dialog>
   </section><div className="desktop-footer">수익률 24시 <span>가상 스마트폰 체험</span></div></main>;
 }
