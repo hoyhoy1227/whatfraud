@@ -8,7 +8,7 @@ const routeSource = await readFile(new URL('../app/api/ai-chat/route.ts', import
 const clientSource = await readFile(new URL('../app/story/story-client.tsx', import.meta.url), 'utf8');
 const compile = (source) => ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
 const moduleUrl = (source) => 'data:text/javascript;base64,' + Buffer.from(compile(source)).toString('base64');
-const dialogueUrl = moduleUrl(dialogueSource);
+const dialogueUrl = moduleUrl(dialogueSource.replace("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)));
 const dialogue = await import(dialogueUrl);
 let serial = 0;
 async function freshRoute() {
@@ -263,3 +263,12 @@ async function testSecurity() {
   assert.equal(dialogue.inferDialogueEmotion([{ role: 'user', content: '생각해 볼게' }]), 'disappointed');
   console.log('Security request tests passed: origin, media type, body deadline, schema, forwarding, concurrency, kill switch, privacy.');
 }
+
+const paper=cases.find(c=>c.id==='paper-profit'),recovery=cases.find(c=>c.id==='recovery-team');
+assert.equal(dialogue.validateCharacterChoices(recovery,'arrival',['recovery-offer-share']),false,'future disclosures rejected');
+assert.equal(dialogue.validateCharacterChoices(recovery,'arrival',['recovery-scope-name','recovery-scope-first']),false,'contradictory choices rejected');
+const privatePrompt=dialogue.buildSystemPrompt(recovery,[{role:'user',content:'누구세요?'}],1,'arrival',[]);
+assert.ok(privatePrompt.includes('플레이어가 이 상대에게 전달한 정보: 없음'));
+const sharedPrompt=dialogue.buildSystemPrompt(recovery,[{role:'user',content:'그다음은요?'}],2,'offer',['recovery-scope-name','recovery-explain-loss']);
+assert.ok(sharedPrompt.includes('service / loss'));
+assert.ok(!dialogue.buildSystemPrompt(paper,[{role:'user',content:'자료란 뭔가요?'}],1,'arrival',[]).includes('현재 출금이 보류'),'no future plot in early prompt');
