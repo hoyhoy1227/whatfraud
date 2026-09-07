@@ -1,7 +1,17 @@
 // Authored character knowledge and bounded dialogue choices. No player text is stored.
+/**
+ * @typedef {{speaker:string,text:string}} Message
+ * @typedef {{id:string,label:string,replies:Message[],requires:string,shares:string}} Choice
+ * @typedef {{id:string,stage:string,options:Choice[],required:boolean}} Beat
+ * @typedef {{place:string,goal:string,background:string[],persona:{identity:string,relationship:string,voice:string,knowledge:string,hidden:string,arc:string},scenes:Record<string,Message[]>,beats:Beat[],aftermath:{safe:string,loss:string}} Narrative
+ */
+/** @param {string} speaker @param {string} text @returns {Message} */
 const line=(speaker,text)=>({speaker,text});
+/** @param {string} id @param {string} label @param {Message[]} replies @param {string} requires @param {string} shares @returns {Choice} */
 const option=(id,label,replies,requires='',shares='')=>({id,label,replies,requires,shares});
+/** @param {string} id @param {string} stage @param {Choice[]} options @param {boolean} required @returns {Beat} */
 const beat=(id,stage,options,required=true)=>({id,stage,options,required});
+/** @type {Narrative[]} */
 export const narratives=[
  {
   place:'09:10 · 출근길',goal:'오늘 저녁 준호와 만날 장소를 확인하자.',
@@ -135,6 +145,7 @@ export function findChoice(chapter,id){
  for(const item of narratives[chapter]?.beats??[])for(const choice of item.options)if(choice.id===id)return {beat:item,choice};
  return null;
 }
+/** @returns {string[]} */
 export function chosenIds(state){return state.events.filter(e=>e.type==='talk'&&e.chapter===state.chapter).map(e=>e.data);}
 export function choiceAllowed(state,choice){
  if(choice.requires==='prior-loss')return state.transactions.some(tx=>tx.chapter<state.chapter);
