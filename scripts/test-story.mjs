@@ -88,3 +88,27 @@ const used=restoreBudget({session:'test-session-0000001',counts:[1,2,1],last:12,
 assert.deepEqual(used.counts,[1,2,1]);
 assert.deepEqual(restoreBudget({session:'bad',counts:[9,9,9]},'replacement').counts,[0,0,0]);
 console.log('Separate campaign/demo budget restore passed.');
+
+const n=await import('../app/story/narrative.js');
+for(let chapter=0;chapter<3;chapter++){
+ assert.ok(n.narratives[chapter].background.length>=2);
+ assert.ok(n.narratives[chapter].beats.length>=5);
+ let v=e.createRun();while(v.chapter<chapter)v=finish(v,'paused');
+ const initial=v;
+ const beat=n.pendingBeat(v);assert.ok(beat);
+ const option=beat.options.find(o=>n.choiceAllowed(v,o));
+ v=step(v,'talk',option.id);assert.notEqual(v,initial);
+ assert.equal(step(v,'talk',option.id),v,'same choice once');
+ assert.deepEqual(e.restoreRun(e.serializeRun(v)),v,'authored choices restore');
+ assert.ok(n.authoredMessages(v,v.stage).some(m=>m.speaker==='나'));
+ const alternative=beat.options.find(o=>o.id!==option.id);
+ assert.equal(step(v,'talk',alternative.id),v,'exclusive choice');
+ assert.equal(step(v,'talk','invented-choice'),v);
+ v=step(v,'resolve','paused');assert.equal(step(v,'talk',option.id),v);
+ v=step(v,'reflect','tell');assert.deepEqual(e.restoreRun(e.serializeRun(v)),v);
+ assert.equal(step(v,'reflect','keep'),v,'reflection once');
+}
+let undisclosed=e.createRun('demo');undisclosed=finish(undisclosed,'paused');
+assert.equal(n.choiceAllowed(undisclosed,n.findChoice(2,'recovery-explain-loss').choice),false);
+assert.equal(step(undisclosed,'talk','recovery-explain-loss'),undisclosed,'cannot invent prior loss');
+console.log('Narrative choice tests passed: prerequisites, disclosure, exclusivity, restore and aftercare.');

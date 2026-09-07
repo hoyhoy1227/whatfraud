@@ -1,5 +1,5 @@
 import { reserveSharedBudget } from '../ai-budget';
-import { buildSystemPrompt, inferDialogueEmotion, inferDialogueReplyMode, sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
+import { validateCharacterChoices, buildSystemPrompt, inferDialogueEmotion, inferDialogueReplyMode, sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
 import { cases } from '../../game-data';
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite';
@@ -159,7 +159,7 @@ export async function GET() {
   });
 }
 
-type ChatBody = { caseId?: unknown; messages?: unknown; userTurnCount?: unknown; stageId?: unknown; inputMode?: unknown };
+type ChatBody = { caseId?: unknown; messages?: unknown; userTurnCount?: unknown; stageId?: unknown; inputMode?: unknown; choices?: unknown };
 type PendingReply = { response: Promise<Response>; expires: number };
 const pendingReplies = new Map<string, PendingReply>();
 
@@ -171,7 +171,7 @@ export async function POST(request: Request) {
   let body: ChatBody;
   try {
     body = await readBoundedBody(request) as ChatBody;
-    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !['caseId', 'messages', 'userTurnCount', 'stageId', 'inputMode'].includes(key))) return json({ code: 'invalid_request' }, 400);
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !['caseId', 'messages', 'userTurnCount', 'stageId', 'inputMode', 'choices'].includes(key))) return json({ code: 'invalid_request' }, 400);
   } catch (error) {
     return json({ code: error instanceof Error && error.message === 'body_timeout' ? 'body_timeout' : 'invalid_request' }, error instanceof Error && error.message === 'body_timeout' ? 408 : 400);
   }
@@ -206,6 +206,7 @@ async function handleChat(request: Request, body: ChatBody) {
   if (body.inputMode !== undefined && body.inputMode !== 'free') return json({ code: 'invalid_request' }, 400);
   if (body.stageId !== undefined && (typeof body.stageId !== 'string' || !gameCase.story.stages.some(stage => stage.id === body.stageId))) return json({ code: 'invalid_stage' }, 400);
   if (body.inputMode === 'free' && typeof body.stageId !== 'string') return json({ code: 'invalid_stage' }, 400);
+  if(body.choices!==undefined&&!validateCharacterChoices(gameCase,body.stageId,body.choices))return json({code:'invalid_choices'},400);
   const messages = parseMessages(body.messages);
   if (!messages) return json({ code: 'invalid_messages' }, 400);
 
@@ -261,7 +262,7 @@ async function handleChat(request: Request, body: ChatBody) {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: buildSystemPrompt(gameCase, conversation, userTurnCount, typeof body.stageId === 'string' ? body.stageId : undefined) }] },
+        systemInstruction: { parts: [{ text: buildSystemPrompt(gameCase, conversation, userTurnCount, typeof body.stageId === 'string' ? body.stageId : undefined, Array.isArray(body.choices) ? body.choices as string[] : []) }] },
         contents: conversation.map((message) => ({
           role: message.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: message.content }],

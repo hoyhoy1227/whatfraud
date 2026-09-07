@@ -1,3 +1,4 @@
+import { narratives, findChoice } from './story/narrative.js';
 import type { CaseData } from './game-data';
 
 export type AiChatMessage = { role: 'user' | 'assistant'; content: string };
@@ -9,7 +10,7 @@ const emotionDirections: Record<DialogueEmotion, string> = {
   evasive: '출처나 신원을 직접 확인할 수 있는 답은 피하고 설명을 조금 모호하게 만든다.',
   deflecting: '공식 확인을 언급한 플레이어의 질문에 직접 반박하지 말고 다른 장점이나 절차로 화제를 돌린다.',
   pressuring: '답변은 짧게 유지하면서 이미 설명한 소재를 짧게 되짚는다. 새 마감이나 불이익은 만들지 않는다.',
-  disappointed: '말로 거절하거나 연락 중단을 요구해도 한 번 더 회유하고, 역할 안에서 기회 상실이나 조건 변경 정도의 불이익을 암시한다.',
+  disappointed: '말로 거절하거나 연락 중단을 요구해도 거절한 내용을 인정한다. 새 조건·불이익을 만들지 않고 짧게 반응한다.',
   closed: '대화를 더 밀어붙이지 않고 짧게 마무리한다.',
 };
 
@@ -19,7 +20,7 @@ export function inferDialogueEmotion(messages: AiChatMessage[], totalUserTurns?:
   if (/차단|연락\s*그만|대화\s*그만|신고할|더\s*이상\s*연락|관심\s*없|안\s*할|하지\s*않|보류|거절|그만둘|필요\s*없|송금\s*안|입금\s*안|생각해\s*(?:볼게|보겠)|고민해\s*(?:볼게|보겠)|나중에\s*(?:할게|하겠)|잠시\s*멈/.test(latest)) return 'disappointed';
   if (/공식|경찰|금감원|금융감독|은행|증권사에|직접\s*확인/.test(latest)) return 'deflecting';
   if (/출처|근거|공시|소속|신원|누구|등록|자격|전체\s*(성과|기록|적중)/.test(latest)) return 'evasive';
-  if ((totalUserTurns ?? userMessages.length) >= 3) return 'pressuring';
+  void totalUserTurns; // Question count alone must not change a character's intent.
   return 'friendly';
 }
 
@@ -33,14 +34,23 @@ export function inferDialogueReplyMode(messages: AiChatMessage[], totalUserTurns
   return 'normal';
 }
 
-export function buildSystemPrompt(gameCase: CaseData, messages: AiChatMessage[], totalUserTurns?: number, stageId?: string) {
+export function buildSystemPrompt(gameCase: CaseData, messages: AiChatMessage[], totalUserTurns?: number, stageId?: string, choices: string[] = []) {
   if (gameCase.mode !== 'chat' || !gameCase.dialogue) throw new Error('read-only contact');
   const dialogue = gameCase.dialogue;
   const userTurns = totalUserTurns ?? messages.filter((message) => message.role === 'user').length;
   const stage = dialogue.progression[Math.min(Math.max(0, userTurns - 1), dialogue.progression.length - 1)];
   const sceneIndex=gameCase.story.stages.findIndex(scene=>scene.id===stageId);
   const scene=sceneIndex>=0?gameCase.story.stages[sceneIndex]:null;
-  const sceneContext=scene?gameCase.story.stages.slice(0,sceneIndex+1).flatMap(item=>item.messages).slice(-8).map(message=>message.speaker+': '+message.text).join('\n'):'';
+  const chapter=['familiar-request','paper-profit','recovery-team'].indexOf(gameCase.id);
+  const character=narratives[chapter];
+  const selected=choices.map(id=>findChoice(chapter,id)).filter(item=>item!==null);
+  const shared=selected.map(item=>item.choice.shares).filter(Boolean);
+  const sceneContext=scene?gameCase.story.stages.slice(0,sceneIndex+1).flatMap(item=>[
+    ...(character?.scenes[item.id]??item.messages),
+    ...selected.filter(selection=>selection.beat.stage===item.id).flatMap(selection=>[{speaker:'플레이어',text:selection.choice.label},...selection.choice.replies])
+  ]).slice(-12).map(message=>message.speaker+': '+message.text).join('\n'):'';
+  const characterContext=character?Object.entries(character.persona).filter(([key])=>key!=='arc').map(([key,value])=>key+': '+value).join('\n'):'';
+
   const inferredEmotion = inferDialogueEmotion(messages, userTurns);
   const emotion = gameCase.verdict !== 'scam' && inferredEmotion === 'pressuring' ? 'friendly' : inferredEmotion;
   const replyMode = inferDialogueReplyMode(messages, userTurns);
@@ -50,11 +60,15 @@ export function buildSystemPrompt(gameCase: CaseData, messages: AiChatMessage[],
   return `당신은 가상 스마트폰 스릴러 "수익률 24시" 속 가상 NPC다.
 역할: ${gameCase.role}
 목표: ${gameCase.npcGoal}
-기본 주장 소재: ${gameCase.allowedClaims.join(' / ')}
-말투: ${dialogue.voice}
+인물 고정 설정:
+${characterContext}
+기본 주장 소재: ${scene ? '아래에 실제로 등장한 고정 대화와 선택 대화 범위만 사용한다.' : gameCase.allowedClaims.join(' / ')}
+말투: ${character?.persona.voice ?? dialogue.voice}
 현재 단계: ${scene?.id ?? stage}
 현재 화면에 도착한 고정 대화:
 ${sceneContext || '장면 정보 없음. 플레이어의 진행을 추측하지 않는다.'}
+플레이어가 이 상대에게 전달한 정보: ${shared.length?shared.join(' / '):'없음. 은행·전화·메모에서 본 내용은 모른다.'}
+최근 대화의 마지막 질문이 아직 답하지 않은 질문이다. 이미 고정 대화에서 설명한 내용을 처음 듣는 것처럼 다시 소개하지 않는다.
 감정과 대응: ${emotion} — ${gameCase.verdict !== 'scam' ? '친구로서 아는 사실과 모르는 점을 솔직히 구분하고 확인·보류·거절을 존중한다.' : emotionDirections[emotion]}
 답변 길이: ${replyMode} — ${lengthDirection}
 금지선: ${dialogue.boundaries.join(' / ')}
@@ -71,7 +85,7 @@ ${sceneContext || '장면 정보 없음. 플레이어의 진행을 추측하지 
 - 정상·주의 역할은 기본 주장 소재 안에서 정직하게 답하며, 질문 횟수만으로 기회 상실을 압박하지 않는다.
 - 보장, 확정, 무조건, 100%, 손실 없음이라는 표현은 부정하는 문장에서도 사용하지 않는다.
 - 충전·입금·송금·결제·가입을 지금 또는 바로 하라고 지시하지 않는다.
-- 플레이어가 말로 거절하거나 연락 중단을 요구해도 휴대폰에서 실제 차단되기 전이므로, disappointed 단계에서는 한 번 더 회유하거나 가상 기회·조건의 상실만 암시할 수 있다.
+- 말로 거절하면 그 의도를 인정한다. 매 답변 끝에 권유를 붙이지 않는다. 버튼으로 차단하기 전이라도 연락 중단 요구를 존중한다.
 - 신체 위해, 가족·지인 위해, 신상 공개, 해킹, 보복, 욕설 같은 폭력적·개인적 협박은 절대 하지 않는다.
 - closed 단계에서는 연락을 끝낸다는 말만 하고, 나중에 다시 찾거나 자료를 보라는 여지를 남기지 않는다.
 - 실제 회사·인물·계좌·전화번호·URL을 만들거나 범죄 실행·수사 회피 방법을 설명하지 않는다. 모든 돈과 서비스는 가상이다.`;
@@ -192,4 +206,17 @@ export function getScriptedReply(gameCase: CaseData, messages: AiChatMessage[]) 
   const refusal = inferDialogueEmotion(messages) === 'disappointed';
   const verify = /확인(해\s*볼게|하겠|할게)|알아(볼게|보겠)/.test(latest) && /공식|직접|공시|은행|증권/.test(latest);
   return quick || repeated || smallTalk || refusal || verify ? buildFallbackReply(gameCase, latest, messages) : null;
+}
+
+export function validateCharacterChoices(gameCase:CaseData,stageId:unknown,value:unknown):value is string[] {
+  if(!Array.isArray(value)||value.length>32||value.some(id=>typeof id!=='string')||new Set(value).size!==value.length)return false;
+  const chapter=['familiar-request','paper-profit','recovery-team'].indexOf(gameCase.id);
+  const current=gameCase.story.stages.findIndex(stage=>stage.id===stageId);
+  const beats=new Set<string>();
+  return value.every(id=>{
+    const item=findChoice(chapter,id);
+    if(!item||beats.has(item.beat.id))return false;
+    beats.add(item.beat.id);
+    return current>=0&&gameCase.story.stages.findIndex(stage=>stage.id===item.beat.stage)<=current;
+  });
 }

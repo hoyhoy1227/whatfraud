@@ -1,3 +1,4 @@
+import { findChoice, pendingBeat, choiceAllowed, chosenIds } from './narrative.js';
 import chapters from '../../content/generated/cases.json' with { type: 'json' };
 
 /**
@@ -12,7 +13,7 @@ export const SAVE_KEY = 'whatfraud-story-v3';
 export const INITIAL_BALANCE = 680000;
 export const APPS = ['home', 'messages', 'calls', 'bank', 'browser', 'notes', 'settings'];
 const terminal = ['verified', 'paused', 'blocked', 'reported', 'stopped', 'loss'];
-const validTypes = ['advance','platform','withdraw','confirm','inspect','save','call','resolve','next','cue','read'];
+const validTypes = ['advance','platform','withdraw','confirm','inspect','save','call','resolve','next','cue','read','talk','reflect'];
 export const currentCase = state => chapters[state.chapter];
 export const currentStage = state => currentCase(state).story.stages.find(item => item.id === state.stage);
 export const totalSpent = state => state.transactions.reduce((sum, tx) => sum + tx.amount, 0);
@@ -82,6 +83,17 @@ export function transition(input,event) {
   let changed=false;
   const active=!isResolved(state);
   switch(event.type) {
+    case 'talk': {
+      const selected=findChoice(state.chapter,data);
+      if(!active||!selected||selected.beat.stage!==state.stage||!choiceAllowed(state,selected.choice))break;
+      const chosen=chosenIds(state),pending=pendingBeat(state);
+      if(selected.beat.options.some(o=>chosen.includes(o.id)))break;
+      if(selected.beat.required&&pending?.id!==selected.beat.id)break;
+      changed=true;break;
+    }
+    case 'reflect':
+      if(isResolved(state)&&['tell','keep'].includes(data)&&!state.events.some(e=>e.type==='reflect'&&e.chapter===state.chapter))changed=true;
+      break;
     case 'advance':
       if(active&&stage.next&&stage.actions.some(a=>a.type==='advance')){if(state.chapter===1)state.joined=true;move(state,stage.next);changed=true;} break;
     case 'platform':
