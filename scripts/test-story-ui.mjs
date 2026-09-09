@@ -48,7 +48,7 @@ callback();assert.equal(delivered,1);
 
 let investment=engine.createRun('demo');
 const advance=(type,data='')=>{investment=engine.transition(investment,{type,data,chapter:1});};
-advance('advance');advance('advance');advance('confirm','paper-profit:main');
+advance('advance');advance('advance');advance('observe','platform-view');advance('confirm','paper-profit:main');advance('observe','bank-view');
 let comparison=renderToStaticMarkup(createElement(ui.RecordComparison,{state:investment}));
 assert.ok(comparison.includes('355,200원')&&comparison.includes('300,000원')&&comparison.includes('들어온 돈 0원'));
 assert.ok(!comparison.includes('120,000원'),'future fee is not exposed');
@@ -61,3 +61,15 @@ comparison=renderToStaticMarkup(createElement(ui.RecordComparison,{state:investm
 assert.ok(comparison.includes('420,000원'));
 assert.ok(client.includes('decisionReady&&!momentUsed')&&client.includes('conversationTimeline'));
 assert.ok(!client.includes('activeCase.dialogue?.quickQuestions.map'),'reply choices are scene-bound');
+
+const n=await import('../app/story/narrative.js');
+for(const known of [false,true]){
+ const profile=renderToStaticMarkup(createElement(ui.ContactProfile,{profile:n.contactProfile(0,known),blocked:!known,onClose:noop,onChat:noop,onCall:noop}));
+ assert.ok(profile.includes(known?'내 연락처에 저장됨':'친구로 등록되지 않음'));
+ assert.ok(profile.includes('대화 보기')&&profile.includes('음성 통화')&&!profile.includes('사기'));
+ if(!known)assert.ok(profile.includes('disabled'));
+}
+assert.ok(renderToStaticMarkup(createElement(ui.PhoneStatus,{time:'09:10'})).includes('가상 체험'));
+for(let step=0;step<4;step++)assert.ok(renderToStaticMarkup(createElement(ui.Closing,{state,step,onNext:noop,onSkip:noop})).includes(['마지막 대화','생활 계좌','준호','휴대폰을 잠갔다'][step]));
+assert.ok(client.includes('composerOpen&&freeAvailable')&&client.includes('visualViewport')&&client.includes('openProfile'));
+assert.ok(!client.slice(client.indexOf("dialog==='reply'?")).includes('<textarea'));

@@ -1,5 +1,5 @@
 import { reserveSharedBudget } from '../ai-budget';
-import { aiMoment, validateCharacterChoices, buildSystemPrompt, inferDialogueEmotion, inferDialogueReplyMode, sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
+import { aiMoment, decisionReadyFor, validateCharacterChoices, buildSystemPrompt, inferDialogueEmotion, inferDialogueReplyMode, sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
 import { cases } from '../../game-data';
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite';
@@ -159,7 +159,7 @@ export async function GET() {
   });
 }
 
-type ChatBody = { caseId?: unknown; messages?: unknown; userTurnCount?: unknown; stageId?: unknown; inputMode?: unknown; choices?: unknown };
+type ChatBody = { caseId?: unknown; messages?: unknown; userTurnCount?: unknown; stageId?: unknown; inputMode?: unknown; choices?: unknown; checks?: unknown };
 type PendingReply = { response: Promise<Response>; expires: number };
 const pendingReplies = new Map<string, PendingReply>();
 
@@ -171,7 +171,7 @@ export async function POST(request: Request) {
   let body: ChatBody;
   try {
     body = await readBoundedBody(request) as ChatBody;
-    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !['caseId', 'messages', 'userTurnCount', 'stageId', 'inputMode', 'choices'].includes(key))) return json({ code: 'invalid_request' }, 400);
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !['caseId', 'messages', 'userTurnCount', 'stageId', 'inputMode', 'choices', 'checks'].includes(key))) return json({ code: 'invalid_request' }, 400);
   } catch (error) {
     return json({ code: error instanceof Error && error.message === 'body_timeout' ? 'body_timeout' : 'invalid_request' }, error instanceof Error && error.message === 'body_timeout' ? 408 : 400);
   }
@@ -221,6 +221,9 @@ async function handleChat(request: Request, body: ChatBody) {
   if (scripted !== null) return json({ reply: scripted, provider: 'scripted', model: null });
   const moment=aiMoment(gameCase.id,typeof body.stageId==='string'?body.stageId:'');
   if(!moment)return json({code:'not_decision_moment'},409);
+  const allowedChecks=[...gameCase.story.evidence.map(e=>e.id),'terms-comparison','bank-view','platform-view'];
+  if(!Array.isArray(body.checks)||body.checks.length>12||body.checks.some(id=>typeof id!=='string'||!allowedChecks.includes(id))||new Set(body.checks).size!==body.checks.length)return json({code:'invalid_checks'},400);
+  if(!decisionReadyFor(gameCase.id,body.stageId,Array.isArray(body.choices)?body.choices:[],body.checks))return json({code:'decision_not_ready'},409);
   if (!aiEnabled()) return json({ code: 'ai_disabled' }, 503, { 'Retry-After': '300' });
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return json({ code: 'ai_unconfigured' }, 503);
