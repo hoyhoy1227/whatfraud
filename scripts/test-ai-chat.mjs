@@ -8,7 +8,7 @@ const routeSource = await readFile(new URL('../app/api/ai-chat/route.ts', import
 const clientSource = await readFile(new URL('../app/story/story-client.tsx', import.meta.url), 'utf8');
 const compile = (source) => ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
 const moduleUrl = (source) => 'data:text/javascript;base64,' + Buffer.from(compile(source)).toString('base64');
-const dialogueUrl = moduleUrl(dialogueSource.replace("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)));
+const dialogueUrl = moduleUrl(dialogueSource.replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)));
 const dialogue = await import(dialogueUrl);
 let serial = 0;
 async function freshRoute() {
@@ -21,7 +21,7 @@ async function freshRoute() {
 const request = (text = 'この質問', session = 'test-session-000001', overrides = {}) => new Request('https://example.invalid/api/ai-chat', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'x-whatfraud-session': session, 'cf-connecting-ip': '192.0.2.1' },
-  body: JSON.stringify({ caseId: 'paper-profit', messages: [{ role: 'user', content: text }], userTurnCount: 1, ...overrides }),
+  body: JSON.stringify({ caseId: 'paper-profit', stageId: overrides.caseId==='familiar-request'?'request':'offer', messages: [{ role: 'user', content: text }], userTurnCount: 1, ...overrides }),
 });
 let calls = 0;
 const originalFetch = globalThis.fetch;
@@ -44,7 +44,7 @@ try {
   await route.POST(request());
   assert.equal(calls, 1, 'exact retry reuses response');
   clock += 12_000;
-  await route.POST(request('別の質問'));
+  await route.POST(request('別の質問',undefined,{stageId:'withdrawal'}));
   assert.equal(calls, 2, 'changed content must not collide');
   await route.POST(request('この質問', 'test-session-000002'));
   assert.equal(calls, 3, 'different player must not share response');
@@ -118,7 +118,7 @@ try {
   assert.equal((await (await route.POST(request('네'))).json()).provider, 'scripted');
   assert.equal(calls, 1);
   clock += 11_000;
-  assert.equal((await route.POST(request('새로운 질문 셋째'))).status, 200, 'rejected attempt must not extend spacing');
+  assert.equal((await route.POST(request('새로운 질문 셋째',undefined,{stageId:'withdrawal'}))).status, 200, 'rejected attempt must not extend spacing');
 
   clock += 12_000;
   assert.equal((await route.POST(request('새로운 질문 여섯째'))).status, 429);
@@ -135,6 +135,20 @@ try {
   assert.ok(captured.systemInstruction.parts[0].text.includes('현재 단계: withdrawal'));
   assert.ok(captured.systemInstruction.parts[0].text.includes('현재 출금이 보류'));
   assert.equal((await route.POST(request('질문','invalid-scene-session',{inputMode:'free',stageId:'invented'}))).status,400);
+  
+  route=await freshRoute();calls=0;
+  globalThis.fetch=async()=>{calls++;return successful();};
+  for(const stageId of ['arrival','group','paid','extra-paid']){
+    assert.equal((await (await route.POST(request('복잡한 질문','window-test-session',{inputMode:'free',stageId}))).json()).code,'not_decision_moment');
+  }
+  assert.equal(calls,0,'nondecision scenes never reach Gemini');
+  assert.equal((await route.POST(request('첫 질문','window-test-session',{inputMode:'free',stageId:'offer'}))).status,200);
+  clock+=12000;
+  assert.equal((await (await route.POST(request('두 번째 질문','window-test-session',{inputMode:'free',stageId:'offer'}))).json()).code,'moment_used');
+  clock+=12000;
+  assert.equal((await route.POST(request('출금 질문','window-test-session',{inputMode:'free',stageId:'withdrawal'}))).status,200);
+  assert.equal(calls,2,'investment budget reserved for two distinct decisions');
+  assert.equal((await (await route.POST(request('stage omitted','missing-window-session',{stageId:undefined}))).json()).code,'not_decision_moment','legacy novel requests cannot bypass window');
   await testClientCancellation();
   await testSecurity();
   for (const outcome of ['exhausted','unavailable']) {

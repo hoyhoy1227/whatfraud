@@ -163,3 +163,32 @@ export function authoredMessages(state,stageId){
   return selected?.beat.stage===stageId?[line('나',selected.choice.label),...selected.choice.replies]:[];
  })];
 }
+
+/** A decision window, not a keyword classifier. Never opens on a paid/ending scene.
+ * @param {string} caseId @param {string} stageId @returns {string|null}
+ */
+export function aiMoment(caseId,stageId){
+ if(caseId==='familiar-request'&&['request','waiting'].includes(stageId))return 'familiar-check';
+ if(caseId==='paper-profit'&&stageId==='offer')return 'paper-entry';
+ if(caseId==='paper-profit'&&stageId==='withdrawal')return 'paper-withdrawal';
+ if(caseId==='recovery-team'&&stageId==='offer')return 'recovery-check';
+ return null;
+}
+/** Merge transient chat at its authored-message position; never persist player text. */
+export function conversationTimeline(lines,chat,visible=lines.length){
+ const result=[];
+ for(let index=0;index<=Math.min(visible,lines.length);index++){
+  for(const message of chat.filter(m=>Math.min(m.anchor??lines.length,lines.length)===index)){
+   result.push({speaker:message.role==='user'?'나':message.speaker,text:message.content});
+  }
+  if(index<Math.min(visible,lines.length))result.push(lines[index]);
+ }
+ return result;
+}
+/** Only the real friend's conversation can see earlier voluntary disclosures. */
+export function friendFollowup(state){
+ const told=state.events.filter(e=>e.type==='reflect'&&e.data==='tell'&&e.chapter<state.chapter);
+ if(told.some(e=>state.transactions.some(tx=>tx.chapter===e.chapter)))return '아까 말해 준 일, 혼자 급하게 해결하지 않아도 돼. 또 돈을 보내라는 연락이 오면 잠깐 멈추고 나한테 전화해.';
+ if(told.length)return '아까 확인하고 멈췄다는 얘기 기억해. 다른 연락이 와도 원래 번호로 물어봐 줘.';
+ return state.chapter===2?'오늘 약속은 그대로야. 늦으면 원래 번호로 연락해.':'퇴근하고 연락할게. 오늘은 서로 늦으면 미리 얘기하자.';
+}

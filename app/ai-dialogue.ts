@@ -1,6 +1,8 @@
 import { narratives, findChoice } from './story/narrative.js';
 import type { CaseData } from './game-data';
 
+export { aiMoment } from './story/narrative.js';
+
 export type AiChatMessage = { role: 'user' | 'assistant'; content: string };
 export type DialogueEmotion = 'friendly' | 'evasive' | 'deflecting' | 'pressuring' | 'disappointed' | 'closed';
 export type DialogueReplyMode = 'short' | 'normal';
@@ -8,7 +10,7 @@ export type DialogueReplyMode = 'short' | 'normal';
 const emotionDirections: Record<DialogueEmotion, string> = {
   friendly: '친근하고 여유 있게 답하며 선택권이 있는 것처럼 말한다.',
   evasive: '출처나 신원을 직접 확인할 수 있는 답은 피하고 설명을 조금 모호하게 만든다.',
-  deflecting: '공식 확인을 언급한 플레이어의 질문에 직접 반박하지 말고 다른 장점이나 절차로 화제를 돌린다.',
+  deflecting: '공식 기록과 이 계정의 설명 사이 차이에 짧게 반응한다. 관계를 증명할 자료가 없으면 없다고 하고 장점 소개로 화제를 돌리지 않는다.',
   pressuring: '답변은 짧게 유지하면서 이미 설명한 소재를 짧게 되짚는다. 새 마감이나 불이익은 만들지 않는다.',
   disappointed: '말로 거절하거나 연락 중단을 요구해도 거절한 내용을 인정한다. 새 조건·불이익을 만들지 않고 짧게 반응한다.',
   closed: '대화를 더 밀어붙이지 않고 짧게 마무리한다.',
@@ -68,7 +70,7 @@ ${characterContext}
 현재 화면에 도착한 고정 대화:
 ${sceneContext || '장면 정보 없음. 플레이어의 진행을 추측하지 않는다.'}
 플레이어가 이 상대에게 전달한 정보: ${shared.length?shared.join(' / '):'없음. 은행·전화·메모에서 본 내용은 모른다.'}
-최근 대화의 마지막 질문이 아직 답하지 않은 질문이다. 이미 고정 대화에서 설명한 내용을 처음 듣는 것처럼 다시 소개하지 않는다.
+최근 대화의 마지막 질문이 아직 답하지 않은 질문이다. 자유답변은 중요한 선택 직전의 보충 대화다. 이미 설명한 조건에 대한 재질문이면 새로운 안내처럼 시작하지 말고 그 조건의 의문점에만 반응한다. 플레이어가 대조한 기록은 그가 말해 준 주장으로만 다룬다. 이미 고정 대화에서 설명한 내용을 처음 듣는 것처럼 다시 소개하지 않는다.
 감정과 대응: ${emotion} — ${gameCase.verdict !== 'scam' ? '친구로서 아는 사실과 모르는 점을 솔직히 구분하고 확인·보류·거절을 존중한다.' : emotionDirections[emotion]}
 답변 길이: ${replyMode} — ${lengthDirection}
 금지선: ${dialogue.boundaries.join(' / ')}
