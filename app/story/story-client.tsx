@@ -140,7 +140,12 @@ export default function StoryClient(){
     setDialog(null);setStarted(true);setApp(!resume&&mode==='full'?'messages':'home');setThread(!resume&&mode==='full'?'junho':'current');setBrowserPage('start');setPaused(false);
   }
   function persistBudget(){setAiUsed(budget.current.counts.reduce((a,b)=>a+b,0));setAiCounts([...budget.current.counts]);setAiMoments([...budget.current.moments]);try{localStorage.setItem(budgetKey(budget.current.mode),JSON.stringify(budget.current));}catch{/* no chat or identity beyond random quota token */}}
-  function submitDraft(event:React.FormEvent){event.preventDefault();setComposerOpen(false);void send(draft,true,Date.now());}
+  function submitDraft(event:React.FormEvent){
+    event.preventDefault();setComposerOpen(false);
+    // This handler runs only on form submission, never during render.
+    // eslint-disable-next-line react-hooks/purity
+    void send(draft,true,Date.now());
+  }
   async function send(text:string,free=false,submittedAt=0){
     if(progressLocked||sending||gate.current.pending||state.blocked.includes(state.chapter)||chat.filter(m=>m.role==='user').length>=24)return;
     const clean=sanitizePlayerText(text);if(!clean)return;
