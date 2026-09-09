@@ -139,7 +139,7 @@ export default function StoryClient(){
     }
     const scripted=getScriptedReply(activeCase,messages);
     const canGenerate=decisionReady&&!momentUsed&&aiAllowed&&!practiceOriginal&&submittedAt>=budget.current.cooldown&&submittedAt-budget.current.last>=12000&&budget.current.counts[chapter]<c.story.aiLimit&&budget.current.counts.reduce((a,b)=>a+b,0)<4;
-    if(free&&!canGenerate){setNote(!decisionReady?'자유답변은 준비된 대화를 읽은 뒤 중요한 선택 직전에 열립니다.':momentUsed?'이 선택의 AI 답장은 이미 사용했습니다. 기록 확인이나 준비된 답장으로 이어가세요.':!aiAllowed?'자유답변은 AI 대화를 켜야 사용할 수 있습니다.':practiceOriginal?'되감기에서는 준비된 답장을 사용합니다.':budget.current.counts[chapter]>=c.story.aiLimit||aiUsed>=4?'이 장면의 AI 답장을 모두 사용했습니다. 준비된 답장으로 계속할 수 있습니다.':'AI 답장은 잠시 간격을 두고 보낼 수 있습니다. 입력은 남겨 두었습니다.');return;}
+    if(free&&!canGenerate){setNote(!decisionReady?'자유답변은 준비된 대화를 읽은 뒤 중요한 선택 직전에 열립니다.':momentUsed?'이 선택의 AI 답장은 이미 사용했습니다. 기록 확인이나 준비된 답장으로 이어가세요.':!aiAllowed?'자유답변은 AI 대화를 켜야 사용할 수 있습니다.':practiceOriginal?'되감기에서는 준비된 답장을 사용합니다.':budget.current.counts[chapter]>=c.story.aiLimit||aiUsed>=4?'이 사건의 AI 답장을 모두 사용했습니다. 준비된 답장으로 계속할 수 있습니다.':'AI 답장은 잠시 간격을 두고 보낼 수 있습니다. 입력은 남겨 두었습니다.');return;}
     setDrafts(old=>({...old,[id]:''}));setChats(old=>({...old,[id]:[...(old[id]??[]),{role:'user',content:clean,stage:stageId,anchor:sceneLines.length,speaker:c.sender}]}));setSending(true);
     try{
       await gate.current.run(async(signal:AbortSignal)=>{
@@ -154,7 +154,7 @@ export default function StoryClient(){
               body:JSON.stringify({caseId:id,stageId,choices:selectedChoices,inputMode:'free',messages:messages.slice(-4),userTurnCount:chat.filter(m=>m.role==='user').length+1})});
             const result=await response.json() as {reply?:unknown;provider?:string};
             if(!signal.aborted&&response.ok&&result.provider==='gemini'&&typeof result.reply==='string'&&validateAiReply(result.reply)){reply=result.reply;setModelStatus(result.provider==='gemini'?'AI 보조 응답 사용':'내장 대사 사용');}
-            else if(!signal.aborted){budget.current.cooldown=Date.now()+60000;persistBudget();setModelStatus('AI 답장 일시 중단');setNote('AI 답장을 받지 못했습니다. 준비된 답장을 선택하거나 잠시 뒤 다시 질문해 주세요.');setDrafts(old=>({...old,[id]:clean}));}
+            else if(!signal.aborted){budget.current.cooldown=Date.now()+60000;persistBudget();setModelStatus('AI 답장 일시 중단');setNote('AI 답장을 받지 못했습니다. 이 선택에서는 다시 호출하지 않습니다. 준비된 답장이나 기록 확인으로 계속해 주세요.');setDrafts(old=>({...old,[id]:clean}));}
           }catch{if(!signal.aborted){budget.current.cooldown=Date.now()+60000;persistBudget();setModelStatus('AI 연결 일시 중단');setNote('AI 연결이 지연되었습니다. 준비된 답장으로 계속할 수 있습니다.');setDrafts(old=>({...old,[id]:clean}));}}
           finally{clearTimeout(timeout);signal.removeEventListener('abort',abort);}
         }
