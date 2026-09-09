@@ -285,3 +285,8 @@ CI에 80개 경로 조합, 저장/변조/중복 거래/분기 되감기, 원장�
 - 실제 준호는 플레이어가 이전에 말하기를 선택한 사건에만 후속 반응한다. 상담 NPC에게 그 정보가 자동 전송되지 않는다. 결말은 말하기·혼자 정리하기의 차이를 반영한다.
 - 자동 검증: 장면 밖 생성 0회, 투자 순간별 1회, 구 저장 복원, 대화 순서, 미공개 정보 비노출, 가상 은행 원장/대조 카드, 기존 전체 경로 회귀 검사.
 - 수동 플레이·모바일 브라우저·실제 Gemini 평가는 사용자 요청에 따라 제외. 자연스러움과 실제 체험 길이는 실측하지 않는다.
+
+- 배포 전 발견된 보안 경고 3건: Next 16.3.3, sharp 0.35.4로 갱신하고 잠금 파일은 GitHub Actions에서 생성. 보안 검사의 예외 목록은 확대하지 않는다.
+  - [Next Windows 경고](https://github.com/advisories/GHSA-p293-qw3h-jr36)
+  - [Next 이미지 최적화 경고](https://github.com/advisories/GHSA-2xp9-vwfh-vxw4)
+  - [sharp 경고](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c)
