@@ -1,7 +1,7 @@
 import { narratives, findChoice } from './story/narrative.js';
 import type { CaseData } from './game-data';
 
-export { aiMoment } from './story/narrative.js';
+export { aiMoment, decisionReadyFor } from './story/narrative.js';
 
 export type AiChatMessage = { role: 'user' | 'assistant'; content: string };
 export type DialogueEmotion = 'friendly' | 'evasive' | 'deflecting' | 'pressuring' | 'disappointed' | 'closed';

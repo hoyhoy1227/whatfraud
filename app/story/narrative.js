@@ -33,7 +33,7 @@ export const narratives=[
     option('familiar-account-listen','무슨 부탁인데?',[line('준호','결제 하나가 안 돼서. 폰이 이상해서 다른 기기로 들어온 거야.'),line('준호','잠깐 대신 처리해 줄 수 있나 해서.')])
    ]),
    beat('familiar-request-detail','request',[
-    option('familiar-request-what','어떤 예약이야?',[line('준호','오늘 찾으려고 한 물건이야. 안내 화면에 적힌 결제 건을 말하는 거야.'),line('준호','여기서 더 설명할 수 있는 건 그 정도야.')]),
+    option('familiar-request-what','어떤 예약이야?',[line('준호','오늘 찾으려고 한 물건이야. 안내 화면에 적힌 결제 건을 말하는 거야.'),line('준호','찾으러 가기 전에 결제부터 해 두려고 했어.')]),
     option('familiar-request-later','저녁에 만나서 하면 안 돼?',[line('준호','그 전에 끝내 두려고 했지. 어렵다면 나도 다른 방법 알아볼게.')])
    ]),
    beat('familiar-recipient-check','request',[
@@ -56,11 +56,11 @@ export const narratives=[
   background:['최근 지출이 늘어 부수입에 관심이 생겼다. 며칠 전 무료 시장 소식 알림을 신청했다.','커피를 들고 자리로 돌아오는 길, 신청한 이름으로 자료가 도착한다. 처음에는 읽어 보기만 할 생각이다.'],
   persona:{identity:'온결 리서치 자료방 운영자. 금융사 직원이 아닌 별도 운영팀을 내세운다.',relationship:'무료 시장 노트 구독자에게 설명하는 운영자. 친한 친구처럼 말하지 않는다.',voice:'정돈된 해요체와 합니다체. 질문받은 항목부터 한두 문장으로 답한다. 매 답변을 참여 권유로 끝내지 않는다.',knowledge:'자신이 올린 자료와 이 방에서 오간 말만 안다. 플레이어의 은행 조회·친구 통화·다른 앱 활동은 모른다.',hidden:'일부 성공 사례로 관심을 유지하려 한다. 새 수익·마감·입금 확인을 임의로 만들지 않는다.',arc:'arrival: 무료 자료 설명. group: 참여자의 서로 다른 질문에 반응. offer: 자료 열람과 참여 구분. paid: 표시 화면 설명. withdrawal: 출금 보류와 기존 비용 안내만 설명. extra-paid: 확인 중이라는 범위에서 짧게 답한다.'},
   scenes:{
-   arrival:[line('온결 리서치','신청하신 시장 노트입니다. 오늘은 수익 화면을 읽을 때 구분할 항목을 정리했어요.'),line('온결 리서치','화면에 표시된 평가 금액과 실제로 출금할 수 있는 금액은 같지 않을 수 있습니다.'),line('온결 리서치','읽다가 궁금한 점이 있으면 남겨 주세요. 자료방에서도 질문을 받고 있어요.')],
-   group:[line('유진','저는 어제 알림 신청했어요. 자료에 모르는 말이 좀 있네요.'),line('민석','저도 처음엔 표만 봤어요. 이제 화면이 어디 있는지는 알겠네요.'),line('지수','좋았던 날 말고 전체 기간도 볼 수 있나요?'),line('온결 리서치','방에는 일부 공유 화면을 올립니다. 전체 내역과는 범위가 달라요.'),line('유진','아, 그럼 이 화면만 보고 다 알 수 있는 건 아니군요.')],
+   arrival:[line('온결 리서치','신청하신 오늘의 시장 노트 보내드려요. 점심시간에 보시기 좋게 짧게 정리했습니다.'),line('온결 리서치','오늘 자료에는 이용 화면도 같이 넣었어요. 자료방에 먼저 보신 분들이 계십니다.'),line('온결 리서치','읽다가 궁금한 점이 있으면 남겨 주세요. 자료방에서도 질문을 받고 있어요.')],
+   group:[line('유진','저는 어제 알림 신청했어요. 자료에 모르는 말이 좀 있네요.'),line('민석','저도 처음엔 표만 봤어요. 이제 화면이 어디 있는지는 알겠네요.'),line('지수','좋았던 날 말고 전체 기간도 볼 수 있나요?'),line('온결 리서치','오늘 올라온 화면부터 봐 주세요. 기간별 자료는 정리해서 안내하고 있어요.'),line('유진','저는 일단 저장해 놓고 퇴근할 때 다시 보려고요.'),line('지수','추가 비용은 없나요? 안내에서 못 찾겠어요.')],
    offer:[line('온결 리서치','자료를 읽는 것과 별도 참여는 구분됩니다. 참여 안내를 남겼어요.'),line('민석','저는 안내를 다시 보고 있어요. 받는 이름이 운영팀 이름이랑 조금 다르네요.'),line('온결 리서치','수취인은 온결 파트너입니다. 결정 전에 안내를 읽어 주세요.')],
    paid:[line('온결 리서치','이용 화면에서 표시 상태를 보실 수 있습니다.'),line('유진','숫자는 바뀌었는데 은행 쪽에는 아직 안 보이네요.'),line('민석','저는 저녁에 다시 보려고요. 출금은 아직 안 해 봤어요.')],
-   withdrawal:[line('온결 리서치','현재 출금이 보류되어 있습니다. 별도 확인 비용 안내를 읽어 주세요.'),line('지수','처음 안내에는 그런 내용이 없었는데요.'),line('알림','지수의 메시지가 삭제되었다.'),line('유진','방금 질문이 있었던 것 같은데요.'),line('온결 리서치','개별 문의는 이 대화에서 받고 있습니다.')],
+   withdrawal:[line('온결 리서치','현재 출금이 보류되어 있습니다. 별도 확인 비용 안내를 읽어 주세요.'),line('알림','지수의 이전 질문이 삭제되었다.'),line('유진','방금 질문이 있었던 것 같은데요.'),line('온결 리서치','개별 문의는 이 대화에서 받고 있습니다.')],
    'extra-paid':[line('온결 리서치','확인 중입니다. 담당자가 답변할 때까지 기다려 주세요.'),line('알림','화면을 다시 열어도 출금은 보류 상태다. 새로운 안내는 없다.')]
   },
   beats:[
@@ -81,15 +81,15 @@ export const narratives=[
     option('paper-group-cautious','일단 조건부터 알아보고 싶어요.',[line('온결 리서치','네. 별도 참여 안내가 있습니다.'),line('유진','저도 그 부분부터 읽어 보려고요.')])
    ]),
    beat('paper-offer-terms','offer',[
-    option('paper-offer-recipient','온결 파트너는 어느 쪽인가요?',[line('온결 리서치','접수에 사용하는 이름입니다. 방 이름과는 다릅니다.'),line('온결 리서치','위탁 관계를 보여드릴 별도 문서는 여기에는 없습니다.')]),
-    option('paper-offer-withdraw','참여 전에 출금 조건을 알려 주세요.',[line('온결 리서치','이용 화면에서 출금 요청을 하는 방식입니다.'),line('온결 리서치','이 단계에서 안내된 내용은 여기까지예요.')])
+    option('paper-offer-recipient','온결 파트너는 어느 쪽인가요?',[line('온결 리서치','접수에 사용하는 이름입니다. 방 이름과는 다릅니다.'),line('온결 리서치','참여 안내에 적힌 접수 명의로 보고 계시면 됩니다.')]),
+    option('paper-offer-withdraw','참여 전에 출금 조건을 알려 주세요.',[line('온결 리서치','이용 화면에서 출금 요청을 하는 방식입니다.'),line('온결 리서치','요청하신 내역은 이용 화면에서 확인하실 수 있어요.')])
    ]),
    beat('paper-offer-compare','offer',[
     option('paper-offer-official','공식 기록에서 위탁 관계를 찾지 못했어요.',[line('온결 리서치','그 조회와 저희 방 안내는 구분해서 보셔야 합니다.'),line('온결 리서치','여기서 추가로 보여드릴 문서는 없습니다.')],'official-record'),
-    option('paper-offer-repeat','다른 사람 화면인데 주문 시각이 같네요.',[line('온결 리서치','공유 자료를 정리하는 과정에서 같은 화면이 포함될 수 있습니다.'),line('지수','그럼 다른 사람의 성과라고 보기는 어렵겠네요.')],'success-post')
+    option('paper-offer-repeat','다른 사람 화면인데 주문 시각이 같네요.',[line('온결 리서치','공유 자료를 정리하는 과정에서 같은 화면이 포함될 수 있습니다.'),line('지수','저도 그 시각이 같아서 물어보려던 참이었어요.')],'success-post')
    ],false),
    beat('paper-paid-numbers','paid',[
-    option('paper-paid-claim','올라간 숫자가 제 돈이라는 뜻인가요?',[line('온결 리서치','이용 화면에 표시된 평가 금액입니다.'),line('유진','그러면 출금해서 확인하기 전에는 화면 숫자인 거네요.')]),
+    option('paper-paid-claim','올라간 숫자가 제 돈이라는 뜻인가요?',[line('온결 리서치','이용 화면에 표시된 평가 금액입니다.'),line('유진','저도 은행 앱 한번 열어 봐야겠어요.')]),
     option('paper-paid-bank','은행에서는 출금만 보이는데요.',[line('온결 리서치','플랫폼 표시와 은행 내역은 별도로 보셔야 합니다.'),line('지수','들어온 돈이 있는지는 은행 쪽을 봐야겠어요.')])
    ]),
    beat('paper-withdraw-compare','withdrawal',[
@@ -122,7 +122,7 @@ export const narratives=[
     option('recovery-explain-private','자세한 내역은 아직 말하지 않을게요.',[line('회복 지원 상담','알겠습니다. 이용 여부나 피해를 전제로 말씀드리지는 않겠습니다.'),line('회복 지원 상담','절차 설명만 들으셔도 됩니다.')])
    ]),
    beat('recovery-offer-records','offer',[
-    option('recovery-offer-share','게임 속 거래 기록만 보여줄게요.',[line('회복 지원 상담','전달하신 게임 내 거래 기록을 기준으로 살펴보겠습니다.'),line('회복 지원 상담','기록을 받는 것과 처리가 끝나는 것은 다릅니다.')],'prior-loss','record'),
+    option('recovery-offer-share','이 휴대폰의 거래 기록만 보여줄게요.',[line('회복 지원 상담','보내주신 내역부터 살펴보겠습니다.'),line('회복 지원 상담','기록을 받는 것과 처리가 끝나는 것은 다릅니다.')],'prior-loss','record'),
     option('recovery-offer-hold','기록은 공식 창구에만 낼게요.',[line('회복 지원 상담','그쪽에 제출하실 계획이시군요.'),line('회복 지원 상담','이 계정에는 내역을 받지 않은 것으로 두겠습니다.')])
    ]),
    beat('recovery-offer-cost','offer',[
@@ -190,5 +190,34 @@ export function friendFollowup(state){
  const told=state.events.filter(e=>e.type==='reflect'&&e.data==='tell'&&e.chapter<state.chapter);
  if(told.some(e=>state.transactions.some(tx=>tx.chapter===e.chapter)))return '아까 말해 준 일, 혼자 급하게 해결하지 않아도 돼. 또 돈을 보내라는 연락이 오면 잠깐 멈추고 나한테 전화해.';
  if(told.length)return '아까 확인하고 멈췄다는 얘기 기억해. 다른 연락이 와도 원래 번호로 물어봐 줘.';
- return state.chapter===2?'오늘 약속은 그대로야. 늦으면 원래 번호로 연락해.':'퇴근하고 연락할게. 오늘은 서로 늦으면 미리 얘기하자.';
+ return state.chapter===2?'집에 가는 길이지? 도착하면 연락 줘.':'퇴근하고 연락할게. 오늘은 서로 늦으면 미리 얘기하자.';
+}
+
+export const decisionWindows=[
+ {id:'familiar-check',caseId:'familiar-request',stages:['request','waiting'],checks:['recipient'],hint:'받는 이름 확인하기',target:'bank'},
+ {id:'paper-entry',caseId:'paper-profit',stages:['offer'],checks:['success-post','official-record'],hint:'게시물 또는 공식 기록 확인하기',target:'browser'},
+ {id:'paper-withdrawal',caseId:'paper-profit',stages:['withdrawal'],checks:['terms-comparison'],hint:'처음 안내와 지금 안내 비교하기',target:'compare'},
+ {id:'recovery-check',caseId:'recovery-team',stages:['offer'],checks:['official-help'],hint:'공식 접수 안내 확인하기',target:'official'}
+];
+/** Shared bounded progress checks; not authentication. */
+export function decisionReadyFor(caseId,stageId,choices=[],checks=[]){
+ const window=decisionWindows.find(w=>w.caseId===caseId&&w.stages.includes(stageId));
+ const chapter=['familiar-request','paper-profit','recovery-team'].indexOf(caseId);
+ return Boolean(window&&window.checks.some(id=>checks.includes(id))&&narratives[chapter].beats.filter(b=>b.required&&b.stage===stageId).every(b=>b.options.some(o=>choices.includes(o.id))));
+}
+export const retainedQuestion={id:'paper-question',speaker:'지수',text:'추가 비용은 없나요? 안내에서 못 찾겠어요.'};
+export function displayedMessages(state,stageId){
+ return authoredMessages(state,stageId).map(m=>state.chapter===1&&['withdrawal','extra-paid'].includes(state.stage)&&m.speaker===retainedQuestion.speaker&&m.text===retainedQuestion.text?{speaker:'알림',text:'삭제된 메시지'}:m);
+}
+export function decisionChecks(state){
+ const prefix=['familiar-request','paper-profit','recovery-team'][state.chapter]+':';
+ return [...state.inspected.filter(id=>id.startsWith(prefix)).map(id=>id.slice(prefix.length)),...state.events.filter(e=>e.chapter===state.chapter&&e.type==='observe').map(e=>e.data)];
+}
+export function contactProfile(chapter,known=false){
+ if(known)return {name:'준호',initial:'준',status:'저녁 약속은 원래 번호로',relationship:'내 연락처에 저장됨',kind:'friend'};
+ return [
+ {name:'준호',initial:'준',status:'메시지로 연락해 줘',relationship:'친구로 등록되지 않음',kind:'friend'},
+ {name:'온결 리서치',initial:'온',status:'시장 노트 · 자료 안내',relationship:'시장 노트 구독으로 연결됨',kind:'room'},
+ {name:'회복 지원 상담',initial:'회',status:'접수 안내는 메시지로 남겨 주세요',relationship:'친구로 등록되지 않음',kind:'service'}
+ ][chapter];
 }

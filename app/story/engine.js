@@ -13,7 +13,7 @@ export const SAVE_KEY = 'whatfraud-story-v3';
 export const INITIAL_BALANCE = 680000;
 export const APPS = ['home', 'messages', 'calls', 'bank', 'browser', 'notes', 'settings'];
 const terminal = ['verified', 'paused', 'blocked', 'reported', 'stopped', 'loss'];
-const validTypes = ['advance','platform','withdraw','confirm','inspect','save','call','resolve','next','cue','read','talk','reflect'];
+const validTypes = ['advance','platform','withdraw','confirm','inspect','save','call','resolve','next','cue','read','talk','reflect','observe','capture'];
 export const currentCase = state => chapters[state.chapter];
 export const currentStage = state => currentCase(state).story.stages.find(item => item.id === state.stage);
 export const totalSpent = state => state.transactions.reduce((sum, tx) => sum + tx.amount, 0);
@@ -83,6 +83,14 @@ export function transition(input,event) {
   let changed=false;
   const active=!isResolved(state);
   switch(event.type) {
+    case 'observe': {
+      const allowed=state.chapter===1&&(data==='platform-view'&&['group','offer','paid','withdrawal','extra-paid'].includes(state.stage)||data==='bank-view'&&chapterSpent(state)>0||data==='terms-comparison'&&['withdrawal','extra-paid'].includes(state.stage)&&state.visited.includes('offer'));
+      if(allowed&&!state.events.some(e=>e.type==='observe'&&e.chapter===state.chapter&&e.data===data))changed=true;
+      break;
+    }
+    case 'capture':
+      if(active&&state.chapter===1&&data==='paper-question'&&['group','offer','paid'].includes(state.stage)&&!state.events.some(e=>e.type==='capture'&&e.data===data))changed=true;
+      break;
     case 'talk': {
       const selected=findChoice(state.chapter,data);
       if(!active||!selected||selected.beat.stage!==state.stage||!choiceAllowed(state,selected.choice))break;
