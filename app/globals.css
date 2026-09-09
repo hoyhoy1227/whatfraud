@@ -42,3 +42,5 @@ dialog{max-width:380px;padding:24px}dialog h2{font-size:1.5rem}dialog p{font-siz
 .large-text .bubble p,.large-text .record p,.large-text .fine,.large-text button{font-size:1.125rem}
 @media(max-width:600px){.screen-scroll{padding:18px}.app-messages{padding:14px}.intro{padding:4px}.intro h1{margin:16px 0;font-size:3.4rem}.home-clock{margin:10px 0 20px}.app-grid{margin-top:22px;gap:18px 8px}}
 @media(max-height:680px){.intro h1{font-size:2.8rem;margin:12px 0}.intro-card{margin:12px 0}.message-dock{max-height:48%}.home-clock strong{font-size:2.6rem}}
+
+.comparison summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}.comparison-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}.comparison-pair article{min-width:0;border-left:2px solid #9aaac2;padding-left:10px}.comparison-pair h3{font-size:1rem}.comparison-pair p{font-size:1rem;overflow-wrap:anywhere}.comparison-pair small{font-size:.875rem}.ending-personal{line-height:1.7}@media(max-width:340px){.comparison-pair{grid-template-columns:1fr}}

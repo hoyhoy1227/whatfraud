@@ -1,5 +1,5 @@
 import { reserveSharedBudget } from '../ai-budget';
-import { validateCharacterChoices, buildSystemPrompt, inferDialogueEmotion, inferDialogueReplyMode, sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
+import { aiMoment, validateCharacterChoices, buildSystemPrompt, inferDialogueEmotion, inferDialogueReplyMode, sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
 import { cases } from '../../game-data';
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite';
@@ -219,6 +219,8 @@ async function handleChat(request: Request, body: ChatBody) {
   const userTurnCount = Number(body.userTurnCount);
   const scripted = body.inputMode === 'free' ? null : getScriptedReply(gameCase, conversation);
   if (scripted !== null) return json({ reply: scripted, provider: 'scripted', model: null });
+  const moment=aiMoment(gameCase.id,typeof body.stageId==='string'?body.stageId:'');
+  if(!moment)return json({code:'not_decision_moment'},409);
   if (!aiEnabled()) return json({ code: 'ai_disabled' }, 503, { 'Retry-After': '300' });
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return json({ code: 'ai_unconfigured' }, 503);
@@ -237,6 +239,8 @@ async function handleChat(request: Request, body: ChatBody) {
   }
 
 
+  const momentKey = `moment:${ip}:${session}:${moment}`;
+  if (!consumeRateLimit(momentKey, 1, 1)) return json({ code: 'moment_used' }, 429);
   const caseKey = `case:${ip}:${session}:${gameCase.id}`;
   // Supplemental isolate-local throttle; not a project-wide quota or billing cap.
   if (!consumeRateLimit(caseKey, gameCase.story.aiLimit, gameCase.story.aiLimit)) {

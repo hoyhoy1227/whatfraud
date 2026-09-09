@@ -45,3 +45,19 @@ const cancel=scheduleMessage('문장',false,()=>delivered++,fn=>{callback=fn;ret
 cancel();callback();assert.equal(delivered,0);assert.equal(cleared,true);
 scheduleMessage('문장',false,()=>delivered++,fn=>{callback=fn;return 2;},()=>{});
 callback();assert.equal(delivered,1);
+
+let investment=engine.createRun('demo');
+const advance=(type,data='')=>{investment=engine.transition(investment,{type,data,chapter:1});};
+advance('advance');advance('advance');advance('confirm','paper-profit:main');
+let comparison=renderToStaticMarkup(createElement(ui.RecordComparison,{state:investment}));
+assert.ok(comparison.includes('355,200원')&&comparison.includes('300,000원')&&comparison.includes('들어온 돈 0원'));
+assert.ok(!comparison.includes('120,000원'),'future fee is not exposed');
+advance('withdraw');
+comparison=renderToStaticMarkup(createElement(ui.RecordComparison,{state:investment}));
+assert.ok(comparison.includes('120,000원')&&comparison.includes('참여 전 대화'));
+assert.ok(!comparison.includes('이용 화면에서 출금 요청을 하는 방식입니다'),'unchosen dialogue is not presented as history');
+advance('confirm','paper-profit:extra');
+comparison=renderToStaticMarkup(createElement(ui.RecordComparison,{state:investment}));
+assert.ok(comparison.includes('420,000원'));
+assert.ok(client.includes('decisionReady&&!momentUsed')&&client.includes('conversationTimeline'));
+assert.ok(!client.includes('activeCase.dialogue?.quickQuestions.map'),'reply choices are scene-bound');
