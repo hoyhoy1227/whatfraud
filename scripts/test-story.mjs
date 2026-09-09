@@ -129,3 +129,24 @@ let told=e.createRun();told=step(told,'resolve','paused');told=step(told,'reflec
 assert.ok(n.friendFollowup(told).includes('기억해'));
 assert.ok(!n.friendFollowup(e.createRun('demo')).includes('기억해'),'unshared events stay private');
 console.log('Decision windows, chronological chat, quota restore and relationship memory passed.');
+
+assert.equal(n.decisionReadyFor('familiar-request','request',['familiar-request-what'],[]),false);
+assert.equal(n.decisionReadyFor('familiar-request','request',['familiar-request-what'],['recipient']),true);
+assert.equal(n.decisionReadyFor('paper-profit','offer',[],['success-post']),false);
+assert.equal(n.decisionReadyFor('paper-profit','offer',['paper-offer-withdraw'],['success-post']),true);
+assert.equal(n.decisionReadyFor('paper-profit','withdrawal',['paper-withdraw-old'],['success-post']),false);
+assert.equal(n.decisionReadyFor('paper-profit','withdrawal',['paper-withdraw-old'],['terms-comparison']),true);
+assert.equal(n.decisionReadyFor('recovery-team','offer',['recovery-offer-hold','recovery-offer-why'],['official-help']),true);
+let captured=e.createRun('demo');
+assert.equal(step(captured,'capture','paper-question'),captured);
+captured=step(captured,'advance');
+assert.ok(n.displayedMessages(captured,'group').some(m=>m.text===n.retainedQuestion.text));
+captured=step(captured,'capture','paper-question');captured=step(captured,'advance');captured=step(captured,'confirm','paper-profit:main');
+assert.equal(step(captured,'observe','terms-comparison'),captured);
+captured=step(captured,'withdraw');captured=step(captured,'observe','terms-comparison');
+assert.ok(!n.displayedMessages(captured,'group').some(m=>m.text===n.retainedQuestion.text));
+assert.deepEqual(e.restoreRun(e.serializeRun(captured)),captured);
+assert.ok(!e.serializeRun(captured).includes(n.retainedQuestion.text));
+assert.equal(step(captured,'capture','paper-question'),captured);
+assert.ok(n.decisionChecks(captured).includes('terms-comparison'));
+console.log('Evidence gates, retained deletion and profile metadata passed.');

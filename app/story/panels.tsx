@@ -31,11 +31,27 @@ export function Rewind({state,onReplay,onRestart}:{state:Run;onReplay:(index:num
     <button className="primary" onClick={onRestart}>처음 화면으로</button></div>;
 }
 
-export function RecordComparison({state}:{state:Run}){
-  if(state.chapter!==1||!['paid','withdrawal','extra-paid'].includes(state.stage))return null;
-  const sent=state.transactions.filter(tx=>tx.chapter===1).reduce((sum,tx)=>sum+tx.amount,0);
-  return <details className="record comparison"><summary>두 기록 나란히 보기</summary>
-    <div className="comparison-pair"><article><h3>온결 화면</h3><p>표시된 평가 금액</p><strong>355,200원</strong></article><article><h3>생활 계좌</h3><p>온결 관련 출금</p><strong>−{money(sent)}</strong><p>들어온 돈 0원</p></article></div>
-    {['withdrawal','extra-paid'].includes(state.stage)&&<div className="comparison-pair"><article><h3>참여 전 대화</h3><p>{state.events.some(e=>e.type==='talk'&&e.data==='paper-offer-withdraw')?'“이용 화면에서 출금 요청을 하는 방식입니다.”':'“자료를 읽는 것과 별도 참여는 구분됩니다. 참여 안내를 남겼어요.”'}</p><small>참여 전 대화 · 확인 비용 안내 없음</small></article><article><h3>현재 대화</h3><p>“현재 출금이 보류되어 있습니다. 별도 확인 비용 안내를 읽어 주세요.”</p><small>추가 요청 120,000원</small></article></div>}
-  </details>;
+
+export function RecordComparison({state,onObserve,onQuestion,onBank,onPlatform}:{state:Run;onObserve?:()=>void;onQuestion?:()=>void;onBank?:()=>void;onPlatform?:()=>void}){
+ if(state.chapter!==1||!['paid','withdrawal','extra-paid'].includes(state.stage))return null;
+ const seen=(id:string)=>state.events.some(e=>e.type==='observe'&&e.chapter===1&&e.data===id);
+ const sent=state.transactions.filter(tx=>tx.chapter===1).reduce((sum,tx)=>sum+tx.amount,0);
+ return <section className="record comparison"><h3>기록 대조</h3>
+ {seen('bank-view')&&seen('platform-view')?<details><summary>화면 금액과 은행 내역</summary><div className="comparison-pair"><article><small>출처 · 온결 화면</small><h3>표시된 평가 금액</h3><strong>355,200원</strong></article><article><small>출처 · 생활 계좌</small><h3>온결 관련 출금</h3><strong>−{money(sent)}</strong><p>들어온 돈 0원</p></article></div></details>:<div>{!seen('platform-view')&&<button onClick={onPlatform}>투자 화면 확인하기</button>}{!seen('bank-view')&&<button onClick={onBank}>은행 내역 확인하기</button>}</div>}
+ {['withdrawal','extra-paid'].includes(state.stage)&&<details onToggle={event=>{if(event.currentTarget.open)onObserve?.();}}><summary>처음 안내와 지금 안내</summary><div className="comparison-pair"><article><small>출처 · 참여 전 대화</small><p>{state.events.some(e=>e.type==='talk'&&e.data==='paper-offer-withdraw')?'“이용 화면에서 출금 요청을 하는 방식입니다.”':'“자료를 읽는 것과 별도 참여는 구분됩니다. 참여 안내를 남겼어요.”'}</p></article><article><small>출처 · 현재 대화</small><p>“현재 출금이 보류되어 있습니다. 별도 확인 비용 안내를 읽어 주세요.”</p><strong>추가 요청 120,000원</strong></article></div><button onClick={onQuestion}>이 내용 물어보기</button></details>}
+ </section>;
+}
+export function PhoneStatus({time}:{time:string}){
+ return <div className="statusbar"><b>{time}</b><span className="camera-island" aria-hidden="true"/><span className="phone-indicators"><span className="simulation-label">가상 체험</span><span aria-hidden="true">▂▄▆</span><span className="battery-icon" aria-hidden="true"/></span></div>;
+}
+export function Closing({state,step,onNext,onSkip}:{state:Run;step:number;onNext:()=>void;onSkip:()=>void}){
+ const told=state.events.some(e=>e.type==='reflect'&&e.data==='tell'),last=state.results.find(r=>r.chapter===2);
+ return <div className={'closing closing-'+step}>
+ {step===0?<><small>마지막 대화</small><h2>회복 지원 상담</h2><p className="system-message">{last?.kind==='loss'?'접수 내용 확인 중':last?.kind==='reported'?'자료 접수 기록이 남아 있다.':'이 연락은 여기서 멈췄다.'}</p></>:step===1?<><small>생활 계좌</small><Ledger state={state}/><p>돌아오지 않은 금액 {money(totalSpent(state))}</p></>:step===2?<><small>준호 · 기존 연락처</small><div className="bubble"><p>{told?'오늘 얘기해 줘서 고마워. 내일도 연락할게. 혼자 급하게 해결하려고 하진 말자.':'집에 도착했어? 오늘 만나서 좋았어. 내일 연락할게.'}</p></div><p>{state.saved.length||state.events.some(e=>e.type==='capture')?'메모에 보관한 기록이 남아 있다.':'은행에는 오늘의 거래 내역이 남아 있다.'}</p></>:<><div className="lock-clock">22:10</div><p>휴대폰을 잠갔다.</p><small>하루가 끝나도 다음 선택은 남아 있다.</small></>}
+ <button className="primary" onClick={onNext}>{['은행 내역 보기','준호의 연락 보기','화면 잠그기','오늘의 기록 열기'][step]}</button>{step<3&&<button className="text-button" onClick={onSkip}>오늘의 기록으로 바로 가기</button>}
+ </div>;
+}
+type Profile={name:string;initial:string;status:string;relationship:string;kind:string};
+export function ContactProfile({profile,blocked,onClose,onChat,onCall}:{profile:Profile;blocked:boolean;onClose:()=>void;onChat:()=>void;onCall:()=>void}){
+ return <div className={'contact-profile profile-'+profile.kind}><div className="profile-cover"><button className="profile-close" aria-label="프로필 닫기" onClick={onClose}>×</button></div><div className="profile-body"><div className="profile-avatar" aria-hidden="true">{profile.initial}</div><h2>{profile.name}</h2><p className="profile-status">{profile.status}</p><span className="profile-relationship">{profile.relationship}</span>{blocked&&<p>차단한 계정</p>}<div className="profile-actions"><button onClick={onChat}>대화 보기</button><button disabled={blocked} onClick={onCall}>음성 통화</button></div><small>이름과 상태 메시지는 계정에 표시된 정보입니다.</small></div></div>;
 }

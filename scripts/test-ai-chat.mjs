@@ -18,11 +18,12 @@ async function freshRoute() {
     .replace("import { cases } from '../../game-data';", 'const cases = ' + JSON.stringify(cases) + ';');
   return import(moduleUrl(source) + '#' + serial++);
 }
-const request = (text = 'この質問', session = 'test-session-000001', overrides = {}) => new Request('https://example.invalid/api/ai-chat', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json', 'x-whatfraud-session': session, 'cf-connecting-ip': '192.0.2.1' },
-  body: JSON.stringify({ caseId: 'paper-profit', stageId: overrides.caseId==='familiar-request'?'request':'offer', messages: [{ role: 'user', content: text }], userTurnCount: 1, ...overrides }),
-});
+const request = (text = 'この質問', session = 'test-session-000001', overrides = {}) => {
+ const caseId=overrides.caseId??'paper-profit',stageId=Object.hasOwn(overrides,'stageId')?overrides.stageId:caseId==='familiar-request'?'request':'offer';
+ const choices=caseId==='familiar-request'?['familiar-request-what']:caseId==='recovery-team'?['recovery-offer-hold','recovery-offer-why']:stageId==='withdrawal'?['paper-withdraw-old']:stageId==='offer'?['paper-offer-withdraw']:[];
+ const checks=caseId==='familiar-request'?['recipient']:caseId==='recovery-team'?['official-help']:['success-post','terms-comparison'];
+ return new Request('https://example.invalid/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':session,'cf-connecting-ip':'192.0.2.1'},body:JSON.stringify({caseId,stageId,choices:stageId?choices:[],checks,messages:[{role:'user',content:text}],userTurnCount:1,...overrides})});
+};
 let calls = 0;
 const originalFetch = globalThis.fetch;
 const originalKey = process.env.GEMINI_API_KEY;
@@ -149,7 +150,14 @@ try {
   assert.equal((await route.POST(request('출금 질문','window-test-session',{inputMode:'free',stageId:'withdrawal'}))).status,200);
   assert.equal(calls,2,'investment budget reserved for two distinct decisions');
   assert.equal((await (await route.POST(request('stage omitted','missing-window-session',{stageId:undefined}))).json()).code,'not_decision_moment','legacy novel requests cannot bypass window');
-  await testClientCancellation();
+  
+ route=await freshRoute();let gatedCalls=0;
+ globalThis.fetch=async()=>{gatedCalls++;return successful();};
+ assert.equal((await (await route.POST(request('질문','prereq-test-session',{checks:[]}))).json()).code,'decision_not_ready');
+ assert.equal((await (await route.POST(request('질문','prereq-test-session',{choices:[]}))).json()).code,'decision_not_ready');
+ assert.equal((await (await route.POST(request('질문','prereq-test-session',{checks:['invented']}))).json()).code,'invalid_checks');
+ assert.equal(gatedCalls,0);
+ await testClientCancellation();
   await testSecurity();
   for (const outcome of ['exhausted','unavailable']) {
     globalThis.__budgetOutcome=outcome;
