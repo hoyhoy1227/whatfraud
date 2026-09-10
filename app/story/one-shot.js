@@ -12,7 +12,7 @@ export const attachmentText={
 };
 export function messageStatus(state,id){
  const entries=state.events.filter(e=>e.type==='message'&&e.data.startsWith(id+':'));
- const final=entries.find(e=>['skip',...reactions[id]??[]].includes(e.data.split(':')[1]));
+ const final=entries.find(e=>['skip',...(reactions[id]??[])].includes(e.data.split(':')[1]));
  return final?.data.split(':')[1]??(entries.some(e=>e.data===id+':attempt')?'attempt':'ready');
 }
 export function messageWindow(state,id){

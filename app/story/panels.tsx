@@ -1,3 +1,4 @@
+import {messageConsequences} from './one-shot';
 import { chapters, INITIAL_BALANCE, money, totalSpent, endingFor, timeline } from './engine';
 type Run = ReturnType<typeof import('./engine').createRun>;
 export function Ledger({state}:{state:Run}) {
@@ -12,7 +13,8 @@ export function Rewind({state,onReplay,onRestart}:{state:Run;onReplay:(index:num
   const played=chapters.map((chapter,index)=>({chapter,index,events:pivots.filter(p=>p.chapter===index)})).filter(p=>p.events.length);
   return <div className="rewind"><span className="eyebrow">오늘의 기록</span><h1>{ending.title}</h1><p>{ending.line}</p>
     <div className="balance loss-balance"><span>돌아오지 않은 금액</span><strong>{money(totalSpent(state))}</strong><small>가상 거래 · 접수와 차단은 환급이 아닙니다.</small></div>
-    <p className="ending-personal">{state.events.some(e=>e.type==='reflect'&&e.data==='tell')?'준호에게 이야기한 일이 남아 있다. 이 하루를 혼자 설명할 필요는 없다.':'누구에게 말할지는 아직 정하지 않았다. 지금 남긴 기록은 다음 이야기를 시작할 때 꺼낼 수 있다.'}</p>
+    <p className="ending-personal">{state.events.some(e=>e.type==='reflect'&&e.data==='tell'||e.type==='message'&&e.data==='friend:together')?'준호에게 이야기한 일이 남아 있다. 이 하루를 혼자 설명할 필요는 없다.':'누구에게 말할지는 아직 정하지 않았다. 지금 남긴 기록은 다음 이야기를 시작할 때 꺼낼 수 있다.'}</p>
+    {messageConsequences(state).length>0&&<section className="ending-messages"><h2>오늘 남긴 연락</h2>{messageConsequences(state).map(text=><p key={text}>{text}</p>)}</section>}
     <h2>다시 고른다면</h2><p className="muted">선택 직전으로. 원래 기록은 그대로.</p>
     {played.map(({chapter,index,events})=>{
       const p=events.find(e=>e.type==='confirm')??events.find(e=>e.type==='resolve')??events[0];
@@ -38,7 +40,7 @@ export function RecordComparison({state,onObserve,onQuestion,onBank,onPlatform}:
  const sent=state.transactions.filter(tx=>tx.chapter===1).reduce((sum,tx)=>sum+tx.amount,0);
  return <section className="record comparison"><h3>기록 대조</h3>
  {seen('bank-view')&&seen('platform-view')?<details><summary>화면 금액과 은행 내역</summary><div className="comparison-pair"><article><small>출처 · 온결 화면</small><h3>표시된 평가 금액</h3><strong>355,200원</strong></article><article><small>출처 · 생활 계좌</small><h3>온결 관련 출금</h3><strong>−{money(sent)}</strong><p>들어온 돈 0원</p></article></div></details>:<div>{!seen('platform-view')&&<button onClick={onPlatform}>투자 화면 확인하기</button>}{!seen('bank-view')&&<button onClick={onBank}>은행 내역 확인하기</button>}</div>}
- {['withdrawal','extra-paid'].includes(state.stage)&&<details onToggle={event=>{if(event.currentTarget.open)onObserve?.();}}><summary>처음 안내와 지금 안내</summary><div className="comparison-pair"><article><small>출처 · 참여 전 대화</small><p>{state.events.some(e=>e.type==='talk'&&e.data==='paper-offer-withdraw')?'“이용 화면에서 출금 요청을 하는 방식입니다.”':'“자료를 읽는 것과 별도 참여는 구분됩니다. 참여 안내를 남겼어요.”'}</p></article><article><small>출처 · 현재 대화</small><p>“현재 출금이 보류되어 있습니다. 별도 확인 비용 안내를 읽어 주세요.”</p><strong>추가 요청 120,000원</strong></article></div><button onClick={onQuestion}>이 내용 물어보기</button></details>}
+ {['withdrawal','extra-paid'].includes(state.stage)&&<details onToggle={event=>{if(event.currentTarget.open)onObserve?.();}}><summary>처음 안내와 지금 안내</summary><div className="comparison-pair"><article><small>출처 · 참여 전 대화</small><p>{state.events.some(e=>e.type==='talk'&&e.data==='paper-offer-withdraw')?'“이용 화면에서 출금 요청을 하는 방식입니다.”':'“자료를 읽는 것과 별도 참여는 구분됩니다. 참여 안내를 남겼어요.”'}</p></article><article><small>출처 · 현재 대화</small><p>“현재 출금이 보류되어 있습니다. 별도 확인 비용 안내를 읽어 주세요.”</p><strong>추가 요청 120,000원</strong></article></div><button onClick={onQuestion}>지수에게 메시지 보내기</button></details>}
  </section>;
 }
 export function PhoneStatus({time}:{time:string}){
@@ -52,6 +54,6 @@ export function Closing({state,step,onNext,onSkip}:{state:Run;step:number;onNext
  </div>;
 }
 type Profile={name:string;initial:string;status:string;relationship:string;kind:string};
-export function ContactProfile({profile,blocked,onClose,onChat,onCall}:{profile:Profile;blocked:boolean;onClose:()=>void;onChat:()=>void;onCall:()=>void}){
- return <div className={'contact-profile profile-'+profile.kind}><div className="profile-cover"><button className="profile-close" aria-label="프로필 닫기" onClick={onClose}>×</button></div><div className="profile-body"><div className="profile-avatar" aria-hidden="true">{profile.initial}</div><h2>{profile.name}</h2><p className="profile-status">{profile.status}</p><span className="profile-relationship">{profile.relationship}</span>{blocked&&<p>차단한 계정</p>}<div className="profile-actions"><button onClick={onChat}>대화 보기</button><button disabled={blocked} onClick={onCall}>음성 통화</button></div><small>이름과 상태 메시지는 계정에 표시된 정보입니다.</small></div></div>;
+export function ContactProfile({profile,blocked,onClose,onChat,onCall,callAvailable=true}:{profile:Profile;blocked:boolean;callAvailable?:boolean;onClose:()=>void;onChat:()=>void;onCall:()=>void}){
+ return <div className={'contact-profile profile-'+profile.kind}><div className="profile-cover"><button className="profile-close" aria-label="프로필 닫기" onClick={onClose}>×</button></div><div className="profile-body"><div className="profile-avatar" aria-hidden="true">{profile.initial}</div><h2>{profile.name}</h2><p className="profile-status">{profile.status}</p><span className="profile-relationship">{profile.relationship}</span>{blocked&&<p>차단한 계정</p>}<div className="profile-actions"><button onClick={onChat}>대화 보기</button><button disabled={blocked||!callAvailable} onClick={onCall}>{callAvailable?'음성 통화':'등록된 번호 없음'}</button></div><small>이름과 상태 메시지는 계정에 표시된 정보입니다.</small></div></div>;
 }
