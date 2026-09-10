@@ -4,8 +4,8 @@ import {sanitizePlayerText,validateAiReply} from '../ai-dialogue';
 import {storyMessages,messageStatus,messageWindow,canAttach,attachmentText,reactions} from './one-shot';
 type Run=ReturnType<typeof import('./engine').createRun>;
 type Scene='peer'|'friend';
-type Props={state:Run;scene:Scene;aiAllowed:boolean;session:string;remaining:number;practice:boolean;reduced:boolean;paused:boolean;onEvent:(type:string,data:string)=>boolean;onBack:()=>void;onContinue:()=>void;onProfile:()=>void};
-export default function StoryMessage({state,scene,aiAllowed,session,remaining,practice,reduced,paused,onEvent,onBack,onContinue,onProfile}:Props){
+type Props={state:Run;scene:Scene;aiAllowed:boolean;getSession:()=>string;remaining:number;practice:boolean;reduced:boolean;paused:boolean;onEvent:(type:string,data:string)=>boolean;onBack:()=>void;onContinue:()=>void;onProfile:()=>void};
+export default function StoryMessage({state,scene,aiAllowed,getSession,remaining,practice,reduced,paused,onEvent,onBack,onContinue,onProfile}:Props){
  const person=storyMessages[scene],status=messageStatus(state,scene),available=messageWindow(state,scene);
  const [draft,setDraft]=useState(''),[sent,setSent]=useState(''),[reply,setReply]=useState(''),[attachment,setAttachment]=useState('none');
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -33,7 +33,7 @@ export default function StoryMessage({state,scene,aiAllowed,session,remaining,pr
   const aborter=new AbortController();controller.current=aborter;
   const timer=setTimeout(()=>aborter.abort(),10000);
   try{
-   const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':session},signal:aborter.signal,body:JSON.stringify({caseId:'paper-profit',stageId:state.stage,sceneId:scene,resolved:state.results.some(r=>r.chapter===1),joined:state.joined,attachment:scene==='peer'?attachment:'none',inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1})});
+   const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':getSession()},signal:aborter.signal,body:JSON.stringify({caseId:'paper-profit',stageId:state.stage,sceneId:scene,resolved:state.results.some(r=>r.chapter===1),joined:state.joined,attachment:scene==='peer'?attachment:'none',inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1})});
    const value=await response.json() as {reply?:unknown;provider?:unknown;reaction?:unknown};
    if(!response.ok||value.provider!=='gemini'||typeof value.reply!=='string'||!validateAiReply(value.reply)||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply))throw Error('unavailable');
    if(!reduced)await new Promise<void>(resolve=>{const wait=setTimeout(resolve,600);aborter.signal.addEventListener('abort',()=>{clearTimeout(wait);resolve();},{once:true});});

@@ -80,7 +80,7 @@ let messageSource=messageClient.replace("from '../ai-dialogue'","from "+JSON.str
 const compiled=ts.transpileModule(messageSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime'))).replace("from 'react'","from "+JSON.stringify(import.meta.resolve('react')));
 const Message=(await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'))).default;
 for(const aiAllowed of [false,true]){
- const html=renderToStaticMarkup(createElement(Message,{state:investment,scene:'peer',aiAllowed,session:'test-ui-session-0001',remaining:2,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
+ const html=renderToStaticMarkup(createElement(Message,{state:investment,scene:'peer',aiAllowed,getSession:()=> 'test-ui-session-0001',remaining:2,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
  assert.ok(html.includes('지수')&&html.includes('준비된 메시지로 보내기'));
  assert.equal(html.includes('<textarea'),aiAllowed);
  assert.ok(!html.includes('어떻게 행동'));
