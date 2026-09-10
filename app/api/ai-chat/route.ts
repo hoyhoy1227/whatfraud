@@ -1,5 +1,6 @@
+import { validateStoryContext, storyPrompt, parseStoryReply } from '../../story/one-shot.js';
 import { reserveSharedBudget } from '../ai-budget';
-import { aiMoment, decisionReadyFor, validateCharacterChoices, buildSystemPrompt, inferDialogueEmotion, inferDialogueReplyMode, sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
+import { sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
 import { cases } from '../../game-data';
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite';
@@ -159,7 +160,7 @@ export async function GET() {
   });
 }
 
-type ChatBody = { caseId?: unknown; messages?: unknown; userTurnCount?: unknown; stageId?: unknown; inputMode?: unknown; choices?: unknown; checks?: unknown };
+type ChatBody = { caseId?: unknown; messages?: unknown; userTurnCount?: unknown; stageId?: unknown; inputMode?: unknown; choices?: unknown; checks?: unknown; sceneId?: unknown; resolved?: unknown; joined?: unknown; attachment?: unknown };
 type PendingReply = { response: Promise<Response>; expires: number };
 const pendingReplies = new Map<string, PendingReply>();
 
@@ -171,7 +172,7 @@ export async function POST(request: Request) {
   let body: ChatBody;
   try {
     body = await readBoundedBody(request) as ChatBody;
-    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !['caseId', 'messages', 'userTurnCount', 'stageId', 'inputMode', 'choices', 'checks'].includes(key))) return json({ code: 'invalid_request' }, 400);
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !['caseId', 'messages', 'userTurnCount', 'stageId', 'inputMode', 'choices', 'checks', 'sceneId', 'resolved', 'joined', 'attachment'].includes(key))) return json({ code: 'invalid_request' }, 400);
   } catch (error) {
     return json({ code: error instanceof Error && error.message === 'body_timeout' ? 'body_timeout' : 'invalid_request' }, error instanceof Error && error.message === 'body_timeout' ? 408 : 400);
   }
@@ -203,27 +204,19 @@ async function handleChat(request: Request, body: ChatBody) {
   if (typeof body.caseId !== 'string') return json({ code: 'invalid_request' }, 400);
   const gameCase = cases.find((item) => item.id === body.caseId);
   if (!gameCase || gameCase.mode !== 'chat' || !gameCase.dialogue) return json({ code: 'invalid_case' }, 400);
-  if (body.inputMode !== undefined && body.inputMode !== 'free') return json({ code: 'invalid_request' }, 400);
-  if (body.stageId !== undefined && (typeof body.stageId !== 'string' || !gameCase.story.stages.some(stage => stage.id === body.stageId))) return json({ code: 'invalid_stage' }, 400);
-  if (body.inputMode === 'free' && typeof body.stageId !== 'string') return json({ code: 'invalid_stage' }, 400);
-  if(body.choices!==undefined&&!validateCharacterChoices(gameCase,body.stageId,body.choices))return json({code:'invalid_choices'},400);
   const messages = parseMessages(body.messages);
   if (!messages) return json({ code: 'invalid_messages' }, 400);
-
-  const firstUser = messages.findIndex((message) => message.role === 'user');
-  const conversation = messages.slice(Math.max(firstUser, 0));
-  const visibleUserTurns = conversation.filter((message) => message.role === 'user').length;
-  if (!Number.isInteger(body.userTurnCount) || Number(body.userTurnCount) < visibleUserTurns || Number(body.userTurnCount) > 24) {
-    return json({ code: 'invalid_turn_count' }, 400);
+  // Old clients may still request built-in lines, but never reach the provider.
+  if(body.inputMode!=='story-message'){
+    const scripted=body.inputMode===undefined?getScriptedReply(gameCase,messages):null;
+    if(scripted!==null)return json({reply:scripted,provider:'scripted',model:null});
+    return json({code:'story_message_required'},409);
   }
-  const userTurnCount = Number(body.userTurnCount);
-  const scripted = body.inputMode === 'free' ? null : getScriptedReply(gameCase, conversation);
-  if (scripted !== null) return json({ reply: scripted, provider: 'scripted', model: null });
-  const moment=aiMoment(gameCase.id,typeof body.stageId==='string'?body.stageId:'');
-  if(!moment)return json({code:'not_decision_moment'},409);
-  const allowedChecks=[...gameCase.story.evidence.map(e=>e.id),'terms-comparison','bank-view','platform-view'];
-  if(!Array.isArray(body.checks)||body.checks.length>12||body.checks.some(id=>typeof id!=='string'||!allowedChecks.includes(id))||new Set(body.checks).size!==body.checks.length)return json({code:'invalid_checks'},400);
-  if(!decisionReadyFor(gameCase.id,body.stageId,Array.isArray(body.choices)?body.choices:[],body.checks))return json({code:'decision_not_ready'},409);
+  if(messages.length!==1||messages[0].role!=='user'||body.userTurnCount!==1)return json({code:'invalid_messages'},400);
+  if(!validateStoryContext(body)||body.choices!==undefined||body.checks!==undefined)return json({code:'invalid_story_context'},400);
+  const sceneId=body.sceneId as 'peer'|'friend';
+  const moment='story-'+sceneId;
+  const conversation=messages;
   if (!aiEnabled()) return json({ code: 'ai_disabled' }, 503, { 'Retry-After': '300' });
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return json({ code: 'ai_unconfigured' }, 503);
@@ -251,10 +244,12 @@ async function handleChat(request: Request, body: ChatBody) {
   }
   // Aggregate brake remains isolate-local and does not claim a billing cap.
   if (!consumeRateLimit('aggregate', 20, 240)) return json({ code: 'rate_limit' }, 429, { 'Retry-After': '60' });
-  const emotion = inferDialogueEmotion(conversation, userTurnCount);
-  const replyMode = inferDialogueReplyMode(conversation, userTurnCount);
+  const replyMode = 'normal' as const;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  const abort=()=>controller.abort();
+  request.signal.addEventListener('abort',abort,{once:true});
+  if(request.signal.aborted)controller.abort();
   activeProviderRequests += 1;
 
   try {
@@ -269,13 +264,15 @@ async function handleChat(request: Request, body: ChatBody) {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: buildSystemPrompt(gameCase, conversation, userTurnCount, typeof body.stageId === 'string' ? body.stageId : undefined, Array.isArray(body.choices) ? body.choices as string[] : []) }] },
+        systemInstruction: { parts: [{ text: storyPrompt(sceneId,body.attachment as string) }] },
         contents: conversation.map((message) => ({
           role: message.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: message.content }],
         })),
         generationConfig: {
-          maxOutputTokens: replyMode === 'short' ? 40 : 96,
+          maxOutputTokens: 180,
+          responseMimeType: 'application/json',
+          responseSchema: {type:'OBJECT',properties:{reply:{type:'STRING'},reaction:{type:'STRING',enum:sceneId==='peer'?['check','acknowledge','boundary']:['together','space']}},required:['reply','reaction']},
           thinkingConfig: { thinkingLevel: 'minimal' },
         },
       }),
@@ -291,14 +288,15 @@ async function handleChat(request: Request, body: ChatBody) {
     }
     const payload = await response.json() as { candidates?: Array<{ finishReason?: string }> };
     if (payload.candidates?.[0]?.finishReason !== 'STOP') return json({ code: 'incomplete_response' }, 502);
-    const reply = extractGeminiText(payload);
-    if (!validateAiReply(reply, emotion, replyMode)) return json({ code: 'unsafe_response' }, 502);
-    return json({ reply, provider: 'gemini', model: GEMINI_MODEL });
+    const result = parseStoryReply(extractGeminiText(payload),sceneId);
+    if (!result || !validateAiReply(result.reply, undefined, replyMode)) return json({ code: 'unsafe_response' }, 502);
+    return json({ reply:result.reply, reaction:result.reaction, provider: 'gemini', model: GEMINI_MODEL });
   } catch (error) {
     providerPausedUntil = Date.now() + 30_000;
     return json({ code: error instanceof Error && error.name === 'AbortError' ? 'provider_timeout' : 'provider_error' }, 504);
   } finally {
     clearTimeout(timeout);
+    request.signal.removeEventListener('abort',abort);
     activeProviderRequests -= 1;
   }
 }
