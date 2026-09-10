@@ -5,7 +5,6 @@ import ts from 'typescript';
 const cases = JSON.parse(await readFile(new URL('../content/generated/cases.json', import.meta.url), 'utf8'));
 const dialogueSource = await readFile(new URL('../app/ai-dialogue.ts', import.meta.url), 'utf8');
 const routeSource = await readFile(new URL('../app/api/ai-chat/route.ts', import.meta.url), 'utf8');
-const clientSource = await readFile(new URL('../app/story/story-client.tsx', import.meta.url), 'utf8');
 const compile = (source) => ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
 const moduleUrl = (source) => 'data:text/javascript;base64,' + Buffer.from(compile(source)).toString('base64');
 const dialogueUrl = moduleUrl(dialogueSource.replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)));
@@ -15,169 +14,82 @@ async function freshRoute() {
   const source = routeSource
     .replace("import { reserveSharedBudget } from '../ai-budget';", "const reserveSharedBudget = async () => globalThis.__budgetOutcome ?? 'allowed';")
     .replace("'../../ai-dialogue'", JSON.stringify(dialogueUrl))
+    .replace("'../../story/one-shot.js'",JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href))
     .replace("import { cases } from '../../game-data';", 'const cases = ' + JSON.stringify(cases) + ';');
   return import(moduleUrl(source) + '#' + serial++);
 }
-const request = (text = 'この質問', session = 'test-session-000001', overrides = {}) => {
- const caseId=overrides.caseId??'paper-profit',stageId=Object.hasOwn(overrides,'stageId')?overrides.stageId:caseId==='familiar-request'?'request':'offer';
- const choices=caseId==='familiar-request'?['familiar-request-what']:caseId==='recovery-team'?['recovery-offer-hold','recovery-offer-why']:stageId==='withdrawal'?['paper-withdraw-old']:stageId==='offer'?['paper-offer-withdraw']:[];
- const checks=caseId==='familiar-request'?['recipient']:caseId==='recovery-team'?['official-help']:['success-post','terms-comparison'];
- return new Request('https://example.invalid/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':session,'cf-connecting-ip':'192.0.2.1'},body:JSON.stringify({caseId,stageId,choices:stageId?choices:[],checks,messages:[{role:'user',content:text}],userTurnCount:1,...overrides})});
-};
-let calls = 0;
-const originalFetch = globalThis.fetch;
-const originalKey = process.env.GEMINI_API_KEY;
-const originalEnabled = process.env.GEMINI_ENABLED;
-const originalNow = Date.now;
-let clock = 1_800_000_000_000;
-Date.now = () => clock;
-const successful = () => Response.json({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '조금 더 확인해 볼게.' }] } }] });
-try {
-  process.env.GEMINI_ENABLED = 'true';
-  process.env.GEMINI_API_KEY = 'mock-only-not-a-real-key';
-  globalThis.fetch = async () => { calls++; return successful(); };
-  let route = await freshRoute();
-  assert.equal((await (await route.GET()).json()).enabled, true);
-  assert.equal(calls, 0, 'status must not generate');
-  const concurrent = await Promise.all(Array.from({ length: 5 }, () => route.POST(request())));
-  assert.equal(calls, 1, 'duplicates must generate once');
-  for (const response of concurrent) assert.equal(response.status, 200);
-  await route.POST(request());
-  assert.equal(calls, 1, 'exact retry reuses response');
-  clock += 12_000;
-  await route.POST(request('別の質問',undefined,{stageId:'withdrawal'}));
-  assert.equal(calls, 2, 'changed content must not collide');
-  await route.POST(request('この質問', 'test-session-000002'));
-  assert.equal(calls, 3, 'different player must not share response');
+const request=(text='안내부터 확인해 보세요',session='test-session-000001',overrides={})=>new Request('https://example.invalid/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':session,'cf-connecting-ip':'192.0.2.1'},body:JSON.stringify({caseId:'paper-profit',stageId:'withdrawal',sceneId:'peer',resolved:false,joined:true,attachment:'none',inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1,...overrides})});
+let calls=0;
+const originalFetch=globalThis.fetch,originalKey=process.env.GEMINI_API_KEY,originalEnabled=process.env.GEMINI_ENABLED,originalNow=Date.now;
+let clock=1_800_000_000_000;
+Date.now=()=>clock;
+const successful=(reaction='check',reply='알려주셔서 고마워요. 안내부터 다시 볼게요.')=>Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({reply,reaction})}]}}]});
+try{
+ process.env.GEMINI_ENABLED='true';process.env.GEMINI_API_KEY='mock-only-not-a-real-key';
+ globalThis.fetch=async()=>{calls++;return successful();};
+ let route=await freshRoute();
+ assert.equal((await (await route.GET()).json()).enabled,true);assert.equal(calls,0);
+ const results=await Promise.all(Array.from({length:5},()=>route.POST(request())));
+ assert.equal(calls,1);for(const result of results)assert.equal(result.status,200);
+ assert.equal((await route.POST(request())).status,200);assert.equal(calls,1,'exact duplicate coalesces');
+ clock+=12000;
+ assert.equal((await (await route.POST(request('다른 메시지'))).json()).code,'moment_used');
+ assert.equal(calls,1,'changed text cannot reopen a consumed scene');
+ clock+=12000;
+ globalThis.fetch=async()=>{calls++;return successful('together','말해 줘서 고마워. 내가 전화할게.');};
+ assert.equal((await route.POST(request('같이 확인해 줘',undefined,{sceneId:'friend',resolved:true}))).status,200);
+ assert.equal(calls,2,'two distinct scenes per run');
+ clock+=12000;
+ assert.equal((await route.POST(request('다른 내용',undefined,{sceneId:'friend',resolved:true}))).status,429);
+ globalThis.fetch=async()=>{calls++;return successful();};
+ assert.equal((await route.POST(request('안내부터 확인','different-session-01'))).status,200);
+ assert.equal(calls,3,'no cross-player response reuse');
 
-  calls = 0;
-  route = await freshRoute();
-  globalThis.fetch = async () => { calls++; return new Response(null, { status: 429 }); };
-  assert.equal((await (await route.POST(request())).json()).code, 'provider_quota');
-  assert.equal((await (await route.POST(request('다른 질문'))).json()).code, 'provider_cooldown');
-  assert.equal(calls, 1, 'cooldown must avoid another provider request');
+ route=await freshRoute();calls=0;
+ for(const overrides of [{sceneId:'invented'},{caseId:'familiar-request'},{sceneId:'friend',resolved:false},{stageId:'arrival',resolved:false},{joined:false},{attachment:'invented'},{choices:[]},{checks:[]},{userTurnCount:2},{messages:[{role:'assistant',content:'hi'},{role:'user',content:'hi'}]}]){
+  assert.equal((await route.POST(request('확인',undefined,overrides))).status,400,JSON.stringify(overrides));
+ }
+ assert.equal((await (await route.POST(request('질문',undefined,{inputMode:'free'}))).json()).code,'story_message_required');
+ assert.equal(calls,0);
+ const builtin=await (await route.POST(request('네',undefined,{inputMode:undefined}))).json();
+ assert.equal(builtin.provider,'scripted');assert.equal(calls,0);
 
-  calls = 0;
-  route = await freshRoute();
-  globalThis.fetch = async () => { calls++; return successful(); };
-  assert.equal((await route.POST(new Request('https://example.invalid/api/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: 'x'.repeat(12001) }))).status, 400);
-  assert.equal((await route.POST(request('확인', 'test-session-000003', { caseId: 'official-etf-fill' }))).status, 400);
-  assert.equal((await route.POST(request('확인', 'test-session-000004', { userTurnCount: 25 }))).status, 400);
-  assert.equal(calls, 0, 'invalid requests must not generate');
-  delete process.env.GEMINI_API_KEY;
-  route = await freshRoute();
-  assert.equal((await (await route.POST(request())).json()).code, 'ai_unconfigured');
-  assert.equal(calls, 0);
-
-  process.env.GEMINI_API_KEY = 'mock-only-not-a-real-key';
-  route = await freshRoute();
-  globalThis.fetch = async () => { calls++; return Response.json({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: '아직 끝나지' }] } }] }); };
-  assert.equal((await (await route.POST(request())).json()).code, 'incomplete_response');
-  assert.equal(calls, 1, 'truncation must not trigger regeneration');
-
-  for (const question of ['근거는 어디서 확인해?', '손실 가능성은?', '돈은 어디로 보내나요?']) {
-    assert.equal(dialogue.inferDialogueReplyMode([{ role: 'user', content: question }], 5), 'normal');
-  }
-  // Execute shared routing and fallback functions used by both client and server.
-  for (const gameCase of cases.filter((item) => item.mode === 'chat')) {
-    const question = '손실 가능성은 어떤가요?';
-    const first = dialogue.buildFallbackReply(gameCase, question, [{ role: 'user', content: question }]);
-    const second = dialogue.buildFallbackReply(gameCase, question, [{ role: 'user', content: question }, { role: 'assistant', content: first }, { role: 'user', content: question }]);
-    assert.equal(first, gameCase.dialogue.fallbackByTopic.risk);
-    assert.notEqual(second, first, 'same topic should use an alternate, not repeat verbatim');
-    assert.equal(dialogue.classifyDialogueTopic(question), 'risk');
-    assert.ok(dialogue.getScriptedReply(gameCase, [{ role: 'user', content: '안녕하세요' }]));
-    assert.equal(dialogue.getScriptedReply(gameCase, [{ role: 'user', content: '자료 공개 범위가 어떻게 정해졌는지 설명해 주세요' }]), null);
-    const refusal = [{ role: 'user', content: '하지 않을게요' }];
-    const firstRefusal = dialogue.getScriptedReply(gameCase, refusal);
-    assert.equal(firstRefusal, gameCase.dialogue.fallbackByEmotion.disappointed);
-    const secondRefusal = dialogue.getScriptedReply(gameCase, [...refusal, { role: 'assistant', content: firstRefusal }, { role: 'user', content: '연락 그만' }]);
-    assert.equal(secondRefusal, gameCase.dialogue.fallbackByEmotion.closed);
-    assert.ok(dialogue.validateAiReply(secondRefusal, 'closed'));
-    assert.ok(dialogue.validateAiReply(second), 'alternate must pass output safety rules');
-  }
-  calls = 0;
-  route = await freshRoute();
-  globalThis.fetch = async () => { calls++; return successful(); };
-  for (const gameCase of cases.filter((item) => item.mode === 'chat')) {
-    for (const question of gameCase.dialogue.quickQuestions) {
-      const payload = await (await route.POST(request(question, 'test-session-scripted', { caseId: gameCase.id }))).json();
-      assert.equal(payload.provider, 'scripted');
-      assert.ok(payload.reply);
-    }
-  }
-  assert.equal(calls, 0, 'all recommended questions bypass Gemini on the server');
-  const friend = cases.find((item) => item.id === 'paper-profit');
-  const prompt = dialogue.buildSystemPrompt(friend, [{ role: 'user', content: '어떻게 생각해?' }], 1);
-  assert.ok(prompt.includes(friend.dialogue.progression[0]), 'first reply uses first story stage');
-  assert.ok(dialogue.buildSystemPrompt(friend, [{ role: 'user', content: '설명 부탁해' }], 5).includes('새 증거·수익·조건·연락·사건을 만들어내지 않는다'));
-  // Spacing applies to novel questions, but never stops a scripted reply.
-  route = await freshRoute();
-  await route.POST(request('새로운 질문 첫째'));
-  clock += 1_000;
-  assert.equal((await route.POST(request('새로운 질문 둘째'))).status, 429);
-  assert.equal((await (await route.POST(request('네'))).json()).provider, 'scripted');
-  assert.equal(calls, 1);
-  clock += 11_000;
-  assert.equal((await route.POST(request('새로운 질문 셋째',undefined,{stageId:'withdrawal'}))).status, 200, 'rejected attempt must not extend spacing');
-
-  clock += 12_000;
-  assert.equal((await route.POST(request('새로운 질문 여섯째'))).status, 429);
-  assert.equal(calls, 2, 'investment scene permits only two generation attempts');
-  assert.equal((await (await route.POST(request('네'))).json()).provider, 'scripted');
-  assert.ok(clientSource.includes('getScriptedReply(activeCase,messages)'));
-  const statusCheck = clientSource.slice(clientSource.indexOf('async function checkModel'), clientSource.indexOf('const content='));
-  assert.ok(!statusCheck.includes("method:'POST'"), 'settings check must not generate');
-  // Free input must use Gemini even when it resembles a canned topic.
-  route=await freshRoute();let captured;
-  globalThis.fetch=async(_url,options)=>{captured=JSON.parse(options.body);return successful();};
-  const freeReply=await (await route.POST(request('생각해 볼게','free-context-session',{inputMode:'free',stageId:'withdrawal'}))).json();
-  assert.equal(freeReply.provider,'gemini');
-  assert.ok(captured.systemInstruction.parts[0].text.includes('현재 단계: withdrawal'));
-  assert.ok(captured.systemInstruction.parts[0].text.includes('현재 출금이 보류'));
-  assert.equal((await route.POST(request('질문','invalid-scene-session',{inputMode:'free',stageId:'invented'}))).status,400);
-  
-  route=await freshRoute();calls=0;
-  globalThis.fetch=async()=>{calls++;return successful();};
-  for(const stageId of ['arrival','group','paid','extra-paid']){
-    assert.equal((await (await route.POST(request('복잡한 질문','window-test-session',{inputMode:'free',stageId}))).json()).code,'not_decision_moment');
-  }
-  assert.equal(calls,0,'nondecision scenes never reach Gemini');
-  assert.equal((await route.POST(request('첫 질문','window-test-session',{inputMode:'free',stageId:'offer'}))).status,200);
-  clock+=12000;
-  assert.equal((await (await route.POST(request('두 번째 질문','window-test-session',{inputMode:'free',stageId:'offer'}))).json()).code,'moment_used');
-  clock+=12000;
-  assert.equal((await route.POST(request('출금 질문','window-test-session',{inputMode:'free',stageId:'withdrawal'}))).status,200);
-  assert.equal(calls,2,'investment budget reserved for two distinct decisions');
-  assert.equal((await (await route.POST(request('stage omitted','missing-window-session',{stageId:undefined}))).json()).code,'not_decision_moment','legacy novel requests cannot bypass window');
-  
- route=await freshRoute();let gatedCalls=0;
- globalThis.fetch=async()=>{gatedCalls++;return successful();};
- assert.equal((await (await route.POST(request('질문','prereq-test-session',{checks:[]}))).json()).code,'decision_not_ready');
- assert.equal((await (await route.POST(request('질문','prereq-test-session',{choices:[]}))).json()).code,'decision_not_ready');
- assert.equal((await (await route.POST(request('질문','prereq-test-session',{checks:['invented']}))).json()).code,'invalid_checks');
- assert.equal(gatedCalls,0);
- await testClientCancellation();
-  await testSecurity();
-  for (const outcome of ['exhausted','unavailable']) {
-    globalThis.__budgetOutcome=outcome;
-    const route=await freshRoute(); let budgetCalls=0;
-    globalThis.fetch=async()=>{budgetCalls++;return successful();};
-    assert.equal((await (await route.POST(request())).json()).code,outcome==='exhausted'?'budget_exhausted':'budget_unavailable');
-    assert.equal(budgetCalls,0);
-    assert.equal((await (await route.POST(request('네'))).json()).provider,'scripted');
-  }
-  delete globalThis.__budgetOutcome;
-  console.log('AI call tests passed: status, coalescing, isolation, cooldown, body limit, invalid inputs, missing key, truncation, topic continuity.');
-} finally {
-  if (originalEnabled === undefined) delete process.env.GEMINI_ENABLED;
-  else process.env.GEMINI_ENABLED = originalEnabled;
-  globalThis.fetch = originalFetch;
-  Date.now = originalNow;
-  if (originalKey === undefined) delete process.env.GEMINI_API_KEY;
-  else process.env.GEMINI_API_KEY = originalKey;
+ delete process.env.GEMINI_API_KEY;
+ assert.equal((await (await route.POST(request())).json()).code,'ai_unconfigured');assert.equal(calls,0);
+ process.env.GEMINI_API_KEY='mock-only-not-a-real-key';
+ for(const [value,code] of [
+  [{reply:'괜찮아요?',reaction:'check'},'unsafe_response'],
+  [{reply:'알려줘서 고마워요.',reaction:'refund'},'unsafe_response'],
+  [{reply:'알려줘서 고마워요.',reaction:'check',amount:999},'unsafe_response'],
+  [{reply:'https://example.invalid로 연락하세요',reaction:'check'},'unsafe_response']
+ ]){
+  route=await freshRoute();calls=0;globalThis.fetch=async()=>{calls++;return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(value)}]}}]});};
+  assert.equal((await (await route.POST(request())).json()).code,code);assert.equal(calls,1);
+  clock+=12000;assert.equal((await (await route.POST(request('재시도'))).json()).code,'moment_used');assert.equal(calls,1);
+ }
+ route=await freshRoute();calls=0;globalThis.fetch=async()=>{calls++;return Response.json({candidates:[{finishReason:'MAX_TOKENS',content:{parts:[{text:'{}'}]}}]});};
+ assert.equal((await (await route.POST(request())).json()).code,'incomplete_response');assert.equal(calls,1);
+ route=await freshRoute();calls=0;globalThis.fetch=async()=>{calls++;return new Response(null,{status:429});};
+ assert.equal((await (await route.POST(request())).json()).code,'provider_quota');
+ assert.equal((await (await route.POST(request('다른 메시지'))).json()).code,'provider_cooldown');assert.equal(calls,1);
+ for(const outcome of ['exhausted','unavailable']){
+  globalThis.__budgetOutcome=outcome;route=await freshRoute();calls=0;globalThis.fetch=async()=>{calls++;return successful();};
+  assert.equal((await (await route.POST(request())).json()).code,outcome==='exhausted'?'budget_exhausted':'budget_unavailable');assert.equal(calls,0);
+ }
+ delete globalThis.__budgetOutcome;
+ await testClientCancellation();await testSecurity();
+ route=await freshRoute();let captured;
+ globalThis.fetch=async(_url,options)=>{captured=JSON.parse(options.body);return successful();};
+ assert.equal((await route.POST(request('예전 안내를 봐주세요','prompt-session-0001',{attachment:'first-notice'}))).status,200);
+ assert.ok(captured.systemInstruction.parts[0].text.includes('자료를 읽는 것과 별도 참여는 구분됩니다'));
+ assert.equal(captured.generationConfig.responseMimeType,'application/json');
+ assert.equal(captured.contents.length,1);
+ console.log('One-shot AI tests passed: two windows, legacy disabled, exact coalescing, no retry, schema, provider and shared-budget failures.');
+}finally{
+ if(originalEnabled===undefined)delete process.env.GEMINI_ENABLED;else process.env.GEMINI_ENABLED=originalEnabled;
+ if(originalKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=originalKey;
+ globalThis.fetch=originalFetch;Date.now=originalNow;delete globalThis.__budgetOutcome;
 }
-
 async function testClientCancellation() {
   const {ReplyGate}=await import('../app/story/reply-gate.js');
   for(const context of ['block','app-switch','chapter','pause','unmount','rewind']){
@@ -194,14 +106,6 @@ async function testClientCancellation() {
   const gate=new ReplyGate();let result;
   await gate.run(async()=> 'local fallback',value=>{result=value;});
   assert.equal(result,'local fallback');
-  for(const [caseId,limit] of [['familiar-request',1],['recovery-team',1]]){
-    const route=await freshRoute();let requests=0;
-    globalThis.fetch=async()=>{requests++;return successful();};
-    assert.equal((await route.POST(request('novel first','case-limit-session',{caseId}))).status,200);
-    clock+=12000;
-    assert.equal((await route.POST(request('novel second','case-limit-session',{caseId}))).status,429);
-    assert.equal(requests,limit);
-  }
   globalThis.fetch=async()=>{calls++;return successful();};
 }
 
@@ -267,7 +171,7 @@ async function testSecurity() {
   const disabled = await route.POST(request('새로운 질문', 'disable-session-0001'));
   assert.equal((await disabled.json()).code, 'ai_disabled');
   assert.equal((await (await route.GET()).json()).enabled, false);
-  assert.equal((await (await route.POST(request('네'))).json()).provider, 'scripted');
+  assert.equal((await (await route.POST(request('네',undefined,{inputMode:undefined}))).json()).provider, 'scripted');
   assert.equal(calls, 3, 'operator switch must not disable scripted gameplay or call provider');
   process.env.GEMINI_ENABLED = 'true';
 
@@ -275,8 +179,8 @@ async function testSecurity() {
   let providerBody;
   globalThis.fetch = async (_url, options) => { providerBody = options.body; return successful(); };
   await route.POST(request('질문', 'privacy-session-0001', {
-    messages: [{ role: 'user', content: 'abc@example.invalid 내용은?' }, { role: 'assistant', content: 'https://example.invalid 010-1234-5678' }, { role: 'user', content: '설명 부탁드립니다' }],
-    userTurnCount: 2,
+    messages: [{ role: 'user', content: 'abc@example.invalid https://example.invalid 010-1234-5678 설명 부탁드립니다' }],
+    userTurnCount: 1,
   }));
   assert.ok(providerBody);
   assert.ok(!providerBody.includes('abc@example.invalid') && !providerBody.includes('https://example.invalid') && !providerBody.includes('010-1234-5678'), 'sanitize both roles before provider access');

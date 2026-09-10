@@ -150,3 +150,51 @@ assert.ok(!e.serializeRun(captured).includes(n.retainedQuestion.text));
 assert.equal(step(captured,'capture','paper-question'),captured);
 assert.ok(n.decisionChecks(captured).includes('terms-comparison'));
 console.log('Evidence gates, retained deletion and profile metadata passed.');
+
+const shot=await import('../app/story/one-shot.js');
+let story=e.createRun('demo');
+assert.equal(shot.messageWindow(story,'peer'),false);
+assert.equal(step(story,'message','peer:attempt'),story);
+story=step(story,'advance');story=step(story,'advance');story=step(story,'confirm','paper-profit:main');story=step(story,'withdraw');
+assert.equal(shot.messageWindow(story,'peer'),true);
+const beforeMoney=e.totalSpent(story);
+story=step(story,'message','peer:attempt');
+assert.equal(shot.messageStatus(story,'peer'),'attempt');
+assert.equal(step(story,'message','peer:attempt'),story,'no duplicate attempt');
+assert.equal(shot.messageStatus(e.restoreRun(e.serializeRun(story)),'peer'),'attempt','reload cannot re-open input');
+assert.equal(step(story,'message','peer:refund'),story,'unknown outcome rejected');
+story=step(story,'message','peer:check');
+assert.equal(step(story,'message','peer:boundary'),story,'outcome immutable');
+story=step(story,'message-followup','peer:record');
+assert.equal(step(story,'message-followup','peer:record'),story,'followup idempotent');
+assert.equal(e.totalSpent(story),beforeMoney,'AI outcomes never mutate money');
+assert.equal(story.saved.length,0,'AI does not invent verified evidence');
+assert.equal(step(story,'message','friend:attempt'),story,'friend is after resolution only');
+story=step(story,'resolve','stopped');
+story=step(story,'message','friend:attempt');story=step(story,'message','friend:together');
+story=step(story,'message-followup','friend:call');
+assert.equal(e.totalSpent(story),beforeMoney);
+const restored=e.restoreRun(e.serializeRun(story));
+assert.deepEqual(restored,story);
+assert.ok(shot.messageConsequences(restored).some(line=>line.includes('통화했다')));
+story=step(story,'next');
+assert.equal(step(story,'message','peer:attempt'),story,'past scene closed');
+assert.ok(n.friendFollowup(story).includes('같이 확인'));
+for(const result of ['paused','blocked']){
+ let safe=e.createRun('demo');safe=step(safe,'advance');safe=step(safe,'resolve',result);
+ assert.ok(shot.messageWindow(safe,'peer'),'nonpayer can message after leaving group');
+ safe=step(safe,'message','peer:skip');safe=step(safe,'message','friend:space');safe=step(safe,'next');
+ safe=step(safe,'resolve','paused');safe=step(safe,'next');
+ assert.ok(safe.completed);assert.equal(e.totalSpent(safe),0);assert.ok(e.restoreRun(e.serializeRun(safe)));
+}
+for(const [scene,values] of Object.entries(shot.reactions)){
+ for(const reaction of values){
+  let run=e.createRun('demo');run=step(run,'advance');run=step(run,'resolve','paused');
+  run=step(run,'message',scene+':'+reaction);assert.equal(shot.messageStatus(run,scene),reaction);
+  assert.ok(e.restoreRun(e.serializeRun(run)));
+ }
+}
+assert.equal(shot.parseStoryReply('{"reply":"확인해 볼게요.","reaction":"refund"}','peer'),null);
+assert.equal(shot.parseStoryReply('{"reply":"다시 말해 줄래?","reaction":"together"}','friend'),null);
+assert.equal(shot.canAttach(e.createRun('demo'),'deleted-question'),false);
+console.log('Two message story tests passed: no-loss access, skip, outcome restore, no retry, immutable results, no financial side effects.');
