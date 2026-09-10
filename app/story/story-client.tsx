@@ -139,6 +139,10 @@ export default function StoryClient(){
   function persistBudget(){setAiUsed(budget.current.counts.reduce((a,b)=>a+b,0));try{localStorage.setItem(budgetKey(budget.current.mode),JSON.stringify(budget.current));}catch{/* no chat or identity beyond random quota token */}}
   function messageAct(type:string,data:string){
     const previous=stateRef.current;
+    // Event-time only: no wall-clock value is read during rendering.
+    // eslint-disable-next-line react-hooks/purity
+    const now=Date.now();
+    if(data.endsWith(':attempt')&&now-budget.current.last<12000){setNote('앞선 메시지 전송 후 12초가 지나면 보낼 수 있습니다. 작성한 내용은 그대로 남아 있습니다.');return false;}
     const nextState=transition(previous,{type,chapter:previous.chapter,data});
     if(nextState===previous)return false;
     // Save the categorical attempt before dispatch, not in a later render effect.
@@ -146,6 +150,7 @@ export default function StoryClient(){
       try{localStorage.setItem(previous.mode==='demo'?SAVE_KEY+'-demo':SAVE_KEY,serializeRun(nextState));}
       catch{setNote('진행을 저장할 수 없습니다. AI 전송 없이 준비된 메시지나 건너뛰기로 계속할 수 있습니다.');if(data.endsWith(':attempt'))return false;}
     }
+    if(data.endsWith(':attempt')){budget.current.last=now;persistBudget();}
     stateRef.current=nextState;setState(nextState);return true;
   }
   function action(type:string){

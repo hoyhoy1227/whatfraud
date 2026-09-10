@@ -34,8 +34,8 @@ export default function StoryMessage({state,scene,aiAllowed,session,remaining,pr
   const timer=setTimeout(()=>aborter.abort(),10000);
   try{
    const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':session},signal:aborter.signal,body:JSON.stringify({caseId:'paper-profit',stageId:state.stage,sceneId:scene,resolved:state.results.some(r=>r.chapter===1),joined:state.joined,attachment:scene==='peer'?attachment:'none',inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1})});
-   const value=await response.json();
-   if(!response.ok||value.provider!=='gemini'||typeof value.reply!=='string'||!validateAiReply(value.reply)||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply))throw Error('unavailable');
+   const value=await response.json() as {reply?:unknown;provider?:unknown;reaction?:unknown};
+   if(!response.ok||value.provider!=='gemini'||typeof value.reply!=='string'||!validateAiReply(value.reply)||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply))throw Error('unavailable');
    if(!reduced)await new Promise<void>(resolve=>{const wait=setTimeout(resolve,600);aborter.signal.addEventListener('abort',()=>{clearTimeout(wait);resolve();},{once:true});});
    if(!mounted.current||aborter.signal.aborted)return;
    if(onEvent('message',scene+':'+value.reaction))setReply(value.reply);
@@ -52,7 +52,7 @@ export default function StoryMessage({state,scene,aiAllowed,session,remaining,pr
   <button className="profile-entry chat-profile" onClick={onProfile} aria-label={person.name+' 프로필 열기'}><span className="avatar">{person.initial}</span><span><b>{person.name}</b><small>{scene==='peer'?'온결 자료방 참여자':'저장된 연락처'}</small></span></button>
   <p className="system-message">{person.title}</p>
   <div className="bubble"><small>{person.name}</small><p>{person.opening}</p></div>
-  {sent&&<div className="bubble mine"><p>{sent}</p>{attachment!=='none'&&<small>첨부 · {attachmentText[attachment]}</small>}</div>}
+  {sent&&<div className="bubble mine"><p>{sent}</p>{attachment!=='none'&&<small>첨부 · {attachmentText[attachment as keyof typeof attachmentText]}</small>}</div>}
   {busy&&<p className="typing" role="status">{person.name} 입력 중 …</p>}
   {reply&&<div className="bubble"><small>{person.name}</small><p>{reply}</p></div>}
   {done&&!reply&&status!=='skip'&&<p className="system-message">이 대화는 마쳤습니다. 개인정보 보호를 위해 입력과 AI 답장 원문은 저장하지 않습니다.</p>}

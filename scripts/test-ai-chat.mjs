@@ -36,6 +36,7 @@ try{
  clock+=12000;
  assert.equal((await (await route.POST(request('다른 메시지'))).json()).code,'moment_used');
  assert.equal(calls,1,'changed text cannot reopen a consumed scene');
+ clock+=12000;
  globalThis.fetch=async()=>{calls++;return successful('together','말해 줘서 고마워. 내가 전화할게.');};
  assert.equal((await route.POST(request('같이 확인해 줘',undefined,{sceneId:'friend',resolved:true}))).status,200);
  assert.equal(calls,2,'two distinct scenes per run');
