@@ -9,20 +9,20 @@ type Scene='peer'|'friend';
 type Props={memory?:MessageMemory;onMemory?:(patch:Partial<MessageMemory>)=>void;state:Run;scene:Scene;aiAllowed:boolean;getSession:()=>string;remaining:number;practice:boolean;reduced:boolean;paused:boolean;onEvent:(type:string,data:string)=>boolean;onBack:()=>void;onContinue:()=>void;onProfile:()=>void};
 export default function StoryMessage({memory=emptyMessageMemory(),onMemory,state,scene,aiAllowed,getSession,remaining,practice,reduced,paused,onEvent,onBack,onContinue,onProfile}:Props){
  const person=storyMessages[scene],status=messageStatus(state,scene),available=messageWindow(state,scene);
- const {draft,sent,reply,attachment,sentAttachment,callStep}=memory;
+ const {draft,sent,reply,attachment,sentAttachment,preparedSent,callStep}=memory;
  const setDraft=(draft:string)=>onMemory?.({draft}),setSent=(sent:string)=>onMemory?.({sent}),setReply=(reply:string)=>onMemory?.({reply}),setAttachment=(attachment:string)=>onMemory?.({attachment});
  const [picker,setPicker]=useState(false);
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
  const controller=useRef<AbortController|null>(null),pending=useRef(false),mounted=useRef(true);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;controller.current?.abort();};},[]);
- useEffect(()=>{if(paused)controller.current?.abort();},[paused]);
+ useEffect(()=>{if(paused||!aiAllowed)controller.current?.abort();},[paused,aiAllowed]);
  useEffect(()=>{const hide=()=>{if(document.hidden)controller.current?.abort();};document.addEventListener('visibilitychange',hide);return()=>document.removeEventListener('visibilitychange',hide);},[]);
  const done=!['ready','attempt'].includes(status);
  const canGenerate=available&&status==='ready'&&aiAllowed&&!practice&&remaining>0;
  const recovered=status==='attempt'&&!busy;
  function prepared(){
   if(pending.current||!available||done)return;
-  if(onEvent('message',scene+':'+person.reaction)){onMemory?.({sentAttachment:'none'});setSent(person.prepared);setReply(person.reply);setError('');}
+  if(onEvent('message',scene+':'+person.reaction)){if(sent)onMemory?.({preparedSent:person.prepared});else{onMemory?.({sentAttachment:'none'});setSent(person.prepared);}setReply(person.reply);setError('');}
  }
  async function send(event:React.FormEvent){
   event.preventDefault();
@@ -58,14 +58,15 @@ export default function StoryMessage({memory=emptyMessageMemory(),onMemory,state
   <p className="system-message">{person.title}</p>
   <div className="bubble"><small>{person.name}</small><p>{messageOpening(state,scene)}</p></div>
   {sent&&<div className="bubble mine"><p>{sent}</p>{sentAttachment!=='none'&&<small>첨부 · {attachmentText[sentAttachment as keyof typeof attachmentText]}</small>}</div>}
+  {preparedSent&&<div className="bubble mine"><small>준비된 메시지로 이어 보냄</small><p>{preparedSent}</p></div>}
   {busy&&<p className="typing" role="status">{person.name} 입력 중 …</p>}
   {reply&&<div className="bubble"><small>{person.name}</small><p>{reply}</p></div>}
   {done&&!reply&&status!=='skip'&&<p className="system-message">이 대화는 마쳤습니다. 개인정보 보호를 위해 입력과 AI 답장 원문은 저장하지 않습니다.</p>}
   {(error||recovered)&&<p className="message-error" role="status">{error||'이 장면의 요청 기록이 있습니다. 다시 호출하지 않고 이어갑니다.'}</p>}
-  {!available&&<p className="system-message">이 대화는 해당 사건의 마지막에 열립니다.</p>}
+  {!available&&!done&&<p className="system-message">이 대화는 해당 사건의 마지막에 열립니다.</p>}
   {available&&!done&&!busy&&<>
    {canGenerate?<form className="story-message-composer" onSubmit={send}>
-    {scene==='peer'&&<div className="attachment-picker"><button type="button" aria-expanded={picker} onClick={()=>setPicker(!picker)}>＋ 기록 첨부</button>{picker&&<fieldset><legend>이 대화에 함께 보낼 기록</legend>{Object.keys(attachmentText).filter(id=>id!=='none'&&canAttach(state,id)).map(id=><button type="button" aria-pressed={attachment===id} key={id} onClick={()=>{setAttachment(id);setPicker(false);}}>{id==='first-notice'?'처음 참여 안내':'보관한 지수의 질문'}</button>)}<button type="button" onClick={()=>setPicker(false)}>닫기</button></fieldset>}{attachment!=='none'&&<div className="attachment-preview"><small>{attachmentText[attachment as keyof typeof attachmentText]}</small><button type="button" aria-label="첨부 제거" onClick={()=>setAttachment('none')}>×</button></div>}</div>}
+    {scene==='peer'&&<div className="attachment-picker"><button type="button" aria-expanded={picker} onClick={()=>setPicker(!picker)}>＋ 기록 첨부</button>{picker&&<fieldset><legend>이 대화에 함께 보낼 기록</legend>{!Object.keys(attachmentText).some(id=>id!=='none'&&canAttach(state,id))&&<p>아직 첨부할 기록이 없습니다. 기록 없이도 보낼 수 있습니다.</p>}{Object.keys(attachmentText).filter(id=>id!=='none'&&canAttach(state,id)).map(id=><button type="button" aria-pressed={attachment===id} key={id} onClick={()=>{setAttachment(id);setPicker(false);}}>{id==='first-notice'?'처음 참여 안내':'보관한 지수의 질문'}</button>)}<button type="button" onClick={()=>setPicker(false)}>닫기</button></fieldset>}{attachment!=='none'&&<div className="attachment-preview"><small>{attachmentText[attachment as keyof typeof attachmentText]}</small><button type="button" aria-label="첨부 제거" onClick={()=>setAttachment('none')}>×</button></div>}</div>}
     <label htmlFor="story-message-draft">자유답변(개인정보는 입력하지 마세요)</label>
     <textarea id="story-message-draft" rows={3} maxLength={500} value={draft} onChange={e=>setDraft(e.target.value)} placeholder={scene==='peer'?'지수에게 전하고 싶은 말':'준호에게 지금 하고 싶은 말'}/>
     <button className="primary" disabled={!draft.trim()} type="submit">보내기</button><small>보내면 한 번의 답장으로 이 장면이 이어집니다.</small>
@@ -74,13 +75,13 @@ export default function StoryMessage({memory=emptyMessageMemory(),onMemory,state
    <button className="text-button" onClick={()=>{if(onEvent('message',scene+':skip'))onContinue();}}>지금은 말하지 않기</button>
   </>}
   {done&&<>
-   {scene==='peer'&&status==='check'&&<article className="message-consequence"><p>지수는 입금을 미루고 안내를 다시 확인하러 갔다.</p>{!followed?(peerRecordReady(state)?<button onClick={()=>onEvent('message-followup','peer:record')}>지수가 남긴 기록 보기</button>:<small>다른 기록을 살펴보는 동안 지수도 안내를 확인합니다.</small>):<><p>지수: 처음 안내와 나중 안내를 따로 보관해 뒀어요. 저도 확인하고 나서 결정할게요.</p><small>이 연락이 메모에 남았습니다. 이후 거래 결과는 아직 알 수 없습니다.</small></>}</article>}
+   {scene==='peer'&&status==='check'&&<article className="message-consequence"><p>지수는 입금을 미루고 안내를 다시 확인하러 갔다.</p>{!followed?(peerRecordReady(state)?<button onClick={()=>onEvent('message-followup','peer:record')}>지수가 남긴 기록 보기</button>:<small>다른 기록을 살펴보는 동안 지수도 안내를 확인합니다.</small>):<><p>지수: 처음 안내와 나중 안내를 따로 보관해 뒀어요. 저도 확인하고 나서 결정할게요.</p><button disabled={state.events.some(e=>e.type==='message-followup'&&e.data==='peer:saved')} onClick={()=>onEvent('message-followup','peer:saved')}>{state.events.some(e=>e.type==='message-followup'&&e.data==='peer:saved')?'메모에 보관됨':'메모에 보관'}</button><small>이후 거래 결과는 아직 알 수 없습니다.</small></>}</article>}
    {scene==='peer'&&status==='acknowledge'&&<p className="system-message">메시지를 남겼다. 지수의 다음 결정은 아직 알 수 없다.</p>}
    {scene==='peer'&&status==='boundary'&&<p className="system-message">이 대화는 여기서 마쳤다. 더 설명하지 않아도 된다.</p>}
    {scene==='friend'&&status==='together'&&<article className="incoming-call"><span>준호 · 기존 연락처</span><h3>{followed?(callStep>=supportCall.length?'통화 종료':'준호와 통화 중'):'음성 통화'}</h3>{!followed?<><button className="primary" onClick={()=>{if(onEvent('message-followup','friend:call'))onMemory?.({callStep:1});}}>받기</button><button onClick={onContinue}>나중에</button></>:<><div aria-live="polite">{supportCall.slice(0,Math.max(1,callStep)).map(line=><p key={line}>{line}</p>)}</div>{callStep<supportCall.length&&<button onClick={()=>onMemory?.({callStep:Math.max(1,callStep)+1})}>계속 듣기</button>}</>}<small>게임 내 통화 · 실제 전화 연결 없음</small></article>}
    {scene==='friend'&&status==='space'&&<p className="system-message">준호는 더 묻지 않았다. 저녁 약속은 그대로다.</p>}
    {status==='skip'&&<p className="system-message">지금 말하지 않기로 했다. 이 선택으로 불이익은 생기지 않는다.</p>}
-   <button className="primary" onClick={onContinue}>{scene==='peer'?'내 연락으로 돌아가기':'저녁 약속으로 이어가기'}</button>
+   <button className="primary" onClick={onContinue}>{scene==='friend'&&state.chapter===1?'저녁 약속으로 이어가기':'내 연락으로 돌아가기'}</button>
   </>}
  </section>;
 }
