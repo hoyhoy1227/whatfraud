@@ -86,3 +86,13 @@ for(const aiAllowed of [false,true]){
  assert.ok(!html.includes('어떻게 행동'));
 }
 console.log('One-shot message SSR passed: input opt-in, prepared alternative, profile and story context.');
+
+let late=engine.createRun('demo');
+for(const [type,data] of [['resolve','paused'],['message','friend:together'],['next','']])late=engine.transition(late,{type,data,chapter:late.chapter});
+const lateHtml=renderToStaticMarkup(createElement(Message,{state:late,scene:'friend',aiAllowed:true,getSession:()=> 'test-ui-session-0001',remaining:1,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
+assert.ok(lateHtml.includes('받기')&&lateHtml.includes('내 연락으로 돌아가기'));
+assert.ok(!lateHtml.includes('<textarea'),'history permits call, not another generation');
+const restoredHtml=renderToStaticMarkup(createElement(Message,{state:investment,scene:'peer',memory:{draft:'작성 중인 문장',sent:'첫 메시지',reply:'받은 답장',attachment:'none',sentAttachment:'none',preparedSent:'준비된 후속 메시지',callStep:0},aiAllowed:true,getSession:()=> 'test-ui-session-0001',remaining:1,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
+for(const line of ['작성 중인 문장','첫 메시지','받은 답장','준비된 후속 메시지'])assert.ok(restoredHtml.includes(line));
+assert.ok(client.includes("act('message-followup','peer:checked-bank')"));
+console.log('Deferred call and in-memory transcript SSR passed.');

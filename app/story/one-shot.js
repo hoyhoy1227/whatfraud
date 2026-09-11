@@ -33,12 +33,15 @@ export function messageEventAllowed(state,data){
 }
 export function messageFollowupAllowed(state,data){
  if(![1,2].includes(state.chapter)||state.completed||state.events.some(e=>e.type==='message-followup'&&e.data===data))return false;
- return data==='peer:record'&&messageStatus(state,'peer')==='check'||state.chapter===1&&data==='friend:call'&&messageStatus(state,'friend')==='together';
+ return (data==='peer:record'||data==='peer:checked-bank')&&messageStatus(state,'peer')==='check'
+  ||data==='peer:saved'&&state.events.some(e=>e.type==='message-followup'&&e.data==='peer:record')
+  ||data==='friend:call'&&messageStatus(state,'friend')==='together';
 }
 export function messageConsequences(state){
  const messages=[];
  if(state.events.some(e=>e.type==='message'&&e.data==='peer:check'))messages.push('지수는 입금을 미루고 안내를 다시 확인하러 갔다. 이후 거래 결과는 아직 알 수 없다.');
- if(state.events.some(e=>e.type==='message-followup'&&e.data==='peer:record'))messages.push('지수: 처음 안내와 나중 안내를 따로 보관해 뒀어요. 저도 확인하고 나서 결정할게요.');
+ if(state.events.some(e=>e.type==='message-followup'&&e.data==='peer:record'))messages.push('지수가 남긴 확인 기록을 읽었다. 거래 결과는 아직 알 수 없다.');
+ if(state.events.some(e=>e.type==='message-followup'&&e.data==='peer:saved'))messages.push('보관한 지수의 연락: 처음 안내와 나중 안내를 따로 보관해 뒀어요. 저도 확인하고 나서 결정할게요.');
  if(state.events.some(e=>e.type==='message'&&e.data==='peer:acknowledge'))messages.push('지수에게 메시지를 남겼다. 지수가 이후 어떤 결정을 했는지는 확인되지 않았다.');
  if(state.events.some(e=>e.type==='message'&&e.data==='peer:boundary'))messages.push('지수와의 대화는 여기서 마쳤다. 더 설명할 의무는 없다.');
  if(state.events.some(e=>e.type==='message'&&e.data==='friend:together'))messages.push('준호가 함께 확인하자며 전화를 제안했다.');
