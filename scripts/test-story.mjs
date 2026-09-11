@@ -198,3 +198,16 @@ assert.equal(shot.parseStoryReply('{"reply":"확인해 볼게요.","reaction":"r
 assert.equal(shot.parseStoryReply('{"reply":"다시 말해 줄래?","reaction":"together"}','friend'),null);
 assert.equal(shot.canAttach(e.createRun('demo'),'deleted-question'),false);
 console.log('Two message story tests passed: no-loss access, skip, outcome restore, no retry, immutable results, no financial side effects.');
+
+const presentation=await import('../app/story/presentation.js');
+assert.equal(presentation.minimumReplyDelay(50),650);
+assert.equal(presentation.minimumReplyDelay(900),0);
+assert.equal(presentation.minimumReplyDelay(0,true),0);
+assert.notEqual(presentation.emptyMessageMemory(),presentation.emptyMessageMemory());
+const presentationState={chapter:1,completed:false,calls:[],events:[{type:'message',data:'peer:check',chapter:1}]};
+assert.equal(presentation.peerRecordReady(presentationState),false);
+assert.equal(presentation.peerRecordReady({...presentationState,events:[...presentationState.events,{type:'resolve',chapter:1}]}),true);
+assert.equal(presentation.supportReady({...presentationState,chapter:2}),false);
+assert.equal(presentation.supportReady({...presentationState,chapter:2,events:[{type:'message-followup',data:'friend:call'}]}),true);
+assert.ok(presentation.messageOpening({...presentationState,calls:['0:junho']},'friend').includes('그 계정'));
+console.log('Presentation gates passed: delayed records, support continuity, response timing.');
