@@ -198,3 +198,32 @@ assert.equal(shot.parseStoryReply('{"reply":"확인해 볼게요.","reaction":"r
 assert.equal(shot.parseStoryReply('{"reply":"다시 말해 줄래?","reaction":"together"}','friend'),null);
 assert.equal(shot.canAttach(e.createRun('demo'),'deleted-question'),false);
 console.log('Two message story tests passed: no-loss access, skip, outcome restore, no retry, immutable results, no financial side effects.');
+
+const presentation=await import('../app/story/presentation.js');
+assert.equal(presentation.minimumReplyDelay(50),650);
+assert.equal(presentation.minimumReplyDelay(900),0);
+assert.equal(presentation.minimumReplyDelay(0,true),0);
+assert.notEqual(presentation.emptyMessageMemory(),presentation.emptyMessageMemory());
+const presentationState={chapter:1,completed:false,calls:[],events:[{type:'message',data:'peer:check',chapter:1}]};
+assert.equal(presentation.peerRecordReady(presentationState),false);
+assert.equal(presentation.peerRecordReady({...presentationState,events:[...presentationState.events,{type:'resolve',chapter:1}]}),true);
+assert.equal(presentation.supportReady({...presentationState,chapter:2}),false);
+assert.equal(presentation.supportReady({...presentationState,chapter:2,events:[{type:'message-followup',data:'friend:call'}]}),true);
+assert.ok(presentation.messageOpening({...presentationState,calls:['0:junho']},'friend').includes('그 계정'));
+console.log('Presentation gates passed: delayed records, support continuity, response timing.');
+
+let supportRun=e.createRun('demo');
+supportRun=step(supportRun,'resolve','paused');
+supportRun=step(supportRun,'message','friend:together');
+supportRun=step(supportRun,'message-followup','friend:call');
+supportRun=step(supportRun,'next');
+const supportBefore=e.totalSpent(supportRun);
+supportRun=step(supportRun,'support','recovery');
+assert.ok(supportRun.events.some(event=>event.type==='support'));
+assert.equal(step(supportRun,'support','recovery'),supportRun);
+assert.equal(e.totalSpent(supportRun),supportBefore);
+assert.equal(supportRun.inspected.length,0);
+assert.deepEqual(e.restoreRun(e.serializeRun(supportRun)),supportRun);
+let privateRun=step(step(e.createRun('demo'),'resolve','paused'),'next');
+assert.equal(step(privateRun,'support','recovery'),privateRun,'support requires a received call');
+assert.equal(shot.parseStoryReply(JSON.stringify({reply:'지금 전화할게. 같이 확인하자.',reaction:'space'}),'friend'),null);

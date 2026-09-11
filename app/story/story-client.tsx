@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AppIcon from '../app-icon';
 import type { AiChatMessage } from '../ai-dialogue';
-import StoryMessage from './story-message';
+import StoryMessage, {type MessageMemory} from './story-message';
+import {emptyMessageMemory,peerRecordReady,supportReady} from './presentation';
 import {messageWindow,messageStatus,messageConsequences} from './one-shot';
 import { chapters, createRun, currentCase, currentStage, transition, SAVE_KEY, serializeRun, restoreRun, replayBefore, evidenceFor, verified, offerFor, money, gameTime, isResolved, outcomeText, recoveryContext, chapterSpent } from './engine';
 import { budgetKey, restoreBudget } from './session-budget';
@@ -22,6 +23,9 @@ export default function StoryClient(){
   const [ready,setReady]=useState(false),[started,setStarted]=useState(false),[hasSave,setHasSave]=useState(false);
   const [app,setApp]=useState<App>('home'),[recent,setRecent]=useState<App[]>([]),[showRecent,setShowRecent]=useState(false);
   const [thread,setThread]=useState('current'),[browserPage,setBrowserPage]=useState('start');
+  const [messageMemory,setMessageMemory]=useState<Record<string,MessageMemory>>({});
+  const followTail=useRef(true);
+  const [newMessages,setNewMessages]=useState(false);
   const [chats,setChats]=useState<Record<string,Chat[]>>({});
   const [sending,setSending]=useState(false),[paused,setPaused]=useState(false),[note,setNote]=useState('');
   const [aiUsed,setAiUsed]=useState(0);
@@ -45,7 +49,7 @@ export default function StoryClient(){
   const chat=chats[c.id]??[];
   const readKey=state.chapter+':current',unread=!state.read.includes(readKey);
   const ownEvidence=evidenceFor(state).filter(e=>e.chapter===state.chapter);
-  const scrollKey=state.chapter+':'+app+':'+thread+':'+browserPage;
+  const scrollKey=(practiceOriginal?'practice:':'')+state.mode+':'+state.chapter+':'+app+':'+thread+':'+browserPage;
   const narrative=narratives[state.chapter],sceneLines=useMemo(()=>displayedMessages(state,state.stage),[state]);
   const beat=pendingBeat(state);
   const selectedChoices=chosenIds(state);
@@ -53,6 +57,7 @@ export default function StoryClient(){
   const storyAttempts=state.events.filter(e=>e.type==='message'&&e.data.endsWith(':attempt')).length;
   const remaining=Math.max(0,2-aiUsed-storyAttempts);
   const storyScene=thread==='jisu'?'peer':thread==='support'?'friend':null;
+  const memoryKey=(practiceOriginal?'practice:':'')+state.mode+':'+storyScene;
   const reflection=state.events.find(event=>event.type==='reflect'&&event.chapter===state.chapter)?.data;
   const sceneKey=c.id+':'+state.stage;
   const visibleCount=revealed[sceneKey]??0;
@@ -105,11 +110,11 @@ export default function StoryClient(){
     catch{queueMicrotask(()=>setNote('진행 저장에 실패했습니다. 이 화면을 닫으면 기록이 사라질 수 있습니다.'));}
   },[state,ready,started,practiceOriginal]);
   useEffect(()=>{
-    if(scroll.current)scroll.current.scrollTop=positions.current[scrollKey]??(app==='messages'&&thread==='current'?scroll.current.scrollHeight:0);
+    if(scroll.current){scroll.current.scrollTop=positions.current[scrollKey]??(app==='messages'&&thread==='current'?scroll.current.scrollHeight:0);followTail.current=scroll.current.scrollHeight-scroll.current.scrollTop-scroll.current.clientHeight<80;}
   },[scrollKey,app,thread]);
   useEffect(()=>{
-    if(scroll.current?.classList.contains('app-messages'))scroll.current.scrollTop=scroll.current.scrollHeight;
-  },[state.stage,chat.length,resolved,visibleCount]);
+    if(scroll.current?.classList.contains('app-messages')){if(followTail.current)scroll.current.scrollTop=scroll.current.scrollHeight;else queueMicrotask(()=>setNewMessages(true));}
+  },[state.stage,chat.length,resolved,visibleCount,messageMemory]);
   useEffect(()=>{
     if(dialog||paused||showRecent||practiceDone){if(!dialogRef.current?.open)dialogRef.current?.showModal();}
     else dialogRef.current?.close();
@@ -133,7 +138,7 @@ export default function StoryClient(){
   function start(mode:'full'|'demo',resume=false){
     cancelReply();setNote('');setClosingStep(0);setPracticeOriginal(null);setPracticeDone(false);
     if(resume&&mainSaved.current){setState(mainSaved.current);try{budget.current=restoreBudget(localStorage.getItem(budgetKey('full')),crypto.randomUUID(),'full');setAiUsed(budget.current.counts.reduce((a,b)=>a+b,0));}catch{setAiAllowed(false);}}
-    if(!resume){setRevealed({});setState(createRun(mode));setChats({});positions.current={};budget.current=restoreBudget(null,crypto.randomUUID(),mode);persistBudget();}
+    if(!resume){setMessageMemory({});setRevealed({});setState(createRun(mode));setChats({});positions.current={};budget.current=restoreBudget(null,crypto.randomUUID(),mode);persistBudget();}
     setDialog(null);setStarted(true);setApp(!resume&&mode==='full'?'messages':'home');setThread(!resume&&mode==='full'?'junho':'current');setBrowserPage('start');setPaused(false);
   }
   function persistBudget(){setAiUsed(budget.current.counts.reduce((a,b)=>a+b,0));try{localStorage.setItem(budgetKey(budget.current.mode),JSON.stringify(budget.current));}catch{/* no chat or identity beyond random quota token */}}
@@ -179,7 +184,7 @@ export default function StoryClient(){
   }
   function rewind(index:number){
     const original=practiceOriginal??state,value=replayBefore(original,index);if(!value)return;
-    cancelReply();setRevealed({});setPracticeOriginal(original);setPracticeDone(false);setState(value);setChats({});setApp('messages');setThread('current');setBrowserPage('start');setPaused(false);
+    cancelReply();setMessageMemory(old=>Object.fromEntries(Object.entries(old).filter(([key])=>!key.startsWith('practice:'))));setRevealed({});setPracticeOriginal(original);setPracticeDone(false);setState(value);setChats({});setApp('messages');setThread('current');setBrowserPage('start');setPaused(false);
   }
   function exitPractice(){if(practiceOriginal){cancelReply();setState(practiceOriginal);setPracticeOriginal(null);setPracticeDone(false);setApp('home');}}
   const intro=<div className="intro lock-intro"><div className="lock-clock">09:10</div><p className="lock-date">오늘 · 출근길</p><h1>수익률 24시</h1><p className="intro-lead">월급날까지 나흘.<br/>오늘 저녁에는 준호와 약속이 있다.</p><div className="intro-card"><AppIcon name="messages" size="mini"/><span>메시지 · 준호</span><p>어제<br/><b>내일 저녁 일곱 시, 역 앞에서 보자.</b></p></div>
@@ -193,8 +198,8 @@ export default function StoryClient(){
       <article className="calendar-widget"><small>오늘 일정</small><b>19:00</b><span>준호와 저녁 · 역 앞</span></article><div className="app-grid">{[...appList,'settings' as App].map(a=><button key={a} onClick={()=>openApp(a)}><AppIcon name={a}/><span>{names[a]}</span>{a==='messages'&&unread&&<i className="unread-dot" aria-label="읽지 않은 연락"/>}</button>)}</div>
       </div>;
   const messagesContent=
-storyScene?<StoryMessage key={storyScene+':'+state.chapter+':'+Boolean(practiceOriginal)} state={state} scene={storyScene} aiAllowed={aiAllowed} getSession={()=>budget.current.session} remaining={remaining} practice={Boolean(practiceOriginal)} reduced={reduced} paused={paused||showRecent||Boolean(dialog)} onEvent={messageAct} onBack={()=>openApp('messages','list')} onContinue={()=>storyScene==='friend'?next():openApp('messages')} onProfile={()=>openProfile(storyScene==='friend')}/>:
-thread==='list'?<><h2>대화</h2>{messageWindow(state,'peer')&&<button className="notification" onClick={()=>openApp('messages','jisu')}><strong>지수</strong><p>송금 전에 잠깐</p></button>}{messageWindow(state,'friend')&&<button className="notification" onClick={()=>openApp('messages','support')}><strong>준호</strong><p>오늘 무슨 일 있었어?</p></button>}<button className="notification" onClick={()=>setThread('current')}><strong>{c.sender}</strong><p>{c.preview}</p></button><button className="notification quiet" onClick={()=>setThread('junho')}><strong>준호 · 기존 연락처</strong><p>오늘 저녁 약속</p></button>{state.results.filter((r:{chapter:number})=>r.chapter<state.chapter).map((r:{chapter:number;kind:string;spent:number})=><article className="record" key={r.chapter}><h3>{chapters[r.chapter].story.title}</h3><p>이전 연락은 정리되었습니다. 가상 출금 {money(r.spent)}</p><button onClick={()=>openApp('notes')}>보관한 기록 보기</button></article>)}</>:thread!=='current'?<><button onClick={()=>setThread('current')}>← 새 연락으로</button><button className="profile-entry known-profile" onClick={()=>openProfile(true)} aria-label="준호 프로필 열기"><span className="avatar">준</span><span><b>준호</b><small>저장된 연락처</small></span></button><p className="day-context">{state.chapter===0?'월급날까지 나흘. 오늘 저녁 약속을 다시 확인한다.':narrative.place}</p><div className="bubble"><small>어제</small><p>내일 저녁 일곱 시, 역 앞에서 보자. 지난번처럼 내가 먼저 가 있을게. 늦으면 원래 번호로 전화해.</p></div><div className="bubble"><p>{state.chapter===0&&state.transactions.some(tx=>tx.chapter===0)?'이제 메시지 봤어. 나는 다른 계정으로 결제 부탁한 적 없어. 무슨 일이야?':friendFollowup(state)}</p></div><button onClick={()=>openApp('calls')}>저장된 번호로 통화</button></>:<><button className="chat-back" onClick={()=>setThread('list')}>‹ 대화 목록</button><button className="chat-profile profile-entry" onClick={()=>openProfile(false)} aria-label={c.sender+' 프로필 열기'}><span className="avatar">{contactProfile(state.chapter).initial}</span><span><b>{c.sender}</b><small>{contactProfile(state.chapter).relationship}</small></span><span aria-hidden="true">›</span></button>
+storyScene?<StoryMessage key={storyScene+':'+state.chapter+':'+Boolean(practiceOriginal)} state={state} memory={messageMemory[memoryKey]??emptyMessageMemory()} onMemory={patch=>setMessageMemory(old=>({...old,[memoryKey]:{...(old[memoryKey]??emptyMessageMemory()),...patch}}))} scene={storyScene} aiAllowed={aiAllowed} getSession={()=>budget.current.session} remaining={remaining} practice={Boolean(practiceOriginal)} reduced={reduced} paused={paused||showRecent||Boolean(dialog)} onEvent={messageAct} onBack={()=>openApp('messages','list')} onContinue={()=>storyScene==='friend'?next():openApp('messages')} onProfile={()=>openProfile(storyScene==='friend')}/>:
+thread==='list'?<><h2>대화</h2>{supportReady(state)&&!state.events.some(e=>e.type==='support')&&<button className="support-forward" onClick={()=>{act('support','recovery');openApp('messages','junho');}}>준호에게 이 연락 전달하기</button>}{messageWindow(state,'peer')&&<button className="notification" onClick={()=>openApp('messages','jisu')}><strong>지수</strong><p>송금 전에 잠깐</p></button>}{messageWindow(state,'friend')&&<button className="notification" onClick={()=>openApp('messages','support')}><strong>준호</strong><p>오늘 무슨 일 있었어?</p></button>}<button className="notification" onClick={()=>setThread('current')}><strong>{c.sender}</strong><p>{c.preview}</p></button><button className="notification quiet" onClick={()=>setThread('junho')}><strong>준호 · 기존 연락처</strong><p>오늘 저녁 약속</p></button>{state.results.filter((r:{chapter:number})=>r.chapter<state.chapter).map((r:{chapter:number;kind:string;spent:number})=><article className="record" key={r.chapter}><h3>{chapters[r.chapter].story.title}</h3><p>이전 연락은 정리되었습니다. 가상 출금 {money(r.spent)}</p><button onClick={()=>openApp('notes')}>보관한 기록 보기</button></article>)}</>:thread!=='current'?<><button onClick={()=>setThread('current')}>← 새 연락으로</button><button className="profile-entry known-profile" onClick={()=>openProfile(true)} aria-label="준호 프로필 열기"><span className="avatar">준</span><span><b>준호</b><small>저장된 연락처</small></span></button><p className="day-context">{state.chapter===0?'월급날까지 나흘. 오늘 저녁 약속을 다시 확인한다.':narrative.place}</p><div className="bubble mine"><small>어제 · 나</small><p>이번 주는 월급 전이라 저녁은 가볍게 먹자. 늘 가던 데 어때?</p></div><div className="bubble"><small>어제</small><p>내일 저녁 일곱 시, 역 앞에서 보자. 지난번처럼 내가 먼저 가 있을게. 늦으면 원래 번호로 전화해.</p></div><div className="bubble"><p>{state.chapter===0&&state.transactions.some(tx=>tx.chapter===0)?'이제 메시지 봤어. 나는 다른 계정으로 결제 부탁한 적 없어. 무슨 일이야?':friendFollowup(state)}</p></div><button onClick={()=>openApp('calls')}>저장된 번호로 통화</button>{state.chapter===2&&state.events.some(e=>e.type==='support'&&e.data==='recovery')&&<><div className="bubble mine"><small>전달한 연락 · {c.sender}</small><p>피해 확인과 회수 지원을 안내하는 연락이 왔어.</p></div><div className="bubble"><small>준호</small><p>아까 말한 새 연락이구나. 이 사람이 준 연락처 말고, 우리가 직접 공식 접수 안내를 열어 보자. 접수와 돈을 돌려받는 건 다른 일이니까.</p></div><button onClick={()=>{openApp('browser');setBrowserPage('official');}}>공식 접수 안내 열기</button></>}</>:<><button className="chat-back" onClick={()=>setThread('list')}>‹ 대화 목록</button><button className="chat-profile profile-entry" onClick={()=>openProfile(false)} aria-label={c.sender+' 프로필 열기'}><span className="avatar">{contactProfile(state.chapter).initial}</span><span><b>{c.sender}</b><small>{contactProfile(state.chapter).relationship}</small></span><span aria-hidden="true">›</span></button>
       <details className="scene-context"><summary>이 연락이 오기 전</summary><p>{narrative.background.join(' ')}{state.chapter===2&&<><br/>{recoveryContext(state)}</>}</p></details><details className="chat-records"><summary>프로필·연락 기록</summary>{evidenceCards('messages')}</details>
       {state.visited.map((id:string)=><section className="chat-stage" key={id}>{conversationTimeline(displayedMessages(state,id),chat.filter(m=>m.stage===id),id===state.stage&&!resolved?visibleCount:undefined).map((m,i)=><div className={m.speaker==='알림'?'system-message':m.speaker==='나'?'bubble mine':'bubble'} key={id+i}>{m.speaker!=='알림'&&<small>{m.speaker}</small>}<p>{m.text}</p>{m.speaker===retainedQuestion.speaker&&m.text===retainedQuestion.text&&state.chapter===1&&!['withdrawal','extra-paid'].includes(state.stage)&&<button className="message-save" disabled={state.events.some(e=>e.type==='capture'&&e.data===retainedQuestion.id)} onClick={()=>act('capture',retainedQuestion.id)}>{state.events.some(e=>e.type==='capture'&&e.data===retainedQuestion.id)?'보관됨':'메모에 보관'}</button>}</div>)}
         </section>)}
@@ -225,7 +230,9 @@ thread==='list'?<><h2>대화</h2>{messageWindow(state,'peer')&&<button className
       <header className="app-header"><button onClick={()=>openApp('home')} aria-label="홈으로">‹</button>{app==='messages'&&thread!=='list'?<button className="header-contact" onClick={()=>openProfile(thread!=='current'&&thread!=='jisu')}>{thread==='jisu'?'지수':thread==='current'?c.sender:'준호'}</button>:<strong>{names[app]}</strong>}<button onClick={()=>{cancelReply();setPaused(true);}} aria-label="일시정지">Ⅱ</button><button onClick={()=>openApp('settings')} aria-label="설정">⚙</button></header>
       {practiceOriginal&&<div className="practice-bar"><span>되감기 · 원본 기록 보존</span><button onClick={exitPractice}>원래 기록으로</button></div>}
       {unread&&app!=='home'&&app!=='messages'&&<button className="notification compact" onClick={()=>openApp('messages')}>메시지 · {c.sender}의 새 연락</button>}
-      <div className={'screen-scroll app-'+app} ref={scroll}>{content}</div>
+      {peerRecordReady(state)&&!state.events.some(e=>e.type==='message-followup'&&e.data==='peer:record')&&<button className="notification compact" onClick={()=>{if(messageAct('message-followup','peer:record'))openApp('notes');}}>지수 · 확인해 본 기록을 남겼어요</button>}
+      <div className={'screen-scroll app-'+app} ref={scroll} onScroll={e=>{const node=e.currentTarget;positions.current[scrollKey]=node.scrollTop;followTail.current=node.scrollHeight-node.scrollTop-node.clientHeight<80;if(followTail.current)setNewMessages(false);}}>{content}</div>
+      {app==='messages'&&newMessages&&<button className="new-message-pill" onClick={()=>{if(scroll.current)scroll.current.scrollTop=scroll.current.scrollHeight;followTail.current=true;setNewMessages(false);}}>새 메시지 ↓</button>}
       {app==='messages'&&thread==='current'&&messageDock}
       <nav className="system-nav" aria-label="휴대폰 탐색"><button onClick={()=>{cancelReply();if(app==='messages'&&thread==='current')setThread('list');else openApp('home');}} aria-label="뒤로">‹</button><button className="home-indicator" onClick={()=>openApp('home')} aria-label="홈"><span/></button><button onClick={()=>{cancelReply();setShowRecent(!showRecent);}}>최근 앱</button></nav>
 

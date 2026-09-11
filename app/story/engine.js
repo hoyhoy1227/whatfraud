@@ -14,7 +14,7 @@ export const SAVE_KEY = 'whatfraud-story-v3';
 export const INITIAL_BALANCE = 680000;
 export const APPS = ['home', 'messages', 'calls', 'bank', 'browser', 'notes', 'settings'];
 const terminal = ['verified', 'paused', 'blocked', 'reported', 'stopped', 'loss'];
-const validTypes = ['advance','platform','withdraw','confirm','inspect','save','call','resolve','next','cue','read','talk','reflect','observe','capture','message','message-followup'];
+const validTypes = ['advance','platform','withdraw','confirm','inspect','save','call','resolve','next','cue','read','talk','reflect','observe','capture','message','message-followup','support'];
 export const currentCase = state => chapters[state.chapter];
 export const currentStage = state => currentCase(state).story.stages.find(item => item.id === state.stage);
 export const totalSpent = state => state.transactions.reduce((sum, tx) => sum + tx.amount, 0);
@@ -84,6 +84,8 @@ export function transition(input,event) {
   let changed=false;
   const active=!isResolved(state);
   switch(event.type) {
+    case 'support':
+      changed=state.chapter===2&&active&&data==='recovery'&&state.events.some(e=>e.type==='message-followup'&&e.data==='friend:call')&&!state.events.some(e=>e.type==='support'&&e.data===data);break;
     case 'message':
       changed=messageEventAllowed(state,data);break;
     case 'message-followup':
