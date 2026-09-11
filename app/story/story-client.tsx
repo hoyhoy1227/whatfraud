@@ -49,7 +49,7 @@ export default function StoryClient(){
   const chat=chats[c.id]??[];
   const readKey=state.chapter+':current',unread=!state.read.includes(readKey);
   const ownEvidence=evidenceFor(state).filter(e=>e.chapter===state.chapter);
-  const scrollKey=state.chapter+':'+app+':'+thread+':'+browserPage;
+  const scrollKey=(practiceOriginal?'practice:':'')+state.mode+':'+state.chapter+':'+app+':'+thread+':'+browserPage;
   const narrative=narratives[state.chapter],sceneLines=useMemo(()=>displayedMessages(state,state.stage),[state]);
   const beat=pendingBeat(state);
   const selectedChoices=chosenIds(state);
@@ -114,7 +114,7 @@ export default function StoryClient(){
   },[scrollKey,app,thread]);
   useEffect(()=>{
     if(scroll.current?.classList.contains('app-messages')){if(followTail.current)scroll.current.scrollTop=scroll.current.scrollHeight;else queueMicrotask(()=>setNewMessages(true));}
-  },[state.stage,chat.length,resolved,visibleCount]);
+  },[state.stage,chat.length,resolved,visibleCount,messageMemory]);
   useEffect(()=>{
     if(dialog||paused||showRecent||practiceDone){if(!dialogRef.current?.open)dialogRef.current?.showModal();}
     else dialogRef.current?.close();
