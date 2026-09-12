@@ -40,7 +40,7 @@ export default function StoryMessage({memory=emptyMessageMemory(),onMemory,state
   try{
    const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':getSession()},signal:aborter.signal,body:JSON.stringify({caseId:'paper-profit',stageId:state.stage,sceneId:scene,resolved:state.results.some(r=>r.chapter===1),joined:state.joined,attachment:scene==='peer'?attachment:'none',inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1})});
    const value=await response.json() as {reply?:unknown;provider?:unknown;reaction?:unknown};
-   if(!response.ok||value.provider!=='gemini'||typeof value.reply!=='string'||!validateAiReply(value.reply)||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply))throw Error('unavailable');
+   if(!response.ok||value.provider!=='gemini'||typeof value.reply!=='string'||!validateAiReply(value.reply,undefined,'normal','story')||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply))throw Error('unavailable');
    if(!reduced)await new Promise<void>(resolve=>{const wait=setTimeout(resolve,minimumReplyDelay(performance.now()-dispatched,reduced));aborter.signal.addEventListener('abort',()=>{clearTimeout(wait);resolve();},{once:true});});
    if(!mounted.current||aborter.signal.aborted)return;
    if(onEvent('message',scene+':'+value.reaction))setReply(value.reply);

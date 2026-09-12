@@ -104,7 +104,7 @@ export function sanitizePlayerText(text: string) {
     .trim();
 }
 
-export function validateAiReply(text: string, emotion?: DialogueEmotion, replyMode?: DialogueReplyMode) {
+export function validateAiReply(text: string, emotion?: DialogueEmotion, replyMode?: DialogueReplyMode, scope?: 'story') {
   const trimmed = text.trim();
   const maximumLength = emotion === 'closed' ? 70 : replyMode === 'short' ? 55 : 140;
   if (trimmed.length < 2 || trimmed.length > maximumLength) return false;
@@ -113,9 +113,14 @@ export function validateAiReply(text: string, emotion?: DialogueEmotion, replyMo
   if (/https?:\/\/|www\.|계좌번호\s*[:：]?\s*\d{4}|\b\d{2,4}[- ]\d{3,4}[- ]\d{4}\b/i.test(trimmed)) return false;
   if (/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(trimmed)) return false;
   if (/정답|판정 결과|시스템 프롬프트|개발자 메시지|범죄 실행|수사 회피/.test(trimmed)) return false;
-  if (/보장|확정|무조건|100\s*%|손실\s*(?:이\s*)?(?:없|제로)|원금\s*(?:이\s*)?(?:안전|보호)/i.test(trimmed)) return false;
+  if (/보장|확정|무조건|100\s*%|손실\s*(?:이\s*)?(?:없|제로)|원금\s*(?:[이은]\s*)?(?:안전|보호)/i.test(trimmed)) return false;
   if (/(?:현명|탁월|훌륭)한?\s*(?:판단|선택|투자자|자세)|좋은\s*투자자의\s*자세/.test(trimmed)) return false;
-  if (/(?:지금|바로).{0,12}(?:충전|입금|송금|결제|가입)|(?:충전|입금|송금|결제|가입).{0,12}(?:지금|바로)/.test(trimmed)) return false;
+  // Only exact negative imperatives in authored story roles get an exception.
+  // Check the rest of the reply too: a safe first clause cannot hide a later request.
+  const urgencyText = scope === 'story'
+    ? trimmed.replace(/(?:지금|바로)\s*(?:충전|입금|송금|결제|가입)(?:은|을|는|를)?\s*하지\s*(?:말고|말자|마세요|마)(?=[\s.!。！,]|$)/g, '잠깐 멈추고')
+    : trimmed;
+  if (/(?:지금|바로).{0,12}(?:충전|입금|송금|결제|가입)|(?:충전|입금|송금|결제|가입).{0,12}(?:지금|바로)/.test(urgencyText)) return false;
   if (/죽|해코지|찾아가|가족.{0,8}(?:위험|해치|알고)|신상.{0,8}(?:공개|유포)|해킹|보복|가만두지|두고\s*보자|병신|멍청/.test(trimmed)) return false;
   if (emotion === 'closed') {
     if (!/(?:연락|안내|대화).{0,10}(?:않|그만|종료|마치)|여기서.{0,8}(?:마치|끝)/.test(trimmed)) return false;
