@@ -41,12 +41,13 @@ export function messageConsequences(state){
  const messages=[];
  if(state.events.some(e=>e.type==='message'&&e.data==='peer:check'))messages.push('지수는 입금을 미루고 안내를 다시 확인하러 갔다. 이후 거래 결과는 아직 알 수 없다.');
  if(state.events.some(e=>e.type==='message-followup'&&e.data==='peer:record'))messages.push('지수가 남긴 확인 기록을 읽었다. 거래 결과는 아직 알 수 없다.');
- if(state.events.some(e=>e.type==='message-followup'&&e.data==='peer:saved'))messages.push('보관한 지수의 연락: 처음 안내와 나중 안내를 따로 보관해 뒀어요. 저도 확인하고 나서 결정할게요.');
+ if(state.events.some(e=>e.type==='message-followup'&&e.data==='peer:saved'))messages.push('보관한 지수의 연락: '+peerFollowupText(state));
  if(state.events.some(e=>e.type==='message'&&e.data==='peer:acknowledge'))messages.push('지수에게 메시지를 남겼다. 지수가 이후 어떤 결정을 했는지는 확인되지 않았다.');
  if(state.events.some(e=>e.type==='message'&&e.data==='peer:boundary'))messages.push('지수와의 대화는 여기서 마쳤다. 더 설명할 의무는 없다.');
- if(state.events.some(e=>e.type==='message'&&e.data==='friend:together'))messages.push('준호가 함께 확인하자며 연락을 남겼다.');
- if(state.events.some(e=>e.type==='message-followup'&&e.data==='friend:call'))messages.push('준호의 연락 요약을 확인했다. 낯선 연락이 다시 오면 돈을 보내기 전에 함께 확인하기로 했다.');
+ if(state.events.some(e=>e.type==='message'&&e.data==='friend:together'))messages.push(messageStyle(state,'friend').mode==='listen'?'준호에게 지금은 조언보다 이야기를 들어 달라고 전했다.':'준호에게 함께 확인할 내용을 전했다.');
+ if(state.events.some(e=>e.type==='message-followup'&&e.data==='friend:call'))messages.push('준호의 연락 요약을 확인했다. '+(messageStyle(state,'friend').mode==='listen'?'서두르지 않고 저녁에 이야기하기로 했다.':'확인할 내용을 남겼다.'));
  if(state.events.some(e=>e.type==='message'&&e.data==='friend:space'))messages.push('준호는 지금 자세히 말하지 않아도 된다며 저녁 약속에서 만나기로 했다.');
+ for(const [id,text] of Object.entries({compare:'지수에게 보낸 기록과 현재 연락의 주장을 나란히 살펴봤다.',records:'준호에게 요청한 도움을 떠올리고 은행 거래 기록을 다시 열었다.',verify:'준호에게 현재 연락을 전달한 뒤 공식 안내를 직접 열었다.',pause:'준호의 연락을 읽고 현재 요청에 바로 답하지 않기로 했다.'}))if(state.events.some(e=>e.type==='branch-use'&&e.data===id))messages.push(text);
  return messages;
 }
 export function validateStoryContext(body){
@@ -54,7 +55,7 @@ export function validateStoryContext(body){
  if(body.sceneId==='friend')return body.resolved&&body.attachment==='none';
  return body.joined&&(body.resolved||['withdrawal','extra-paid'].includes(body.stageId))&&(body.attachment!=='first-notice'||['offer','paid','withdrawal','extra-paid'].includes(body.stageId));
 }
-export function storyPrompt(id,attachment='none'){
+export function storyPrompt(id,attachment='none',version=1){
  const peer=id==='peer';
  return `가상 스마트폰 스릴러 수익률 24시의 일회성 메시지 장면이다.
 인물: ${peer?'지수. 같은 투자 자료방의 참여자. 아직 입금하기 전이며 자신의 판단으로 확인하려 한다. 낯선 참여자에게 쓰는 짧고 편한 해요체. 상담원이나 운영자가 아니다.':'준호. 이전부터 저장된 실제 친구. 저녁 약속 전 퇴근했다. 평소 약속을 잡고 밥을 먹는 친구의 짧은 반말. 금융 전문가나 심리 상담사가 아니다.'}
@@ -72,12 +73,18 @@ ${peer?'확인이나 보류를 제안하면 check, 단순 정보 공유나 무�
 reply는 플레이어가 한 말에 대한 짧은 반응만 표현한다. reaction 이후의 기록 보관·연락 요약 확인은 게임의 별도 버튼이 실행한다. 이 게임에는 실제 음성 통화가 없다. 전화 걸기·음성 통화를 제안하지 말고 메시지로 반응한다. 이미 전화·신고·환급이 끝났다고 말하지 않는다.
 reaction은 ${reactions[id].join(', ')} 중 하나. 다른 사람을 구했다거나 피해를 확정하지 않는다.
 첨부된 제작 기록: ${attachmentText[attachment]||'없음'}
-출력은 JSON 객체 하나: {"reply":"인물의 답장","reaction":"허용된 값"}`;
+${version===2?`추가 분류: supportMode와 focus를 함께 반환한다.
+지수: 첨부를 근거로 확인 제안이면 compare와 첨부 ID, 근거 없는 걱정은 cautious/none, 송금 권유를 받아도 따르지 않는 경우 safeguard/none, 강요를 거절하거나 연락 종료는 distance/none, 모호하거나 무관하면 neutral/none. compare/cautious/safeguard는 check, distance는 boundary, neutral은 acknowledge.
+준호: 기록 확인 요청은 records/records, 새로운 연락 확인 요청은 verify/contact, 조언 없이 들어 달라는 요청은 listen/none, 대화 거절은 space/none, 모호하거나 무관하면 neutral/none. space만 reaction space이며 나머지는 together.
+말투의 공손함이 아니라 요청의 뜻을 본다. 이미 멈춘 행동을 다시 지시하지 않고 인정한 뒤 다음 행동을 말한다. 첨부 질문의 작성자는 지수이며 처음 안내의 작성자는 온결이다. compare는 실제 첨부가 있을 때만 가능하다.
+listen/space에는 기록 확인을 강요하지 않는다. 출력은 {"reply":"답장","reaction":"허용된 값","supportMode":"허용된 값","focus":"허용된 값"}`:'출력은 JSON 객체 하나: {"reply":"인물의 답장","reaction":"허용된 값"}'}`;
 }
-export function parseStoryReply(text,id){
+export function parseStoryReply(text,id,version=1,attachment='none'){
  try{
   const value=JSON.parse(text);
-  if(!value||Object.keys(value).sort().join(',')!=='reaction,reply'||typeof value.reply!=='string'||!reactions[id]?.includes(value.reaction)||/[?？]/.test(value.reply))return null;
+  if(!value||Object.keys(value).sort().join(',')!==(version===2?'focus,reaction,reply,supportMode':'reaction,reply')||typeof value.reply!=='string'||!reactions[id]?.includes(value.reaction)||/[?？]/.test(value.reply))return null;
+  if(version===2&&(!validBranch(id,value.reaction,value.supportMode,value.focus)||id==='peer'&&value.supportMode==='compare'&&value.focus!==attachment))return null;
+  if(version===2&&value.supportMode==='listen'&&/기록.*보자|내역.*보자|보여\s*줘/.test(value.reply))return null;
   // Fail closed on explicit contradictions to the finite reaction.
   if(value.reaction==='space'&&/전화할게|같이 확인하자|자세히 말해/.test(value.reply))return null;
   if(value.reaction==='boundary'&&/보내\s*주세요|알려\s*주세요|물어/.test(value.reply))return null;
@@ -86,3 +93,57 @@ export function parseStoryReply(text,id){
   return value;
  }catch{return null;}
 }
+
+export const branchModes={peer:['compare','cautious','distance','safeguard','neutral'],friend:['records','verify','listen','space','neutral']};
+export const branchFocus=['none','first-notice','deleted-question','records','contact'];
+export function validBranch(scene,reaction,mode,focus){
+ if(!branchModes[scene]?.includes(mode)||!branchFocus.includes(focus))return false;
+ if(scene==='peer')return mode==='compare'?reaction==='check'&&['first-notice','deleted-question'].includes(focus)
+  :focus==='none'&&(mode==='distance'?reaction==='boundary':mode==='neutral'?reaction==='acknowledge':reaction==='check');
+ return mode==='space'?reaction==='space'&&focus==='none':reaction==='together'&&(mode==='records'?focus==='records':mode==='verify'?focus==='contact':focus==='none');
+}
+export function messageStyle(state,scene){
+ const event=state.events.find(e=>e.type==='message-style'&&e.data.startsWith(scene+':'));
+ if(event){const [,mode,focus]=event.data.split(':');return {mode,focus};}
+ const reaction=messageStatus(state,scene);
+ return scene==='peer'?{mode:reaction==='check'?'cautious':reaction==='boundary'?'distance':'neutral',focus:'none'}
+ :{mode:reaction==='space'?'space':reaction==='together'?'verify':'neutral',focus:reaction==='together'?'contact':'none'};
+}
+export function styleEventAllowed(state,data){
+ const [scene,mode,focus,...extra]=data.split(':');
+ return !extra.length&&state.chapter===1&&!state.completed&&!state.events.some(e=>e.type==='message-style'&&e.data.startsWith(scene+':'))
+ &&validBranch(scene,messageStatus(state,scene),mode,focus)
+ &&(scene!=='peer'||mode!=='compare'||canAttach(state,focus));
+}
+export function peerFollowupText(state){
+ const {mode,focus}=messageStyle(state,'peer');
+ if(mode==='compare')return focus==='deleted-question'?'제가 추가 비용을 물었던 내용이네요. 답을 듣기 전에는 결정하지 않으려고요. 남겨 주셔서 고마워요.':'처음 안내에는 자료를 읽는 것과 별도 참여가 구분돼 있어요. 뒤에 온 요청과 나눠서 보려고요.';
+ if(mode==='safeguard')return '다른 분이 괜찮다고 하셔도 제 경우까지 같은지는 모르겠어요. 저는 안내부터 확인할게요.';
+ return '걱정해 주신 건 알겠어요. 아직 확인되지 않은 부분이 있어서 저는 안내를 더 보고 결정할게요.';
+}
+export function friendFollowupLines(state){
+ const {mode}=messageStyle(state,'friend');
+ if(mode==='listen')return ['지금 다 설명하려고 하지 않아도 돼.','나 먼저 도착하면 연락할게. 저녁에 천천히 얘기하자.'];
+ if(mode==='records')return ['보여 주기로 한 기록부터 같이 보자.','화면에 적힌 금액과 은행에서 실제로 오간 돈은 따로 보면 돼.','다른 연락이 와도 새로 보내기 전에 기록부터 확인하자.'];
+ if(mode==='verify')return ['새 연락은 그 사람이 알려 준 경로 말고 따로 확인하자.','원하면 그 연락만 보여 줘. 공식 접수 안내는 직접 찾아보자.'];
+ return ['응, 남긴 말 읽었어.','이따 약속한 데서 보자.'];
+}
+export function branchUseAllowed(state,data){
+ if(state.chapter!==2||state.completed||state.results.some(r=>r.chapter===2)||state.events.some(e=>e.type==='branch-use'&&e.data===data))return false;
+ if(data==='compare')return messageStyle(state,'peer').mode==='compare'&&state.events.some(e=>e.type==='message-followup'&&e.data==='peer:saved');
+ return (data!=='verify'||state.events.some(e=>e.type==='support'&&e.data==='recovery'))&&state.events.some(e=>e.type==='message-followup'&&e.data==='friend:call')&&({records:'records',verify:'verify',pause:'listen'}[data]===messageStyle(state,'friend').mode);
+}
+export const preparedMessages={
+ peer:[
+ {text:'이 기록을 보니 처음 안내와 지금 요구를 따로 확인해 봐야겠어요.',reply:'남겨 주신 기록부터 다시 볼게요. 제 경우도 확인하고 결정하려고요.',reaction:'check',mode:'compare'},
+ {text:'확신할 근거는 없지만 걱정돼요. 보내기 전에 더 확인해 봐요.',reply:'저도 아직 결정하지 않았어요. 안내를 더 보고 판단할게요.',reaction:'check',mode:'cautious'},
+ {text:'다른 분들이 괜찮다고 해도 직접 확인하기 전엔 모르겠어요.',reply:'맞아요, 다른 분의 경험이 제 경우와 같지는 않을 수 있어요. 저는 먼저 확인할게요.',reaction:'check',mode:'safeguard'},
+ {text:'제 내역은 공유하지 않을게요. 이 대화는 여기까지만 할게요.',reply:'네, 더 묻지 않을게요. 내역도 안 보여 주셔도 돼요.',reaction:'boundary',mode:'distance'}
+ ],
+ friend:[
+ {text:'화면이랑 은행 거래 내역이 달라서 같이 확인해 줬으면 해.',reply:'응, 어디서 다른지 기록부터 같이 보자.',reaction:'together',mode:'records'},
+ {text:'낯선 연락이 오면 그 연락을 같이 확인해 줬으면 해.',reply:'응, 그 사람이 알려 준 곳 말고 따로 확인해 보자.',reaction:'together',mode:'verify'},
+ {text:'지금은 조언보다 그냥 들어 줬으면 해. 자세한 얘기는 저녁에 할게.',reply:'응, 지금 다 설명 안 해도 돼. 저녁에 천천히 얘기하자.',reaction:'together',mode:'listen'},
+ {text:'지금은 이 얘기를 하고 싶지 않아. 저녁에 다른 얘기 하자.',reply:'알겠어, 더 묻지 않을게. 저녁에 보자.',reaction:'space',mode:'space'}
+ ]
+};

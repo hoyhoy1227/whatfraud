@@ -1,3 +1,4 @@
+import {messageStyle} from './one-shot.js';
 // Authored character knowledge and bounded dialogue choices. No player text is stored.
 /**
  * @typedef {{speaker:string,text:string}} Message
@@ -187,6 +188,9 @@ export function conversationTimeline(lines,chat,visible=lines.length){
 }
 /** Only the real friend's conversation can see earlier voluntary disclosures. */
 export function friendFollowup(state){
+ if(state.chapter===2&&messageStyle(state,'friend').mode==='listen')return '나 먼저 도착했어. 지금 다 설명하지 않아도 돼. 와서 천천히 얘기하자.';
+ if(state.chapter===2&&messageStyle(state,'friend').mode==='records')return '아까 같이 보기로 한 기록, 필요하면 꺼내 보자. 화면에 적힌 것과 실제 거래는 따로 보면 돼.';
+ if(state.chapter===2&&state.events.some(e=>e.type==='message-style'&&e.data==='friend:neutral:none'))return '이따 약속한 데서 보자. 먼저 도착하면 연락할게.';
  if(state.chapter===2&&state.events.some(e=>e.type==='message-followup'&&e.data==='friend:call'))return '아까 같이 확인하기로 했지. 다른 연락이 와도 바로 돈부터 보내지는 말고, 내가 저장된 이 번호로 연락해.';
  if(state.chapter===2&&state.events.some(e=>e.type==='message'&&e.data==='friend:space'))return '오늘 일은 말하고 싶을 때 얘기해. 집에 도착하면 연락 줘.';
  const told=state.events.filter(e=>e.type==='reflect'&&e.data==='tell'&&e.chapter<state.chapter);

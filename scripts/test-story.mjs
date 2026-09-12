@@ -208,7 +208,7 @@ const presentationState={chapter:1,completed:false,calls:[],events:[{type:'messa
 assert.equal(presentation.peerRecordReady(presentationState),false);
 assert.equal(presentation.peerRecordReady({...presentationState,events:[...presentationState.events,{type:'resolve',chapter:1}]}),true);
 assert.equal(presentation.supportReady({...presentationState,chapter:2}),false);
-assert.equal(presentation.supportReady({...presentationState,chapter:2,events:[{type:'message-followup',data:'friend:call'}]}),true);
+assert.equal(presentation.supportReady({...presentationState,chapter:2,events:[{type:'message',data:'friend:together'},{type:'message-followup',data:'friend:call'}]}),true);
 assert.ok(presentation.messageOpening({...presentationState,calls:['0:junho']},'friend').includes('그 계정'));
 console.log('Presentation gates passed: delayed records, support continuity, response timing.');
 
@@ -256,3 +256,30 @@ assert.ok(presentation.supportReady(delayed),'deferred call can be received in t
 assert.deepEqual(e.restoreRun(e.serializeRun(delayed)),delayed);
 assert.equal(e.totalSpent(delayed),300000);
 console.log('Continuity gaps passed: demo memory, bank revisits, explicit record save, deferred calls.');
+
+for(const [mode,focus,reaction,use] of [['records','records','together','records'],['verify','contact','together','verify'],['listen','none','together','pause'],['space','none','space',null],['neutral','none','together',null]]){
+ let run=e.createRun('demo');run=step(run,'advance');run=step(run,'resolve','paused');
+ assert.equal(step(run,'message-style','friend:'+mode+':'+focus),run,'style cannot precede message');
+ run=step(run,'message','friend:'+reaction);run=step(run,'message-style','friend:'+mode+':'+focus);
+ assert.equal(shot.messageStyle(run,'friend').mode,mode);
+ assert.equal(step(run,'message-style','friend:'+mode+':'+focus),run,'style immutable');
+ run=step(run,'message-followup','friend:call');run=step(run,'next');
+ if(use==='verify'){assert.equal(shot.branchUseAllowed(run,'verify'),false);run=step(run,'support','recovery');}
+ if(use){assert.equal(shot.branchUseAllowed(run,use),true);run=step(run,'branch-use',use);}
+ else assert.equal(shot.branchUseAllowed(run,'records'),false);
+ assert.equal(e.totalSpent(run),0);assert.equal(run.inspected.length,0);
+ assert.deepEqual(e.restoreRun(e.serializeRun(run)),run);
+ if(mode==='listen'){assert.ok(!n.friendFollowup(run).includes('확인'));assert.ok(!shot.friendFollowupLines(run).join(' ').includes('기록'));}
+ run=finish(run,'paused');assert.ok(run.completed);assert.equal(e.totalSpent(run),0);
+}
+let proof=e.createRun('demo');proof=step(proof,'advance');proof=step(proof,'capture','paper-question');proof=step(proof,'resolve','paused');
+proof=step(proof,'message','peer:check');proof=step(proof,'message-style','peer:compare:deleted-question');
+proof=step(proof,'message-followup','peer:record');proof=step(proof,'message-followup','peer:saved');proof=step(proof,'next');
+assert.ok(shot.branchUseAllowed(proof,'compare'));proof=step(proof,'branch-use','compare');
+assert.equal(proof.inspected.length,0);assert.equal(e.totalSpent(proof),0);
+assert.deepEqual(e.restoreRun(e.serializeRun(proof)),proof);
+assert.ok(shot.messageConsequences(proof).some(text=>text.includes('나란히')));
+assert.ok(shot.peerFollowupText(proof).includes('제가 추가 비용'));
+assert.equal(shot.validBranch('peer','check','compare','none'),false);
+assert.equal(shot.validBranch('friend','space','records','records'),false);
+console.log('Story branches passed: intent modes, explicit use, no forced loss, record provenance, no invented verification, save replay.');

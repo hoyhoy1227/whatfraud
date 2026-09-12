@@ -110,6 +110,22 @@ try{
  route=await freshRoute();globalThis.fetch=async()=>successful('space','내가 전화할게.');
  assert.equal((await (await route.POST(request('합성 입력',undefined,{sceneId:'friend',resolved:true}))).json()).validation,'story_contract');
 
+
+ for(const [scene,reaction,supportMode,focus,attachment,reply] of [
+ ['friend','together','records','records','none','응, 추가로 보내지는 않았구나. 기록부터 같이 보자.'],
+ ['friend','together','listen','none','none','응, 지금 다 설명하지 않아도 돼. 저녁에 얘기하자.'],
+ ['peer','check','compare','deleted-question','deleted-question','제가 물어본 내용이네요. 남겨 주셔서 고마워요.']
+ ]){
+  route=await freshRoute();calls=0;
+  globalThis.fetch=async()=>{calls++;return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({reply,reaction,supportMode,focus})}]}}]});};
+  const result=await route.POST(request('합성 분기 검수',undefined,{sceneId:scene,resolved:true,attachment,contractVersion:2}));
+  assert.equal(result.status,200);assert.equal((await result.json()).supportMode,supportMode);assert.equal(calls,1);
+  clock+=12000;assert.equal((await route.POST(request('다시 요청',undefined,{sceneId:scene,resolved:true,attachment,contractVersion:2}))).status,429);assert.equal(calls,1);
+ }
+ route=await freshRoute();globalThis.fetch=async()=>Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({reply:'기록을 다시 볼게요.',reaction:'check',supportMode:'compare',focus:'deleted-question'})}]}}]});
+ assert.equal((await (await route.POST(request('첨부 없음',undefined,{contractVersion:2}))).json()).validation,'story_contract');
+ route=await freshRoute();globalThis.fetch=async()=>Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({reply:'기록부터 같이 보자.',reaction:'together',supportMode:'listen',focus:'none'})}]}}]});
+ assert.equal((await (await route.POST(request('그냥 들어 줘',undefined,{sceneId:'friend',resolved:true,contractVersion:2}))).json()).validation,'story_contract');
  console.log('One-shot AI tests passed: two windows, legacy disabled, exact coalescing, no retry, schema, provider and shared-budget failures.');
 }finally{
  if(originalEnabled===undefined)delete process.env.GEMINI_ENABLED;else process.env.GEMINI_ENABLED=originalEnabled;
