@@ -77,6 +77,7 @@ ${version===2?`추가 분류: supportMode와 focus를 함께 반환한다.
 지수: 첨부를 근거로 확인 제안이면 compare와 첨부 ID, 근거 없는 걱정은 cautious/none, 송금 권유를 받아도 따르지 않는 경우 safeguard/none, 강요를 거절하거나 연락 종료는 distance/none, 모호하거나 무관하면 neutral/none. compare/cautious/safeguard는 check, distance는 boundary, neutral은 acknowledge.
 준호: 기록 확인 요청은 records/records, 새로운 연락 확인 요청은 verify/contact, 조언 없이 들어 달라는 요청은 listen/none, 대화 거절은 space/none, 모호하거나 무관하면 neutral/none. space만 reaction space이며 나머지는 together.
 말투의 공손함이 아니라 요청의 뜻을 본다. 이미 멈춘 행동을 다시 지시하지 않고 인정한 뒤 다음 행동을 말한다. 첨부 질문의 작성자는 지수이며 처음 안내의 작성자는 온결이다. compare는 실제 첨부가 있을 때만 가능하다.
+첨부가 있으면 이미 전달받아 읽을 수 있는 기록이다. '내용이 있다면', '보내 주시면', '보관하셨다면'처럼 다시 받는 조건을 붙이지 않는다. 삭제 사실은 플레이어가 알려 준 말로만 받아들인다. 지수가 삭제 장면을 직접 봤다고 만들지 않는다. deleted-question에는 자신이 쓴 질문임을 알아보고, 이미 받은 기록을 기준으로 반응한다.
 listen/space에는 기록 확인을 강요하지 않는다. 출력은 {"reply":"답장","reaction":"허용된 값","supportMode":"허용된 값","focus":"허용된 값"}`:'출력은 JSON 객체 하나: {"reply":"인물의 답장","reaction":"허용된 값"}'}`;
 }
 export function parseStoryReply(text,id,version=1,attachment='none'){
@@ -84,6 +85,7 @@ export function parseStoryReply(text,id,version=1,attachment='none'){
   const value=JSON.parse(text);
   if(!value||Object.keys(value).sort().join(',')!==(version===2?'focus,reaction,reply,supportMode':'reaction,reply')||typeof value.reply!=='string'||!reactions[id]?.includes(value.reaction)||/[?？]/.test(value.reply))return null;
   if(version===2&&(!validBranch(id,value.reaction,value.supportMode,value.focus)||id==='peer'&&value.supportMode==='compare'&&value.focus!==attachment))return null;
+  if(version===2&&id==='peer'&&value.supportMode==='compare'&&(/(?:내용|기록|자료).{0,12}있다면|보관하셨다면|보내\s*주시면/.test(value.reply)||attachment==='deleted-question'&&/(?:질문|글).{0,20}(?:지워|삭제).{0,12}(?:봤|보았)/.test(value.reply)))return null;
   if(version===2&&value.supportMode==='listen'&&/기록.*보자|내역.*보자|보여\s*줘/.test(value.reply))return null;
   // Fail closed on explicit contradictions to the finite reaction.
   if(value.reaction==='space'&&/전화할게|같이 확인하자|자세히 말해/.test(value.reply))return null;
