@@ -176,7 +176,7 @@ story=step(story,'message-followup','friend:call');
 assert.equal(e.totalSpent(story),beforeMoney);
 const restored=e.restoreRun(e.serializeRun(story));
 assert.deepEqual(restored,story);
-assert.ok(shot.messageConsequences(restored).some(line=>line.includes('통화했다')));
+assert.ok(shot.messageConsequences(restored).some(line=>line.includes('연락 요약을 확인했다')));
 story=step(story,'next');
 assert.equal(step(story,'message','peer:attempt'),story,'past scene closed');
 assert.ok(n.friendFollowup(story).includes('같이 확인'));

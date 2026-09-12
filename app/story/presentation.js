@@ -16,7 +16,7 @@ export function supportReady(state){
 }
 export function minimumReplyDelay(elapsed,reduced=false){return reduced?0:Math.max(0,700-elapsed);}
 export const supportCall=[
- '응, 나야. 아까 남긴 말 읽었어.',
+ '아까 남긴 말 읽었어. 같이 볼 내용 남겨 둘게.',
  '화면에 나온 설명이랑 실제 거래 기록은 따로 보자. 지금 모든 걸 해결하려고 서두르지는 말고.',
  '다른 연락이 와도 바로 돈부터 보내지 말자. 필요하면 그 메시지만 나한테 보여 줘.',
  '이따 약속한 데서 보자. 먼저 도착하면 연락할게.'
