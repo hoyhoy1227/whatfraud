@@ -101,3 +101,12 @@ console.log('Deferred call and in-memory transcript SSR passed.');
 
 assert.ok(!messageClient.includes('음성 통화')&&!messageClient.includes('계속 듣기'));
 assert.ok(messageClient.includes('연락 요약')&&client.includes('연락 요약 보기'));
+
+for(const [mode,focus] of [['records','records'],['listen','none']]){
+ let branch=engine.createRun('demo');
+ for(const [type,data] of [['resolve','paused'],['message','friend:together'],['message-style','friend:'+mode+':'+focus],['message-followup','friend:call']])branch=engine.transition(branch,{type,data,chapter:1});
+ const html=renderToStaticMarkup(createElement(Message,{state:branch,scene:'friend',memory:{draft:'',sent:'',reply:'',attachment:'none',sentAttachment:'none',preparedSent:'',callStep:4},aiAllowed:false,getSession:()=>'',remaining:0,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
+ assert.ok(html.includes(mode==='listen'?'지금 다 설명':'화면에 적힌 금액'));
+ if(mode==='listen')assert.ok(!html.includes('은행에서 실제로'));
+}
+for(const label of ['지수와 남긴 기록 대조하기','준호와 확인할 거래 내역 열기','이 연락에는 지금 답하지 않기'])assert.ok(client.includes(label));

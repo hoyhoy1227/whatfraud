@@ -1,4 +1,4 @@
-import { validateStoryContext, storyPrompt, parseStoryReply } from '../../story/one-shot.js';
+import { validateStoryContext, storyPrompt, parseStoryReply, branchModes, branchFocus } from '../../story/one-shot.js';
 import { reserveSharedBudget } from '../ai-budget';
 import { sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
 import { cases } from '../../game-data';
@@ -160,7 +160,7 @@ export async function GET() {
   });
 }
 
-type ChatBody = { caseId?: unknown; messages?: unknown; userTurnCount?: unknown; stageId?: unknown; inputMode?: unknown; choices?: unknown; checks?: unknown; sceneId?: unknown; resolved?: unknown; joined?: unknown; attachment?: unknown };
+type ChatBody = { caseId?: unknown; messages?: unknown; userTurnCount?: unknown; stageId?: unknown; inputMode?: unknown; choices?: unknown; checks?: unknown; sceneId?: unknown; resolved?: unknown; joined?: unknown; attachment?: unknown; contractVersion?: unknown };
 type PendingReply = { response: Promise<Response>; expires: number };
 const pendingReplies = new Map<string, PendingReply>();
 
@@ -172,7 +172,7 @@ export async function POST(request: Request) {
   let body: ChatBody;
   try {
     body = await readBoundedBody(request) as ChatBody;
-    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !['caseId', 'messages', 'userTurnCount', 'stageId', 'inputMode', 'choices', 'checks', 'sceneId', 'resolved', 'joined', 'attachment'].includes(key))) return json({ code: 'invalid_request' }, 400);
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !['caseId', 'messages', 'userTurnCount', 'stageId', 'inputMode', 'choices', 'checks', 'sceneId', 'resolved', 'joined', 'attachment', 'contractVersion'].includes(key))) return json({ code: 'invalid_request' }, 400);
   } catch (error) {
     return json({ code: error instanceof Error && error.message === 'body_timeout' ? 'body_timeout' : 'invalid_request' }, error instanceof Error && error.message === 'body_timeout' ? 408 : 400);
   }
@@ -213,8 +213,9 @@ async function handleChat(request: Request, body: ChatBody) {
     return json({code:'story_message_required'},409);
   }
   if(messages.length!==1||messages[0].role!=='user'||body.userTurnCount!==1)return json({code:'invalid_messages'},400);
-  if(!validateStoryContext(body)||body.choices!==undefined||body.checks!==undefined)return json({code:'invalid_story_context'},400);
+  if((body.contractVersion!==undefined&&body.contractVersion!==2)||!validateStoryContext(body)||body.choices!==undefined||body.checks!==undefined)return json({code:'invalid_story_context'},400);
   const sceneId=body.sceneId as 'peer'|'friend';
+  const contractVersion=body.contractVersion===2?2:1;
   const moment='story-'+sceneId;
   const conversation=messages;
   if (!aiEnabled()) return json({ code: 'ai_disabled' }, 503, { 'Retry-After': '300' });
@@ -264,15 +265,15 @@ async function handleChat(request: Request, body: ChatBody) {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: storyPrompt(sceneId,body.attachment as string) }] },
+        systemInstruction: { parts: [{ text: storyPrompt(sceneId,body.attachment as string,contractVersion) }] },
         contents: conversation.map((message) => ({
           role: message.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: message.content }],
         })),
         generationConfig: {
-          maxOutputTokens: 180,
+          maxOutputTokens: contractVersion===2?220:180,
           responseMimeType: 'application/json',
-          responseSchema: {type:'OBJECT',properties:{reply:{type:'STRING'},reaction:{type:'STRING',enum:sceneId==='peer'?['check','acknowledge','boundary']:['together','space']}},required:['reply','reaction']},
+          responseSchema: {type:'OBJECT',properties:{reply:{type:'STRING'},reaction:{type:'STRING',enum:sceneId==='peer'?['check','acknowledge','boundary']:['together','space']}},required:['reply','reaction'],...(contractVersion===2?{properties:{reply:{type:'STRING'},reaction:{type:'STRING',enum:sceneId==='peer'?['check','acknowledge','boundary']:['together','space']},supportMode:{type:'STRING',enum:branchModes[sceneId]},focus:{type:'STRING',enum:branchFocus}},required:['reply','reaction','supportMode','focus']}: {})},
           thinkingConfig: { thinkingLevel: 'minimal' },
         },
       }),
@@ -288,10 +289,10 @@ async function handleChat(request: Request, body: ChatBody) {
     }
     const payload = await response.json() as { candidates?: Array<{ finishReason?: string }> };
     if (payload.candidates?.[0]?.finishReason !== 'STOP') return json({ code: 'incomplete_response' }, 502);
-    const result = parseStoryReply(extractGeminiText(payload),sceneId);
+    const result = parseStoryReply(extractGeminiText(payload),sceneId,contractVersion,body.attachment as string);
     if (!result) return json({ code: 'unsafe_response', validation: 'story_contract' }, 502);
     if (!validateAiReply(result.reply, undefined, replyMode, 'story')) return json({ code: 'unsafe_response', validation: 'reply_policy' }, 502);
-    return json({ reply:result.reply, reaction:result.reaction, provider: 'gemini', model: GEMINI_MODEL });
+    return json({ reply:result.reply, reaction:result.reaction, provider: 'gemini', model: GEMINI_MODEL, ...(contractVersion===2?{supportMode:result.supportMode,focus:result.focus}: {}) });
   } catch (error) {
     providerPausedUntil = Date.now() + 30_000;
     return json({ code: error instanceof Error && error.name === 'AbortError' ? 'provider_timeout' : 'provider_error' }, 504);

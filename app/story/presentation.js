@@ -1,3 +1,4 @@
+import {messageStyle} from './one-shot.js';
 // Presentation-only helpers. No financial decisions or model calls.
 export const emptyMessageMemory=()=>({draft:'',sent:'',reply:'',attachment:'none',sentAttachment:'none',preparedSent:'',callStep:0});
 export function messageOpening(state,scene){
@@ -12,7 +13,7 @@ export function peerRecordReady(state){
  return at>=0&&state.events.slice(at+1).some(e=>e.type==='resolve'&&e.chapter===1||e.type==='read'&&e.data==='bank'||e.type==='message-followup'&&e.data==='peer:checked-bank'||e.type==='next'&&e.chapter===1);
 }
 export function supportReady(state){
- return state.chapter===2&&!state.completed&&state.events.some(e=>e.type==='message-followup'&&e.data==='friend:call');
+ return state.chapter===2&&!state.completed&&messageStyle(state,'friend').mode==='verify'&&state.events.some(e=>e.type==='message-followup'&&e.data==='friend:call');
 }
 export function minimumReplyDelay(elapsed,reduced=false){return reduced?0:Math.max(0,700-elapsed);}
 export const supportCall=[

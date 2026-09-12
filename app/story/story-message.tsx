@@ -1,8 +1,8 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {sanitizePlayerText,validateAiReply} from '../ai-dialogue';
-import {storyMessages,messageStatus,messageWindow,canAttach,attachmentText,reactions} from './one-shot';
-import {emptyMessageMemory,messageOpening,peerRecordReady,minimumReplyDelay,supportCall} from './presentation';
+import {storyMessages,messageStatus,messageWindow,canAttach,attachmentText,reactions,preparedMessages,peerFollowupText,friendFollowupLines,validBranch,messageStyle} from './one-shot';
+import {emptyMessageMemory,messageOpening,peerRecordReady,minimumReplyDelay} from './presentation';
 export type MessageMemory=ReturnType<typeof emptyMessageMemory>;
 type Run=ReturnType<typeof import('./engine').createRun>;
 type Scene='peer'|'friend';
@@ -20,9 +20,15 @@ export default function StoryMessage({memory=emptyMessageMemory(),onMemory,state
  const done=!['ready','attempt'].includes(status);
  const canGenerate=available&&status==='ready'&&aiAllowed&&!practice&&remaining>0;
  const recovered=status==='attempt'&&!busy;
- function prepared(){
+ function prepared(choice:typeof preparedMessages.peer[number]){
   if(pending.current||!available||done)return;
-  if(onEvent('message',scene+':'+person.reaction)){if(sent)onMemory?.({preparedSent:person.prepared});else{onMemory?.({sentAttachment:'none'});setSent(person.prepared);}setReply(person.reply);setError('');}
+  const focus=scene==='peer'&&choice.mode==='compare'?attachment:choice.mode==='records'?'records':choice.mode==='verify'?'contact':'none';
+  if(!validBranch(scene,choice.reaction,choice.mode,focus)||!canAttach(state,scene==='peer'?focus:'none'))return;
+  if(onEvent('message',scene+':'+choice.reaction)){
+   onEvent('message-style',scene+':'+choice.mode+':'+focus);
+   if(sent)onMemory?.({preparedSent:choice.text});else{onMemory?.({sentAttachment:scene==='peer'&&choice.mode==='compare'?attachment:'none'});setSent(choice.text);}
+   setReply(choice.reply);setError('');
+  }
  }
  async function send(event:React.FormEvent){
   event.preventDefault();
@@ -38,12 +44,12 @@ export default function StoryMessage({memory=emptyMessageMemory(),onMemory,state
   const dispatched=performance.now();
   const timer=setTimeout(()=>aborter.abort(),10000);
   try{
-   const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':getSession()},signal:aborter.signal,body:JSON.stringify({caseId:'paper-profit',stageId:state.stage,sceneId:scene,resolved:state.results.some(r=>r.chapter===1),joined:state.joined,attachment:scene==='peer'?attachment:'none',inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1})});
-   const value=await response.json() as {reply?:unknown;provider?:unknown;reaction?:unknown};
-   if(!response.ok||value.provider!=='gemini'||typeof value.reply!=='string'||!validateAiReply(value.reply,undefined,'normal','story')||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply))throw Error('unavailable');
+   const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':getSession()},signal:aborter.signal,body:JSON.stringify({contractVersion:2,caseId:'paper-profit',stageId:state.stage,sceneId:scene,resolved:state.results.some(r=>r.chapter===1),joined:state.joined,attachment:scene==='peer'?attachment:'none',inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1})});
+   const value=await response.json() as {reply?:unknown;provider?:unknown;reaction?:unknown;supportMode?:unknown;focus?:unknown};
+   if(!response.ok||value.provider!=='gemini'||typeof value.reply!=='string'||!validateAiReply(value.reply,undefined,'normal','story')||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply)||!validBranch(scene,value.reaction,value.supportMode,value.focus))throw Error('unavailable');
    if(!reduced)await new Promise<void>(resolve=>{const wait=setTimeout(resolve,minimumReplyDelay(performance.now()-dispatched,reduced));aborter.signal.addEventListener('abort',()=>{clearTimeout(wait);resolve();},{once:true});});
    if(!mounted.current||aborter.signal.aborted)return;
-   if(onEvent('message',scene+':'+value.reaction))setReply(value.reply);
+   if(onEvent('message',scene+':'+value.reaction)){onEvent('message-style',scene+':'+value.supportMode+':'+value.focus);setReply(value.reply);}
   }catch{
    if(mounted.current)setError('AI 답장을 받지 못했습니다. 다시 요청하지 않습니다. 준비된 메시지를 보내거나 이 대화를 건너뛸 수 있습니다.');
   }finally{
@@ -51,6 +57,7 @@ export default function StoryMessage({memory=emptyMessageMemory(),onMemory,state
    if(mounted.current){setBusy(false);if(aborter.signal.aborted)setError('전송이 중단되었습니다. 재요청 없이 준비된 메시지로 이어갈 수 있습니다.');}
   }
  }
+ const supportCall=friendFollowupLines(state);
  const followed=state.events.some(e=>e.type==='message-followup'&&e.data===(scene==='peer'?'peer:record':'friend:call'));
  return <section className="story-message-thread">
   <button className="chat-back" onClick={onBack}>‹ 대화 목록</button>
@@ -71,14 +78,14 @@ export default function StoryMessage({memory=emptyMessageMemory(),onMemory,state
     <textarea id="story-message-draft" rows={3} maxLength={500} value={draft} onChange={e=>setDraft(e.target.value)} placeholder={scene==='peer'?'지수에게 전하고 싶은 말':'준호에게 지금 하고 싶은 말'}/>
     <button className="primary" disabled={!draft.trim()} type="submit">보내기</button><small>보내면 한 번의 답장으로 이 장면이 이어집니다.</small>
    </form>:<p className="fine">{practice?'되감기에서는 준비된 메시지를 사용합니다.':!aiAllowed?'AI를 사용하지 않는 플레이입니다.':'이 장면에서 AI를 추가로 요청하지 않습니다.'}</p>}
-   <details className="prepared-message"><summary>준비된 메시지로 보내기</summary><p>{person.prepared}</p><button onClick={prepared}>이 메시지 보내기</button></details>
+   <details className="prepared-message"><summary>준비된 메시지로 보내기</summary>{scene==='peer'&&!canGenerate&&<label>함께 보낼 기록<select value={attachment} onChange={e=>setAttachment(e.target.value)}>{Object.keys(attachmentText).filter(id=>canAttach(state,id)).map(id=><option value={id} key={id}>{id==='none'?'첨부 안 함':id==='first-notice'?'처음 안내':'보관한 지수의 질문'}</option>)}</select></label>}{preparedMessages[scene].filter(choice=>choice.mode!=='compare'||attachment!=='none').map(choice=><button key={choice.mode} onClick={()=>prepared(choice)}>{choice.text}</button>)}</details>
    <button className="text-button" onClick={()=>{if(onEvent('message',scene+':skip'))onContinue();}}>지금은 말하지 않기</button>
   </>}
   {done&&<>
-   {scene==='peer'&&status==='check'&&<article className="message-consequence"><p>지수는 입금을 미루고 안내를 다시 확인하러 갔다.</p>{!followed?(peerRecordReady(state)?<button onClick={()=>onEvent('message-followup','peer:record')}>지수가 남긴 기록 보기</button>:<small>다른 기록을 살펴보는 동안 지수도 안내를 확인합니다.</small>):<><p>지수: 처음 안내와 나중 안내를 따로 보관해 뒀어요. 저도 확인하고 나서 결정할게요.</p><button disabled={state.events.some(e=>e.type==='message-followup'&&e.data==='peer:saved')} onClick={()=>onEvent('message-followup','peer:saved')}>{state.events.some(e=>e.type==='message-followup'&&e.data==='peer:saved')?'메모에 보관됨':'메모에 보관'}</button><small>이후 거래 결과는 아직 알 수 없습니다.</small></>}</article>}
+   {scene==='peer'&&status==='check'&&<article className="message-consequence"><p>지수는 자신의 안내를 확인해 보기로 했다.</p>{!followed?(peerRecordReady(state)?<button onClick={()=>onEvent('message-followup','peer:record')}>지수가 남긴 기록 보기</button>:<small>다른 기록을 살펴보는 동안 지수도 안내를 확인합니다.</small>):<><p>지수: {peerFollowupText(state)}</p><button disabled={state.events.some(e=>e.type==='message-followup'&&e.data==='peer:saved')} onClick={()=>onEvent('message-followup','peer:saved')}>{state.events.some(e=>e.type==='message-followup'&&e.data==='peer:saved')?'메모에 보관됨':'메모에 보관'}</button><small>이후 거래 결과는 아직 알 수 없습니다.</small></>}</article>}
    {scene==='peer'&&status==='acknowledge'&&<p className="system-message">메시지를 남겼다. 지수의 다음 결정은 아직 알 수 없다.</p>}
    {scene==='peer'&&status==='boundary'&&<p className="system-message">이 대화는 여기서 마쳤다. 더 설명하지 않아도 된다.</p>}
-   {scene==='friend'&&status==='together'&&<article className="incoming-call"><span>준호 · 기존 연락처</span><h3>{followed?(callStep>=supportCall.length?'연락 요약 확인 완료':'준호의 연락 요약'):'준호가 남긴 연락'}</h3>{!followed?<><button className="primary" onClick={()=>{if(onEvent('message-followup','friend:call'))onMemory?.({callStep:1});}}>연락 내용 보기</button><button onClick={onContinue}>나중에</button></>:<><div aria-live="polite">{supportCall.slice(0,Math.max(1,callStep)).map(line=><p key={line}>{line}</p>)}</div>{callStep<supportCall.length&&<button onClick={()=>onMemory?.({callStep:Math.max(1,callStep)+1})}>다음 내용 보기</button>}</>}<small>준호가 남긴 내용을 순서대로 확인합니다.</small></article>}
+   {scene==='friend'&&status==='together'&&<article className="incoming-call"><span>준호 · {messageStyle(state,'friend').mode==='listen'?'저녁 약속':'기존 연락처'}</span><h3>{followed?(callStep>=supportCall.length?'연락 요약 확인 완료':'준호의 연락 요약'):'준호가 남긴 연락'}</h3>{!followed?<><button className="primary" onClick={()=>{if(onEvent('message-followup','friend:call'))onMemory?.({callStep:1});}}>연락 내용 보기</button><button onClick={onContinue}>나중에</button></>:<><div aria-live="polite">{supportCall.slice(0,Math.max(1,callStep)).map(line=><p key={line}>{line}</p>)}</div>{callStep<supportCall.length&&<button onClick={()=>onMemory?.({callStep:Math.max(1,callStep)+1})}>다음 내용 보기</button>}</>}<small>준호가 남긴 내용을 순서대로 확인합니다.</small></article>}
    {scene==='friend'&&status==='space'&&<p className="system-message">준호는 더 묻지 않았다. 저녁 약속은 그대로다.</p>}
    {status==='skip'&&<p className="system-message">지금 말하지 않기로 했다. 이 선택으로 불이익은 생기지 않는다.</p>}
    <button className="primary" onClick={onContinue}>{scene==='friend'&&state.chapter===1?'저녁 약속으로 이어가기':'내 연락으로 돌아가기'}</button>
