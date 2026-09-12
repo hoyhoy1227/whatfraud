@@ -283,3 +283,9 @@ assert.ok(shot.peerFollowupText(proof).includes('제가 추가 비용'));
 assert.equal(shot.validBranch('peer','check','compare','none'),false);
 assert.equal(shot.validBranch('friend','space','records','records'),false);
 console.log('Story branches passed: intent modes, explicit use, no forced loss, record provenance, no invented verification, save replay.');
+
+const attachedReply=(reply)=>JSON.stringify({reply,reaction:'check',supportMode:'compare',focus:'deleted-question'});
+assert.equal(shot.parseStoryReply(attachedReply('저도 질문이 지워진 걸 봤어요. 보관하신 내용이 있다면 저도 같이 읽어볼게요.'),'peer',2,'deleted-question'),null);
+assert.equal(shot.parseStoryReply(attachedReply('기록을 보내 주시면 같이 읽어볼게요.'),'peer',2,'deleted-question'),null);
+assert.ok(shot.parseStoryReply(attachedReply('제가 추가 비용을 물었던 질문이네요. 남겨 주신 기록을 보고 처음 안내부터 다시 확인할게요.'),'peer',2,'deleted-question'));
+console.log('Attachment reply regression passed: already-received record, no invented witnessing.');
