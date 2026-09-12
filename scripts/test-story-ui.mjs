@@ -22,7 +22,7 @@ const rewind=renderToStaticMarkup(createElement(ui.Rewind,{state,onReplay:noop,o
 assert.ok(rewind.includes('멈춰 세운 하루')&&rewind.includes('80,000원')&&rewind.includes('선택 직전'));
 assert.ok(rewind.includes('지나친 단서')&&!rewind.includes('정답률'));
 const client=await readFile('app/story/story-client.tsx','utf8');
-for(const label of ['저장된 준호에게 전화','출금 요청','보관한 자료로 접수','메모에 보관','보내기','일단 보류하기','이 계정 차단하기','최근 앱','일시정지','움직임 줄이기','글자 크게'])assert.ok(client.includes(label),label);
+for(const label of ['준호에게 확인하기','출금 요청','보관한 자료로 접수','메모에 보관','보내기','일단 보류하기','이 계정 차단하기','최근 앱','일시정지','움직임 줄이기','글자 크게'])assert.ok(client.includes(label),label);
 assert.ok(client.includes('showModal()')&&client.includes('onCancel='));
 const messageClient=await readFile('app/story/story-message.tsx','utf8');
 assert.ok(messageClient.includes('signal:aborter.signal')&&client.includes('practiceOriginal'));
@@ -68,10 +68,12 @@ const n=await import('../app/story/narrative.js');
 for(const known of [false,true]){
  const profile=renderToStaticMarkup(createElement(ui.ContactProfile,{profile:n.contactProfile(0,known),blocked:!known,onClose:noop,onChat:noop,onCall:noop}));
  assert.ok(profile.includes(known?'내 연락처에 저장됨':'친구로 등록되지 않음'));
- assert.ok(profile.includes('대화 보기')&&profile.includes('음성 통화')&&!profile.includes('사기'));
+ assert.ok(profile.includes('대화 보기')&&profile.includes('연락 확인')&&!profile.includes('사기'));
  if(!known)assert.ok(profile.includes('disabled'));
 }
-assert.ok(renderToStaticMarkup(createElement(ui.PhoneStatus,{time:'09:10'})).includes('가상 체험'));
+const statusHtml=renderToStaticMarkup(createElement(ui.PhoneStatus,{time:'09:10'}));
+assert.ok(statusHtml.includes('wifi-icon')&&statusHtml.includes('battery-icon'));
+assert.ok(!statusHtml.includes('가상 체험')&&!statusHtml.includes('▂▄▆'));
 for(let step=0;step<4;step++)assert.ok(renderToStaticMarkup(createElement(ui.Closing,{state,step,onNext:noop,onSkip:noop})).includes(['마지막 대화','생활 계좌','준호','휴대폰을 잠갔다'][step]));
 assert.ok(client.includes('StoryMessage')&&client.includes('visualViewport')&&client.includes('openProfile'));
 assert.ok(!client.slice(client.indexOf("dialog==='reply'?")).includes('<textarea'));
@@ -90,9 +92,12 @@ console.log('One-shot message SSR passed: input opt-in, prepared alternative, pr
 let late=engine.createRun('demo');
 for(const [type,data] of [['resolve','paused'],['message','friend:together'],['next','']])late=engine.transition(late,{type,data,chapter:late.chapter});
 const lateHtml=renderToStaticMarkup(createElement(Message,{state:late,scene:'friend',aiAllowed:true,getSession:()=> 'test-ui-session-0001',remaining:1,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
-assert.ok(lateHtml.includes('받기')&&lateHtml.includes('내 연락으로 돌아가기'));
+assert.ok(lateHtml.includes('연락 내용 보기')&&lateHtml.includes('내 연락으로 돌아가기'));
 assert.ok(!lateHtml.includes('<textarea'),'history permits call, not another generation');
 const restoredHtml=renderToStaticMarkup(createElement(Message,{state:investment,scene:'peer',memory:{draft:'작성 중인 문장',sent:'첫 메시지',reply:'받은 답장',attachment:'none',sentAttachment:'none',preparedSent:'준비된 후속 메시지',callStep:0},aiAllowed:true,getSession:()=> 'test-ui-session-0001',remaining:1,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
 for(const line of ['작성 중인 문장','첫 메시지','받은 답장','준비된 후속 메시지'])assert.ok(restoredHtml.includes(line));
 assert.ok(client.includes("act('message-followup','peer:checked-bank')"));
 console.log('Deferred call and in-memory transcript SSR passed.');
+
+assert.ok(!messageClient.includes('음성 통화')&&!messageClient.includes('계속 듣기'));
+assert.ok(messageClient.includes('연락 요약')&&client.includes('연락 요약 보기'));

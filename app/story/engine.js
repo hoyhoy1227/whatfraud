@@ -191,7 +191,7 @@ export function replayBefore(state,eventIndex) {
 export function timeline(state) {
   return state.events.map((event,index)=>({...event,index})).filter(e=>['confirm','call','resolve'].includes(e.type)).map(e=>{
     const c=chapters[e.chapter];
-    const label=e.type==='confirm'?'가상 거래 실행':e.type==='call'?'전화 경로 확인':({verified:'독립 확인 후 종료',paused:'행동 보류',blocked:'연락 차단',reported:'기록 보관·접수',stopped:'추가 요청 중단',loss:'답변을 기다림'}[e.data]??'연락 정리');
+    const label=e.type==='confirm'?'가상 거래 실행':e.type==='call'?'기존 연락처 확인':({verified:'독립 확인 후 종료',paused:'행동 보류',blocked:'연락 차단',reported:'기록 보관·접수',stopped:'추가 요청 중단',loss:'답변을 기다림'}[e.data]??'연락 정리');
     return {...e,title:c.story.title,label,takeaway:c.story.evidence.filter(item=>item.key).map(item=>({title:item.title,seen:state.events.slice(0,e.index).some(ev=>(ev.type==='inspect'&&ev.data===c.id+':'+item.id)||(ev.type==='call'&&ev.chapter===e.chapter&&((ev.data==='junho'&&item.id==='saved-contact')||(ev.data==='contact'&&item.id==='contact-history'))))}))};
   });
 }
