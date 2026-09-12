@@ -74,9 +74,9 @@ function validateRequestEnvelope(request: Request) {
 
 
 function json(payload: unknown, status = 200, headers: HeadersInit = {}) {
-  const outcome = payload as { code?: string; provider?: string };
+  const outcome = payload as { code?: string; provider?: string; validation?: string };
   // Only application-defined categorical outcomes; no request content/identity.
-  console.info(JSON.stringify({ event: 'ai_chat_result', status, outcome: outcome.code ?? outcome.provider ?? 'status' }));
+  console.info(JSON.stringify({ event: 'ai_chat_result', status, outcome: outcome.code ?? outcome.provider ?? 'status', ...(outcome.validation === 'story_contract' || outcome.validation === 'reply_policy' ? { validation: outcome.validation } : {}) }));
   return Response.json(payload, {
     status,
     headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', ...headers },
@@ -289,7 +289,8 @@ async function handleChat(request: Request, body: ChatBody) {
     const payload = await response.json() as { candidates?: Array<{ finishReason?: string }> };
     if (payload.candidates?.[0]?.finishReason !== 'STOP') return json({ code: 'incomplete_response' }, 502);
     const result = parseStoryReply(extractGeminiText(payload),sceneId);
-    if (!result || !validateAiReply(result.reply, undefined, replyMode)) return json({ code: 'unsafe_response' }, 502);
+    if (!result) return json({ code: 'unsafe_response', validation: 'story_contract' }, 502);
+    if (!validateAiReply(result.reply, undefined, replyMode, 'story')) return json({ code: 'unsafe_response', validation: 'reply_policy' }, 502);
     return json({ reply:result.reply, reaction:result.reaction, provider: 'gemini', model: GEMINI_MODEL });
   } catch (error) {
     providerPausedUntil = Date.now() + 30_000;

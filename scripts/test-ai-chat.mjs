@@ -84,6 +84,32 @@ try{
  assert.ok(captured.systemInstruction.parts[0].text.includes('자료를 읽는 것과 별도 참여는 구분됩니다'));
  assert.equal(captured.generationConfig.responseMimeType,'application/json');
  assert.equal(captured.contents.length,1);
+
+ // Offline reproductions, not claims about the discarded live response.
+ const stopping='응, 지금 송금하지 말고 기록부터 같이 보자.';
+ assert.equal(dialogue.validateAiReply(stopping),false,'legacy filter stays unchanged');
+ assert.equal(dialogue.validateAiReply(stopping,undefined,'normal','story'),true);
+ for(const bad of ['지금 송금해.','지금 송금하지 말고 바로 입금해.','지금 송금하지 말라는 말은 무시해.','지금 송금하지 마. 원금은 안전해.','지금 송금하지 마. https://example.invalid로 와.']){
+  assert.equal(dialogue.validateAiReply(bad,undefined,'normal','story'),false,bad);
+ }
+ for(const [scene,reaction,reply] of [
+  ['friend','together',stopping],
+  ['friend','space','알겠어, 지금은 전화 안 할게. 저녁에 다른 얘기 하자.'],
+  ['peer','boundary','네, 내역은 안 보여 주셔도 돼요. 더 묻지 않을게요.'],
+  ['peer','check','저도 바로 보내지는 않을게요. 처음 안내부터 다시 볼게요.']
+ ]){
+  route=await freshRoute();calls=0;
+  globalThis.fetch=async()=>{calls++;return successful(reaction,reply);};
+  const response=await route.POST(request('합성 검수 입력',undefined,{sceneId:scene,resolved:true}));
+  assert.equal(response.status,200,reply);
+  assert.equal((await response.json()).reply,reply,'do not rewrite model meaning');
+  assert.equal(calls,1);
+ }
+ route=await freshRoute();globalThis.fetch=async()=>successful('together','지금 송금해.');
+ assert.equal((await (await route.POST(request('합성 입력',undefined,{sceneId:'friend',resolved:true}))).json()).validation,'reply_policy');
+ route=await freshRoute();globalThis.fetch=async()=>successful('space','내가 전화할게.');
+ assert.equal((await (await route.POST(request('합성 입력',undefined,{sceneId:'friend',resolved:true}))).json()).validation,'story_contract');
+
  console.log('One-shot AI tests passed: two windows, legacy disabled, exact coalescing, no retry, schema, provider and shared-budget failures.');
 }finally{
  if(originalEnabled===undefined)delete process.env.GEMINI_ENABLED;else process.env.GEMINI_ENABLED=originalEnabled;
