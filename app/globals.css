@@ -76,3 +76,15 @@ html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR'
 .routine-plan{font-size:14px;line-height:1.5;margin:8px 0 16px;color:#e8eef7}.story-message-composer:focus-within{scroll-margin-bottom:16px}.story-message-thread .attachment-picker fieldset p{font-size:14px;line-height:1.6}.story-message-thread .incoming-call button{min-height:44px}
 
 .contact-branches{display:grid;gap:10px;margin:14px 0}.contact-branches:empty{display:none}.contact-branches>button{background:#fff;border:1px solid #c5d3e3;text-align:left;color:#246bce}.prepared-message>button{display:block;width:100%;margin-top:8px;text-align:left}.prepared-message select{font:inherit;max-width:100%;min-height:44px}
+
+/* Short authored interludes within the existing phone, no blocking animation. */
+.chapter-scene { text-align:left; padding:.5rem 0; }
+.chapter-scene>small {font-size:.875rem;color:var(--muted-foreground,#536274);}
+.chapter-scene h2 {font-size:1.55rem;line-height:1.35;margin:.75rem 0 1.25rem;}
+.chapter-copy {min-height:8rem;animation:chapter-in .22s ease-out;}
+.chapter-copy p {font-size:1rem;line-height:1.75;overflow-wrap:anywhere;}
+.chapter-count {font-size:.875rem;color:#536274;margin:1rem 0;}
+.chapter-scene button {min-height:44px;white-space:normal;}
+@keyframes chapter-in {from {opacity:0;transform:translateY(4px)} to {opacity:1;transform:translateY(0)}}
+.reduce-motion .chapter-copy {animation:none;}
+@media(prefers-reduced-motion:reduce){.chapter-copy{animation:none;}}

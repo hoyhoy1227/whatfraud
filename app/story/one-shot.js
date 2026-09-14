@@ -125,10 +125,10 @@ export function peerFollowupText(state){
 }
 export function friendFollowupLines(state){
  const {mode}=messageStyle(state,'friend');
- if(mode==='listen')return ['지금 다 설명하려고 하지 않아도 돼.','나 먼저 도착하면 연락할게. 저녁에 천천히 얘기하자.'];
+ if(mode==='listen')return state.chapter===2?['아까 못다 한 얘기는 나중에 해도 돼.','집에 가는 길엔 잠깐 쉬어. 도착하면 연락 줘.']:['지금 다 설명하려고 하지 않아도 돼.','나 먼저 도착하면 연락할게. 저녁에 천천히 얘기하자.'];
  if(mode==='records')return ['보여 주기로 한 기록부터 같이 보자.','화면에 적힌 금액과 은행에서 실제로 오간 돈은 따로 보면 돼.','다른 연락이 와도 새로 보내기 전에 기록부터 확인하자.'];
  if(mode==='verify')return ['새 연락은 그 사람이 알려 준 경로 말고 따로 확인하자.','원하면 그 연락만 보여 줘. 공식 접수 안내는 직접 찾아보자.'];
- return ['응, 남긴 말 읽었어.','이따 약속한 데서 보자.'];
+ return ['응, 남긴 말 읽었어.',state.chapter===2?'오늘 만나서 반가웠어. 집에 도착하면 연락 줘.':'이따 약속한 데서 보자.'];
 }
 export function branchUseAllowed(state,data){
  if(state.chapter!==2||state.completed||state.results.some(r=>r.chapter===2)||state.events.some(e=>e.type==='branch-use'&&e.data===data))return false;

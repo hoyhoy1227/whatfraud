@@ -5,6 +5,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import ts from 'typescript';
 import * as engine from '../app/story/engine.js';
 let source=await readFile('app/story/panels.tsx','utf8');
+source=source.replace("from './context'","from "+JSON.stringify(new URL('../app/story/context.js',import.meta.url).href));
 source=source.replace("from './one-shot'","from "+JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
 source=source.replace("from './engine'","from "+JSON.stringify(new URL('../app/story/engine.js',import.meta.url).href));
 const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime')));
@@ -110,3 +111,24 @@ for(const [mode,focus] of [['records','records'],['listen','none']]){
  if(mode==='listen')assert.ok(!html.includes('은행에서 실제로'));
 }
 for(const label of ['지수와 남긴 기록 대조하기','준호와 확인할 거래 내역 열기','이 연락에는 지금 답하지 않기'])assert.ok(client.includes(label));
+
+for(const mode of ['full','demo']){
+ const run=engine.createRun(mode);
+ const html=renderToStaticMarkup(createElement(ui.ChapterScene,{state:run,page:0,onNext:noop,onContinue:noop}));
+ assert.ok(html.includes(mode==='full'?'출근길':'무료 시장 노트'));
+ assert.ok(html.includes(mode==='full'?'준호와의 약속 대화 열기':'도착한 시장 노트 보기'));
+ const resumed=renderToStaticMarkup(createElement(ui.ChapterScene,{state:run,resume:true,onNext:noop,onContinue:noop}));
+ assert.ok(resumed.includes('멈춘 연락으로 돌아가기')&&resumed.includes('새 연락을 살펴보던'));
+}
+let interlude=engine.createRun('demo');
+interlude=engine.transition(interlude,{type:'resolve',data:'paused',chapter:1});
+interlude=engine.transition(interlude,{type:'next',data:'',chapter:1});
+for(const page of [0,1]){
+ const html=renderToStaticMarkup(createElement(ui.ChapterScene,{state:interlude,page,onNext:noop,onContinue:noop}));
+ assert.ok(html.includes(page===0?'약속은 그대로였다':'귀갓길에 도착한 연락'));
+ assert.equal(html.includes('장면 건너뛰기'),page===0);
+}
+assert.ok(client.includes("setDialog(resume&&mainSaved.current?.completed?null:'chapter')"));
+assert.ok(client.includes("if(state.chapter<2){setChapterPage(0);setChapterResume(false);setDialog('chapter');}"));
+for(const label of ['점심시간으로','지금까지의 하루','도착한 새 연락 보기'])assert.ok(client.includes(label));
+console.log('Context SSR passed: entry, demo, resume, bridge skip, new-contact affordance.');

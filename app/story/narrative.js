@@ -20,7 +20,7 @@ export const narratives=[
   persona:{identity:'친구 준호를 흉내 내는 새 계정. 실제 준호와 다른 사람이다.',relationship:'플레이어는 오래 아는 친구라고 생각할 수 있지만 이 계정은 사적인 추억을 모른다.',voice:'짧은 반말. 나야, 잠깐, 알겠어처럼 담백하게 말한다. 상담원식 존댓말·과장된 친근함은 쓰지 않는다.',knowledge:'공개된 상태 메시지에 저녁 약속이 있다는 것만 보았다. 정확한 장소·추억·가족·직장은 모른다.',hidden:'요청을 자연스럽게 이어가려 하지만 설정되지 않은 핑계나 마감을 만들지 않는다.',arc:'arrival: 약속 이야기로 접근. request: 휴대폰 문제와 부탁 설명. waiting: 질문에만 답하며 기다림. paid: 확인 중이라는 짧은 말. 사적인 질문에는 기억을 지어내지 않는다.'},
   scenes:{
    arrival:[line('준호','나야. 오늘 약속 기억하지?'),line('준호','상태에 저녁 약속이라고 써 둔 거 봤어. 아직 괜찮지?')],
-   request:[line('준호','예약해 둔 물건 결제가 남아 있는데 폰에서 결제가 안 돼.'),line('준호','서비스 쪽에 대신 보내줄 수 있을까? 저녁에 만나서 정리하려고.'),line('준호','받는 이름은 한별 서비스로 나올 거야. 먼저 안내를 봐 줘.')],
+   request:[line('준호','수리 맡긴 태블릿을 오늘 찾으려는데 수리비 8만 원이 남았어. 내 폰에서 결제가 안 돼.'),line('준호','수리점 쪽으로 대신 보내줄 수 있을까? 저녁에 만나서 돌려주려고.'),line('준호','받는 이름은 한별 서비스로 나올 거야. 먼저 안내를 봐 줘.')],
    waiting:[line('준호','응, 메시지는 볼 수 있어.'),line('준호','확인할 게 있으면 물어봐. 나는 여기 답장 기다릴게.')],
    paid:[line('준호','보냈다는 건 봤어. 처리되는지 확인할게.'),line('알림','읽음 표시가 생긴다. 다음 답장은 오지 않는다.')]
   },
@@ -34,7 +34,7 @@ export const narratives=[
     option('familiar-account-listen','무슨 부탁인데?',[line('준호','결제 하나가 안 돼서. 폰이 이상해서 다른 기기로 들어온 거야.'),line('준호','잠깐 대신 처리해 줄 수 있나 해서.')])
    ]),
    beat('familiar-request-detail','request',[
-    option('familiar-request-what','어떤 예약이야?',[line('준호','오늘 찾으려고 한 물건이야. 안내 화면에 적힌 결제 건을 말하는 거야.'),line('준호','찾으러 가기 전에 결제부터 해 두려고 했어.')]),
+    option('familiar-request-what','무슨 수리비야?',[line('준호','태블릿 화면 수리비야. 한별 서비스에 맡겼어.'),line('준호','퇴근하고 찾으러 가기 전에 결제해 두려고 했어.')]),
     option('familiar-request-later','저녁에 만나서 하면 안 돼?',[line('준호','그 전에 끝내 두려고 했지. 어렵다면 나도 다른 방법 알아볼게.')])
    ]),
    beat('familiar-recipient-check','request',[
@@ -57,7 +57,7 @@ export const narratives=[
   background:['최근 지출이 늘어 부수입에 관심이 생겼다. 며칠 전 무료 시장 소식 알림을 신청했다.','커피를 들고 자리로 돌아오는 길, 신청한 이름으로 자료가 도착한다. 처음에는 읽어 보기만 할 생각이다.'],
   persona:{identity:'온결 리서치 자료방 운영자. 금융사 직원이 아닌 별도 운영팀을 내세운다.',relationship:'무료 시장 노트 구독자에게 설명하는 운영자. 친한 친구처럼 말하지 않는다.',voice:'정돈된 해요체와 합니다체. 질문받은 항목부터 한두 문장으로 답한다. 매 답변을 참여 권유로 끝내지 않는다.',knowledge:'자신이 올린 자료와 이 방에서 오간 말만 안다. 플레이어의 은행 조회·친구와의 연락·다른 앱 활동은 모른다.',hidden:'일부 성공 사례로 관심을 유지하려 한다. 새 수익·마감·입금 확인을 임의로 만들지 않는다.',arc:'arrival: 무료 자료 설명. group: 참여자의 서로 다른 질문에 반응. offer: 자료 열람과 참여 구분. paid: 표시 화면 설명. withdrawal: 출금 보류와 기존 비용 안내만 설명. extra-paid: 확인 중이라는 범위에서 짧게 답한다.'},
   scenes:{
-   arrival:[line('온결 리서치','신청하신 오늘의 시장 노트 보내드려요. 점심시간에 보시기 좋게 짧게 정리했습니다.'),line('온결 리서치','오늘 자료에는 이용 화면도 같이 넣었어요. 자료방에 먼저 보신 분들이 계십니다.'),line('온결 리서치','읽다가 궁금한 점이 있으면 남겨 주세요. 자료방에서도 질문을 받고 있어요.')],
+   arrival:[line('온결 리서치','신청하신 오늘의 시장 노트 보내드려요. 오늘은 투자 화면의 숫자를 읽는 법을 정리했어요.'),line('온결 리서치','오늘의 노트 · 평가 금액은 현재 가격으로 계산한 값입니다. 실제로 출금한 금액과는 구분해서 봅니다.'),line('온결 리서치','함께 읽는 자료방이 있어요. 먼저 보신 분들의 질문과 이용 화면도 올라와 있습니다.')],
    group:[line('지수','저도 오늘 들어왔어요. 공지가 많아서 조금 헷갈리네요.'),line('유진','저는 어제 알림 신청했어요. 자료에 모르는 말이 좀 있네요.'),line('민석','저도 처음엔 표만 봤어요. 이제 화면이 어디 있는지는 알겠네요.'),line('지수','좋았던 날 말고 전체 기간도 볼 수 있나요?'),line('온결 리서치','오늘 올라온 화면부터 봐 주세요. 기간별 자료는 정리해서 안내하고 있어요.'),line('유진','저는 일단 저장해 놓고 퇴근할 때 다시 보려고요.'),line('지수','추가 비용은 없나요? 안내에서 못 찾겠어요.')],
    offer:[line('지수','처음 안내는 위에 고정돼 있어요. 저도 한참 찾았어요.'),line('온결 리서치','자료를 읽는 것과 별도 참여는 구분됩니다. 참여 안내를 남겼어요.'),line('지수','다들 먼저 보셨나 봐요. 저는 아직 입금 전이라 안내부터 보고 있어요.'),line('민석','저는 안내를 다시 보고 있어요. 받는 이름이 운영팀 이름이랑 조금 다르네요.'),line('온결 리서치','수취인은 온결 파트너입니다. 결정 전에 안내를 읽어 주세요.')],
    paid:[line('온결 리서치','이용 화면에서 표시 상태를 보실 수 있습니다.'),line('유진','숫자는 바뀌었는데 은행 쪽에는 아직 안 보이네요.'),line('민석','저는 저녁에 다시 보려고요. 출금은 아직 안 해 봤어요.')],
@@ -66,7 +66,7 @@ export const narratives=[
   },
   beats:[
    beat('paper-note','arrival',[
-    option('paper-note-meaning','평가 금액이랑 출금 금액이 왜 달라요?',[line('온결 리서치','평가 금액은 화면상 계산값이고 출금은 별도 처리입니다.'),line('온결 리서치','다른 분들이 같은 부분을 질문하셔서 자료방에 설명을 모아 두었어요.')]),
+    option('paper-note-meaning','자료에 나온 평가 금액은 바로 쓸 수 있는 돈인가요?',[line('온결 리서치','평가 금액은 화면상 계산값이고 출금은 별도 처리입니다.'),line('온결 리서치','다른 분들이 같은 부분을 질문하셔서 자료방에 설명을 모아 두었어요.')]),
     option('paper-note-only','무료 자료만 읽어도 되나요?',[line('온결 리서치','네. 자료 구독만으로 거래 참여가 되는 것은 아닙니다.'),line('온결 리서치','질문을 함께 보고 싶으시면 자료방으로 오셔도 돼요.')])
    ]),
    beat('paper-note-origin','arrival',[
@@ -188,9 +188,9 @@ export function conversationTimeline(lines,chat,visible=lines.length){
 }
 /** Only the real friend's conversation can see earlier voluntary disclosures. */
 export function friendFollowup(state){
- if(state.chapter===2&&messageStyle(state,'friend').mode==='listen')return '나 먼저 도착했어. 지금 다 설명하지 않아도 돼. 와서 천천히 얘기하자.';
- if(state.chapter===2&&messageStyle(state,'friend').mode==='records')return '아까 같이 보기로 한 기록, 필요하면 꺼내 보자. 화면에 적힌 것과 실제 거래는 따로 보면 돼.';
- if(state.chapter===2&&state.events.some(e=>e.type==='message-style'&&e.data==='friend:neutral:none'))return '이따 약속한 데서 보자. 먼저 도착하면 연락할게.';
+ if(state.chapter===2&&messageStyle(state,'friend').mode==='listen')return '아까 못다 한 얘기는 나중에 해도 돼. 집에 가는 길엔 잠깐 쉬어.';
+ if(state.chapter===2&&messageStyle(state,'friend').mode==='records')return '아까 같이 봐 달라고 한 기록, 필요하면 꺼내 보자. 화면에 적힌 것과 실제 거래는 따로 보면 돼.';
+ if(state.chapter===2&&state.events.some(e=>e.type==='message-style'&&e.data==='friend:neutral:none'))return '아까 만나서 반가웠어. 집에 도착하면 연락 줘.';
  if(state.chapter===2&&state.events.some(e=>e.type==='message-followup'&&e.data==='friend:call'))return '아까 같이 확인하기로 했지. 다른 연락이 와도 바로 돈부터 보내지는 말고, 내가 저장된 이 번호로 연락해.';
  if(state.chapter===2&&state.events.some(e=>e.type==='message'&&e.data==='friend:space'))return '오늘 일은 말하고 싶을 때 얘기해. 집에 도착하면 연락 줘.';
  const told=state.events.filter(e=>e.type==='reflect'&&e.data==='tell'&&e.chapter<state.chapter);

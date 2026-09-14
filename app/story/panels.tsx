@@ -1,3 +1,4 @@
+import {chapterPages,chapterAction,resumeContext} from './context';
 import {messageConsequences} from './one-shot';
 import { chapters, INITIAL_BALANCE, money, totalSpent, endingFor, timeline } from './engine';
 type Run = ReturnType<typeof import('./engine').createRun>;
@@ -56,4 +57,15 @@ export function Closing({state,step,onNext,onSkip}:{state:Run;step:number;onNext
 type Profile={name:string;initial:string;status:string;relationship:string;kind:string};
 export function ContactProfile({profile,blocked,onClose,onChat,onCall,callAvailable=true}:{profile:Profile;blocked:boolean;callAvailable?:boolean;onClose:()=>void;onChat:()=>void;onCall:()=>void}){
  return <div className={'contact-profile profile-'+profile.kind}><div className="profile-cover"><button className="profile-close" aria-label="프로필 닫기" onClick={onClose}>×</button></div><div className="profile-body"><div className="profile-avatar" aria-hidden="true">{profile.initial}</div><h2>{profile.name}</h2><p className="profile-status">{profile.status}</p><span className="profile-relationship">{profile.relationship}</span>{blocked&&<p>차단한 계정</p>}<div className="profile-actions"><button onClick={onChat}>대화 보기</button><button disabled={blocked||!callAvailable} onClick={onCall}>{callAvailable?'연락 확인':'등록된 번호 없음'}</button></div><small>이름과 상태 메시지는 계정에 표시된 정보입니다.</small></div></div>;
+}
+
+export function ChapterScene({state,page=0,resume=false,onNext,onContinue}:{state:Run;page?:number;resume?:boolean;onNext:()=>void;onContinue:()=>void}){
+ const pages=chapterPages(state),scene=pages[Math.min(page,pages.length-1)],last=resume||page>=pages.length-1;
+ return <section className={'chapter-scene chapter-scene-'+state.chapter} aria-label="하루의 장면">
+ <small>{resume?'멈췄던 순간':scene.time}</small><h2>{resume?'다시 휴대폰을 열었다':scene.title}</h2>
+ <div key={resume?'resume':page} className="chapter-copy">{(resume?resumeContext(state):scene.lines).filter(Boolean).map(line=><p key={line}>{line}</p>)}</div>
+ {!resume&&<p className="chapter-count">{page+1} / {pages.length}</p>}
+ <button className="primary" onClick={last?onContinue:onNext}>{last?(resume?'멈춘 연락으로 돌아가기':chapterAction(state)):'시간을 이어가기'}</button>
+ {!last&&<button className="text-button" onClick={onContinue}>장면 건너뛰기</button>}
+ </section>;
 }
