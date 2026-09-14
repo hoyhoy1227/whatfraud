@@ -132,3 +132,22 @@ assert.ok(client.includes("setDialog(resume&&mainSaved.current?.completed?null:'
 assert.ok(client.includes("if(state.chapter<2){setChapterPage(0);setChapterResume(false);setDialog('chapter');}"));
 for(const label of ['점심시간으로','지금까지의 하루','도착한 새 연락 보기'])assert.ok(client.includes(label));
 console.log('Context SSR passed: entry, demo, resume, bridge skip, new-contact affordance.');
+
+const narrativeSource=await readFile('app/story/narrative.js','utf8');
+assert.ok(!narrativeSource.includes('상태에 저녁 약속')&&!narrativeSource.includes('공개된 상태 메시지에'));
+assert.ok(narrativeSource.includes('휴대폰 화면·상태·캘린더·다른 대화는 볼 수 없다'));
+assert.ok(narrativeSource.includes('잠깐 부탁할 게 있어서 연락했어.'));
+for(const unread of [false,true]){
+ const row=renderToStaticMarkup(createElement(ui.ConversationRow,{name:'준호',initial:'준',preview:'약속 확인',detail:'저장된 연락처',unread,onOpen:noop}));
+ assert.ok(row.includes('conversation-row')&&row.includes('약속 확인'));
+ assert.equal(row.includes('conversation-unread'),unread);
+}
+const embedded=renderToStaticMarkup(createElement(Message,{embedded:true,state:investment,scene:'peer',aiAllowed:false,getSession:()=>'',remaining:0,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
+assert.ok(!embedded.includes('chat-back')&&!embedded.includes('chat-profile'),'parent owns the single chat header');
+assert.ok(client.includes("openApp(a,a==='messages'?'list':'current')"),'app icon opens inbox');
+assert.ok(client.includes("if(app==='messages'&&thread!=='list')openApp('messages','list')"),'all chat threads return to inbox');
+assert.ok(client.includes("if(next==='messages'&&conversation!=='list')act('read',conversation)"),'opening inbox does not read a chat');
+assert.equal((client.match(/onClick={phoneBack}/g)||[]).length,2,'header and system back agree');
+assert.ok(!client.includes("onClick={()=>setThread("),'navigation preserves per-thread scroll through openApp');
+assert.ok(client.includes('이전 약속 대화 보기'),'unified friend row retains older history');
+console.log('Messenger SSR passed: bounded character knowledge, unified header, inbox rows and consistent back navigation.');

@@ -6,8 +6,8 @@ import {emptyMessageMemory,messageOpening,peerRecordReady,minimumReplyDelay} fro
 export type MessageMemory=ReturnType<typeof emptyMessageMemory>;
 type Run=ReturnType<typeof import('./engine').createRun>;
 type Scene='peer'|'friend';
-type Props={memory?:MessageMemory;onMemory?:(patch:Partial<MessageMemory>)=>void;state:Run;scene:Scene;aiAllowed:boolean;getSession:()=>string;remaining:number;practice:boolean;reduced:boolean;paused:boolean;onEvent:(type:string,data:string)=>boolean;onBack:()=>void;onContinue:()=>void;onProfile:()=>void};
-export default function StoryMessage({memory=emptyMessageMemory(),onMemory,state,scene,aiAllowed,getSession,remaining,practice,reduced,paused,onEvent,onBack,onContinue,onProfile}:Props){
+type Props={embedded?:boolean;memory?:MessageMemory;onMemory?:(patch:Partial<MessageMemory>)=>void;state:Run;scene:Scene;aiAllowed:boolean;getSession:()=>string;remaining:number;practice:boolean;reduced:boolean;paused:boolean;onEvent:(type:string,data:string)=>boolean;onBack:()=>void;onContinue:()=>void;onProfile:()=>void};
+export default function StoryMessage({embedded=false,memory=emptyMessageMemory(),onMemory,state,scene,aiAllowed,getSession,remaining,practice,reduced,paused,onEvent,onBack,onContinue,onProfile}:Props){
  const person=storyMessages[scene],status=messageStatus(state,scene),available=messageWindow(state,scene);
  const {draft,sent,reply,attachment,sentAttachment,preparedSent,callStep}=memory;
  const setDraft=(draft:string)=>onMemory?.({draft}),setSent=(sent:string)=>onMemory?.({sent}),setReply=(reply:string)=>onMemory?.({reply}),setAttachment=(attachment:string)=>onMemory?.({attachment});
@@ -60,8 +60,8 @@ export default function StoryMessage({memory=emptyMessageMemory(),onMemory,state
  const supportCall=friendFollowupLines(state);
  const followed=state.events.some(e=>e.type==='message-followup'&&e.data===(scene==='peer'?'peer:record':'friend:call'));
  return <section className="story-message-thread">
-  <button className="chat-back" onClick={onBack}>‹ 대화 목록</button>
-  <button className="profile-entry chat-profile" onClick={onProfile} aria-label={person.name+' 프로필 열기'}><span className="avatar">{person.initial}</span><span><b>{person.name}</b><small>{scene==='peer'?'온결 자료방 참여자':'저장된 연락처'}</small></span></button>
+  {!embedded&&<><button className="chat-back" onClick={onBack}>‹ 대화 목록</button>
+  <button className="profile-entry chat-profile" onClick={onProfile} aria-label={person.name+' 프로필 열기'}><span className="avatar">{person.initial}</span><span><b>{person.name}</b><small>{scene==='peer'?'온결 자료방 참여자':'저장된 연락처'}</small></span></button></>}
   <p className="system-message">{state.chapter===2?'저녁 약속 전 메시지 · 이전 대화':person.title}</p>
   <div className="bubble"><small>{person.name}</small><p>{messageOpening(state,scene)}</p></div>
   {sent&&<div className="bubble mine"><p>{sent}</p>{sentAttachment!=='none'&&<small>첨부 · {attachmentText[sentAttachment as keyof typeof attachmentText]}</small>}</div>}

@@ -69,3 +69,10 @@ export function ChapterScene({state,page=0,resume=false,onNext,onContinue}:{stat
  {!last&&<button className="text-button" onClick={onContinue}>장면 건너뛰기</button>}
  </section>;
 }
+
+export function ConversationRow({name,initial,preview,detail,unread=false,onOpen}:{name:string;initial:string;preview:string;detail:string;unread?:boolean;onOpen:()=>void}){
+ return <button className="conversation-row" onClick={onOpen} aria-label={name+' · '+detail+(unread?' · 읽지 않은 연락':'')}>
+ <span className="avatar" aria-hidden="true">{initial}</span><span className="conversation-copy"><span className="conversation-name">{name}<small>{detail}</small></span><span className="conversation-preview">{preview}</span></span>
+ {unread&&<span className="conversation-unread" aria-label="읽지 않은 연락"/>}
+ </button>;
+}
