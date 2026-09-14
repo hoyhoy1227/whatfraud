@@ -289,3 +289,39 @@ assert.equal(shot.parseStoryReply(attachedReply('저도 질문이 지워진 걸 
 assert.equal(shot.parseStoryReply(attachedReply('기록을 보내 주시면 같이 읽어볼게요.'),'peer',2,'deleted-question'),null);
 assert.ok(shot.parseStoryReply(attachedReply('제가 추가 비용을 물었던 질문이네요. 남겨 주신 기록을 보고 처음 안내부터 다시 확인할게요.'),'peer',2,'deleted-question'));
 console.log('Attachment reply regression passed: already-received record, no invented witnessing.');
+
+const context=await import('../app/story/context.js');
+assert.equal(context.chapterPages(e.createRun()).length,1);
+assert.equal(context.chapterPages(e.createRun('demo')).length,1,'demo does not invent morning events');
+assert.ok(context.arrivalContext(e.createRun('demo')).join(' ').includes('무료 시장 노트'));
+for(const paid of [false,true]){
+ let run=e.createRun();
+ if(paid){run=step(run,'advance');run=step(run,'confirm','familiar-request:main');}
+ run=step(run,'resolve','paused');run=step(run,'next');
+ const snapshot=e.serializeRun(run);
+ assert.equal(context.chapterPages(run).length,2);
+ const bridge=context.chapterPages(run)[0].lines.join(' ');
+ assert.equal(bridge.includes('80,000원'),paid);
+ assert.ok(!bridge.includes('만회'));
+ context.resumeContext(run);assert.equal(e.serializeRun(run),snapshot,'context is read-only');
+ assert.deepEqual(e.restoreRun(snapshot),run);
+}
+for(const mode of ['listen','records','verify','space','neutral','skip']){
+ let run=step(e.createRun('demo'),'resolve','paused');
+ run=step(run,'message','friend:'+(mode==='skip'?'skip':mode==='space'?'space':'together'));
+ if(!['skip'].includes(mode))run=step(run,'message-style','friend:'+mode+':'+(mode==='records'?'records':mode==='verify'?'contact':'none'));
+ run=step(run,'next');
+ const dinner=context.dinnerContext(run);
+ if(mode==='listen')assert.ok(dinner.includes('들어 달라는'));
+ if(mode==='space')assert.ok(dinner.includes('더 묻지'));
+ if(mode==='records')assert.ok(dinner.includes('확인된 것은 아니다'));
+ if(mode==='skip')assert.ok(!/기록을 같이|털어놓았다/.test(dinner));
+ assert.ok(!/이따|먼저 도착|와서 천천히/.test(n.friendFollowup(run)));
+ assert.ok(!/이따|먼저 도착/.test(shot.friendFollowupLines(run).join(' ')));
+ assert.equal(e.totalSpent(run),0);
+ assert.ok(context.arrivalContext(run).join(' ').includes('확인되지'));
+ assert.deepEqual(e.restoreRun(e.serializeRun(run)),run);
+}
+assert.ok(n.narratives[1].scenes.arrival.some(m=>m.text.includes('오늘의 노트')));
+assert.ok(n.narratives[0].scenes.request.some(m=>m.text.includes('태블릿')));
+console.log('Context continuity passed: intro/demo, conditional bridges, dinner privacy, after-dinner timing, no state mutation.');

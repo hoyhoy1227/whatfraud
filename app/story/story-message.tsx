@@ -62,7 +62,7 @@ export default function StoryMessage({memory=emptyMessageMemory(),onMemory,state
  return <section className="story-message-thread">
   <button className="chat-back" onClick={onBack}>‹ 대화 목록</button>
   <button className="profile-entry chat-profile" onClick={onProfile} aria-label={person.name+' 프로필 열기'}><span className="avatar">{person.initial}</span><span><b>{person.name}</b><small>{scene==='peer'?'온결 자료방 참여자':'저장된 연락처'}</small></span></button>
-  <p className="system-message">{person.title}</p>
+  <p className="system-message">{state.chapter===2?'저녁 약속 전 메시지 · 이전 대화':person.title}</p>
   <div className="bubble"><small>{person.name}</small><p>{messageOpening(state,scene)}</p></div>
   {sent&&<div className="bubble mine"><p>{sent}</p>{sentAttachment!=='none'&&<small>첨부 · {attachmentText[sentAttachment as keyof typeof attachmentText]}</small>}</div>}
   {preparedSent&&<div className="bubble mine"><small>준비된 메시지로 이어 보냄</small><p>{preparedSent}</p></div>}
@@ -85,8 +85,8 @@ export default function StoryMessage({memory=emptyMessageMemory(),onMemory,state
    {scene==='peer'&&status==='check'&&<article className="message-consequence"><p>지수는 자신의 안내를 확인해 보기로 했다.</p>{!followed?(peerRecordReady(state)?<button onClick={()=>onEvent('message-followup','peer:record')}>지수가 남긴 기록 보기</button>:<small>다른 기록을 살펴보는 동안 지수도 안내를 확인합니다.</small>):<><p>지수: {peerFollowupText(state)}</p><button disabled={state.events.some(e=>e.type==='message-followup'&&e.data==='peer:saved')} onClick={()=>onEvent('message-followup','peer:saved')}>{state.events.some(e=>e.type==='message-followup'&&e.data==='peer:saved')?'메모에 보관됨':'메모에 보관'}</button><small>이후 거래 결과는 아직 알 수 없습니다.</small></>}</article>}
    {scene==='peer'&&status==='acknowledge'&&<p className="system-message">메시지를 남겼다. 지수의 다음 결정은 아직 알 수 없다.</p>}
    {scene==='peer'&&status==='boundary'&&<p className="system-message">이 대화는 여기서 마쳤다. 더 설명하지 않아도 된다.</p>}
-   {scene==='friend'&&status==='together'&&<article className="incoming-call"><span>준호 · {messageStyle(state,'friend').mode==='listen'?'저녁 약속':'기존 연락처'}</span><h3>{followed?(callStep>=supportCall.length?'연락 요약 확인 완료':'준호의 연락 요약'):'준호가 남긴 연락'}</h3>{!followed?<><button className="primary" onClick={()=>{if(onEvent('message-followup','friend:call'))onMemory?.({callStep:1});}}>연락 내용 보기</button><button onClick={onContinue}>나중에</button></>:<><div aria-live="polite">{supportCall.slice(0,Math.max(1,callStep)).map(line=><p key={line}>{line}</p>)}</div>{callStep<supportCall.length&&<button onClick={()=>onMemory?.({callStep:Math.max(1,callStep)+1})}>다음 내용 보기</button>}</>}<small>준호가 남긴 내용을 순서대로 확인합니다.</small></article>}
-   {scene==='friend'&&status==='space'&&<p className="system-message">준호는 더 묻지 않았다. 저녁 약속은 그대로다.</p>}
+   {scene==='friend'&&status==='together'&&<article className="incoming-call"><span>준호 · {state.chapter===2?'귀갓길 연락':messageStyle(state,'friend').mode==='listen'?'저녁 약속':'기존 연락처'}</span><h3>{followed?(callStep>=supportCall.length?'연락 요약 확인 완료':'준호의 연락 요약'):'준호가 남긴 연락'}</h3>{!followed?<><button className="primary" onClick={()=>{if(onEvent('message-followup','friend:call'))onMemory?.({callStep:1});}}>연락 내용 보기</button><button onClick={onContinue}>나중에</button></>:<><div aria-live="polite">{supportCall.slice(0,Math.max(1,callStep)).map(line=><p key={line}>{line}</p>)}</div>{callStep<supportCall.length&&<button onClick={()=>onMemory?.({callStep:Math.max(1,callStep)+1})}>다음 내용 보기</button>}</>}<small>준호가 남긴 내용을 순서대로 확인합니다.</small></article>}
+   {scene==='friend'&&status==='space'&&<p className="system-message">준호는 더 묻지 않았다. 말할 때는 내가 정할 수 있다.</p>}
    {status==='skip'&&<p className="system-message">지금 말하지 않기로 했다. 이 선택으로 불이익은 생기지 않는다.</p>}
    <button className="primary" onClick={onContinue}>{scene==='friend'&&state.chapter===1?'저녁 약속으로 이어가기':'내 연락으로 돌아가기'}</button>
   </>}
