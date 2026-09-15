@@ -110,3 +110,48 @@ html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR'
 .past-conversations summary{min-height:44px;display:flex;align-items:center;cursor:pointer}
 .history-link{width:100%;text-align:center;margin:8px 0}
 @media(max-width:360px){.header-contact .avatar{display:none}.conversation-name{gap:3px 7px}}
+
+/* Readable messenger rhythm across thread types and phone sizes. */
+.screen-scroll{scrollbar-gutter:stable;touch-action:pan-y;min-width:0}
+.story-world p,.story-world button,.story-world summary,.story-world h2,.story-world h3{word-break:keep-all;overflow-wrap:anywhere}
+.day-context,.scene-context p,.chapter-copy p,.intro-card p,.record p{white-space:pre-line}
+.message-group{display:flex;flex-direction:column;align-items:flex-start;gap:7px;margin:16px 0;min-width:0}
+.message-group.outgoing{align-items:flex-end}
+.message-group .bubble{width:fit-content;max-width:88%;margin:0;min-width:0}
+.message-group .bubble p{word-break:keep-all;overflow-wrap:anywhere;white-space:pre-wrap;line-height:1.65}
+.message-sender{display:flex;align-items:center;gap:8px;margin-bottom:2px;font-size:13px;color:#506176}
+.message-sender .avatar{width:28px;height:28px;border-radius:10px;font-size:13px;flex-shrink:0}
+.contact-identity{display:flex;align-items:center;gap:12px;margin-bottom:14px}.contact-identity h3{margin:0}.contact-identity small{display:block;font-size:13px;font-weight:400;color:#566779;margin-top:5px}.contact-card>button{width:100%;min-height:44px;background:#e7eef9;color:#234c79}.contact-card{min-width:0}.contact-identity .avatar{flex-shrink:0}.record,.notification,.story-message-thread{min-width:0;max-width:100%;box-sizing:border-box}
+.chat-stage{gap:0;margin-bottom:8px}.chat-stage .message-group{margin:10px 0}
+.app-messages>.bubble{margin:12px 0}.app-messages>.bubble.mine{margin-left:auto}
+.avatar[data-person="준호"],.profile-avatar[data-person="준호"]{background:#d4e5f8;color:#274f7b}
+.avatar[data-person="지수"],.profile-avatar[data-person="지수"]{background:#ebdef8;color:#624082}
+.avatar[data-person="온결 리서치"],.profile-avatar[data-person="온결 리서치"]{background:#244b63;color:#fff}
+.avatar[data-person="유진"]{background:#f7dfc9;color:#795127}
+.avatar[data-person="민석"]{background:#d3e8df;color:#285e4a}
+.avatar[data-person="회복 지원 상담"],.profile-avatar[data-person="회복 지원 상담"]{background:#dfdfee;color:#484875}
+.contact-shortcut{display:flex;gap:12px;align-items:center;width:100%;margin:20px 0 12px;background:#fff;padding:14px;text-align:left}
+.contact-shortcut small{display:block;color:#58687b;margin-top:4px;font-size:13px}
+.new-account{background:#e7edf8;border:1px solid #c5d4e7;width:100%}.new-account small{display:block;color:#47638a}
+.intro-card>span{display:block}.intro-card p{clear:both;line-height:1.7}.intro-card p b{display:block}
+.day-context{line-height:1.7;margin:4px 0 20px}.system-message{clear:both;margin:16px 0}
+.message-dock{flex-shrink:0;overflow-y:auto;overscroll-behavior:contain}.dock-actions{align-items:stretch}.dock-actions button{line-height:1.5;min-width:0;padding:12px}
+.conversation-name small{line-height:1.5}.ledger-row>span{min-width:0;word-break:keep-all}.comparison-pair{min-width:0}.comparison-pair article{min-width:0}
+.story-message-thread .message-group{margin:4px 0;width:100%}.story-message-composer{min-width:0}
+.chapter-scene>button{display:block;width:100%;margin-top:12px;text-align:center}.chapter-scene .chapter-copy p{white-space:pre-line;line-height:1.8}.notification.compact{background:#e7edf8;color:#304b6c;border:0;border-radius:12px;margin:8px 12px;padding:12px 14px;font-size:14px;line-height:1.5}
+@media(max-width:380px){.screen-scroll{padding:14px}.app-messages{padding:12px}.dock-actions{grid-template-columns:1fr}.message-dock{max-height:42%}.header-contact small{font-size:12px}}
+
+/* Keep every interactive target in its own layout box on phones and desktop. */
+.story-world button,.story-world summary{box-sizing:border-box;white-space:normal;line-height:1.5}
+.screen-scroll{min-height:0;scroll-padding-block:12px}
+.message-dock{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;align-content:start;position:relative;min-height:0;padding:10px 12px;max-height:45%;isolation:isolate}
+.message-dock>button{margin:0;min-height:44px}
+.dock-actions{gap:8px;margin:0;min-width:0}
+.dock-actions>button{height:auto;min-height:44px;margin:0;align-self:stretch}
+.input-rail{min-width:0;gap:8px}.input-rail>button{flex-shrink:0}.input-rail .input-placeholder{flex:1;min-width:0}
+.new-message-pill{position:static;flex-shrink:0;margin:6px 12px;max-width:calc(100% - 24px);min-height:44px}
+.resolution-line>button,.record>button,.pivot-details button,.prepared-message>button{display:block;width:100%;max-width:100%;height:auto;margin-top:10px;min-height:44px}
+.profile-actions,.quick-questions{gap:10px}.profile-actions>button{min-width:0}
+.app-calls .contact-card>button{background:#e7eef9;color:#234c79}
+.chat-stage .message-group{margin:5px 0}.message-group .bubble p{margin:0}.message-group:has(.message-sender){margin-top:14px}
+@media(max-width:380px){.message-dock{max-height:44%}.dock-actions{grid-template-columns:minmax(0,1fr)}}

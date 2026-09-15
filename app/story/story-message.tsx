@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
+import {ChatBubbles} from './chat-bubbles';
 import {sanitizePlayerText,validateAiReply} from '../ai-dialogue';
 import {storyMessages,messageStatus,messageWindow,canAttach,attachmentText,reactions,preparedMessages,peerFollowupText,friendFollowupLines,validBranch,messageStyle} from './one-shot';
 import {emptyMessageMemory,messageOpening,peerRecordReady,minimumReplyDelay} from './presentation';
@@ -63,11 +64,11 @@ export default function StoryMessage({embedded=false,memory=emptyMessageMemory()
   {!embedded&&<><button className="chat-back" onClick={onBack}>‹ 대화 목록</button>
   <button className="profile-entry chat-profile" onClick={onProfile} aria-label={person.name+' 프로필 열기'}><span className="avatar">{person.initial}</span><span><b>{person.name}</b><small>{scene==='peer'?'온결 자료방 참여자':'저장된 연락처'}</small></span></button></>}
   <p className="system-message">{state.chapter===2?'저녁 약속 전 메시지 · 이전 대화':person.title}</p>
-  <div className="bubble"><small>{person.name}</small><p>{messageOpening(state,scene)}</p></div>
-  {sent&&<div className="bubble mine"><p>{sent}</p>{sentAttachment!=='none'&&<small>첨부 · {attachmentText[sentAttachment as keyof typeof attachmentText]}</small>}</div>}
-  {preparedSent&&<div className="bubble mine"><small>준비된 메시지로 이어 보냄</small><p>{preparedSent}</p></div>}
+  <ChatBubbles speaker={person.name} text={messageOpening(state,scene)}/>
+  {sent&&<ChatBubbles speaker="나" text={sent}>{sentAttachment!=='none'&&<small>첨부 · {attachmentText[sentAttachment as keyof typeof attachmentText]}</small>}</ChatBubbles>}
+  {preparedSent&&<ChatBubbles speaker="나" text={preparedSent}/>}
   {busy&&<p className="typing" role="status">{person.name} 입력 중 …</p>}
-  {reply&&<div className="bubble"><small>{person.name}</small><p>{reply}</p></div>}
+  {reply&&<ChatBubbles speaker={person.name} text={reply}/>}
   {done&&!reply&&status!=='skip'&&<p className="system-message">이 대화는 마쳤습니다. 개인정보 보호를 위해 입력과 AI 답장 원문은 저장하지 않습니다.</p>}
   {(error||recovered)&&<p className="message-error" role="status">{error||'이 장면의 요청 기록이 있습니다. 다시 호출하지 않고 이어갑니다.'}</p>}
   {!available&&!done&&<p className="system-message">이 대화는 해당 사건의 마지막에 열립니다.</p>}

@@ -265,7 +265,7 @@ async function handleChat(request: Request, body: ChatBody) {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: storyPrompt(sceneId,body.attachment as string,contractVersion) }] },
+        systemInstruction: { parts: [{ text: storyPrompt(sceneId,body.attachment as string,contractVersion,body.stageId as string) }] },
         contents: conversation.map((message) => ({
           role: message.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: message.content }],
