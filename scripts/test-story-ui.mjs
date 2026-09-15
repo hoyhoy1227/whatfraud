@@ -118,7 +118,10 @@ for(const mode of ['full','demo']){
  const run=engine.createRun(mode);
  const html=renderToStaticMarkup(createElement(ui.ChapterScene,{state:run,page:0,onNext:noop,onContinue:noop}));
  assert.ok(html.includes(mode==='full'?'출근길':'무료 시장 노트'));
- assert.ok(html.includes(mode==='full'?'준호와의 약속 대화 열기':'도착한 시장 노트 보기'));
+ assert.ok(html.includes('조작 안내 보기'));
+ const guide=renderToStaticMarkup(createElement(ui.ChapterScene,{state:run,page:1,onNext:noop,onContinue:noop}));
+ assert.ok(guide.includes('이 휴대폰으로 할 일')&&guide.includes(mode==='full'?'점심시간으로':'저녁 약속으로 이어가기'));
+ assert.ok(guide.includes(mode==='full'?'준호와의 약속 대화 열기':'도착한 시장 노트 보기'));
  const resumed=renderToStaticMarkup(createElement(ui.ChapterScene,{state:run,resume:true,onNext:noop,onContinue:noop}));
  assert.ok(resumed.includes('멈춘 연락으로 돌아가기')&&resumed.includes('새 연락을 살펴보던'));
 }
@@ -128,7 +131,7 @@ interlude=engine.transition(interlude,{type:'next',data:'',chapter:1});
 for(const page of [0,1]){
  const html=renderToStaticMarkup(createElement(ui.ChapterScene,{state:interlude,page,onNext:noop,onContinue:noop}));
  assert.ok(html.includes(page===0?'약속은 그대로였다':'귀갓길에 도착한 연락'));
- assert.equal(html.includes('장면 건너뛰기'),page===0);
+ assert.ok(html.includes('장면 건너뛰기'));
 }
 assert.ok(client.includes("setDialog(resume&&mainSaved.current?.completed?null:'chapter')"));
 assert.ok(client.includes("if(state.chapter<2){setChapterPage(0);setChapterResume(false);setDialog('chapter');}"));
