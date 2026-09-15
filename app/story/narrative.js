@@ -227,3 +227,15 @@ export function contactProfile(chapter,known=false){
  {name:'회복 지원 상담',initial:'회',status:'접수 안내는 메시지로 남겨 주세요',relationship:'친구로 등록되지 않음',kind:'service'}
  ][chapter];
 }
+
+/** Sentence-level delivery; authored text stays attached for evidence gating. */
+export function messageParts(lines){
+ return lines.flatMap((message,index)=>{
+  const parts=message.speaker==='알림'?[message.text]:message.text.split(/\n+|(?<=[.!?。！？])\s+/u).map(s=>s.trim()).filter(Boolean);
+  return parts.map((text,part)=>({...message,text,sourceText:message.text,id:index+'-'+part,lastPart:part===parts.length-1}));
+ });
+}
+export function messagePreview(lines,fallback=''){
+ const last=lines.at(-1);
+ return last?(last.speaker==='나'?'나: ':'')+last.text:fallback;
+}

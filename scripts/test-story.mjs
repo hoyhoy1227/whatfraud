@@ -325,3 +325,15 @@ for(const mode of ['listen','records','verify','space','neutral','skip']){
 assert.ok(n.narratives[1].scenes.arrival.some(m=>m.text.includes('오늘의 노트')));
 assert.ok(n.narratives[0].scenes.request.some(m=>m.text.includes('태블릿')));
 console.log('Context continuity passed: intro/demo, conditional bridges, dinner privacy, after-dinner timing, no state mutation.');
+
+let earlyContact=e.createRun();
+earlyContact=step(earlyContact,'call','junho');
+assert.ok(earlyContact.cues.includes('junho-unanswered'));
+assert.ok(!earlyContact.calls.includes('0:junho'));
+assert.ok(!earlyContact.inspected.includes('familiar-request:saved-contact'));
+assert.deepEqual(e.restoreRun(e.serializeRun(earlyContact)),earlyContact);
+earlyContact=step(earlyContact,'advance');
+earlyContact=step(earlyContact,'call','junho');
+assert.ok(earlyContact.calls.includes('0:junho'));
+assert.ok(earlyContact.inspected.includes('familiar-request:saved-contact'));
+console.log('Early contact stays unanswered; later independent verification and restore remain available.');

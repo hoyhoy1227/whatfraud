@@ -136,6 +136,10 @@ export function transition(input,event) {
       break;
     }
     case 'call': {
+      if(state.chapter===0&&state.stage==='arrival'&&data==='junho'){
+        if(!state.cues.includes('junho-unanswered')){state.cues.push('junho-unanswered');changed=true;}
+        break;
+      }
       if(!['junho','contact','current'].includes(data)||(data==='current'&&(!active||state.blocked.includes(state.chapter))))break;
       const id=state.chapter+':'+data;
       if(!state.calls.includes(id)){
@@ -161,7 +165,7 @@ export function transition(input,event) {
       if(active&&data===c.id+':routine'&&!state.cues.includes(data)){state.cues.push(data);changed=true;} break;
     }
     case 'read':
-      if(['current','junho','bank'].includes(data)&&!state.read.includes(state.chapter+':'+data)){state.read.push(state.chapter+':'+data);changed=true;} break;
+      if((['current','junho','bank'].includes(data)||/^(current|junho|peer|friend):[a-z0-9:-]{1,75}$/.test(data))&&!state.read.includes(state.chapter+':'+data)){state.read.push(state.chapter+':'+data);changed=true;} break;
   }
   if(!changed)return input;
   state.events.push({type:event.type,chapter:event.chapter,data});

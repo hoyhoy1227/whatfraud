@@ -23,7 +23,7 @@ const rewind=renderToStaticMarkup(createElement(ui.Rewind,{state,onReplay:noop,o
 assert.ok(rewind.includes('멈춰 세운 하루')&&rewind.includes('80,000원')&&rewind.includes('선택 직전'));
 assert.ok(rewind.includes('지나친 단서')&&!rewind.includes('정답률'));
 const client=await readFile('app/story/story-client.tsx','utf8');
-for(const label of ['준호에게 확인하기','출금 요청','보관한 자료로 접수','메모에 보관','보내기','일단 보류하기','이 계정 차단하기','최근 앱','일시정지','움직임 줄이기','글자 크게'])assert.ok(client.includes(label),label);
+for(const label of ['준호에게 메시지 보내기','출금 요청','보관한 자료로 접수','메모에 보관','보내기','일단 보류하기','이 계정 차단하기','최근 앱','일시정지','움직임 줄이기','글자 크게'])assert.ok(client.includes(label),label);
 assert.ok(client.includes('showModal()')&&client.includes('onCancel='));
 const messageClient=await readFile('app/story/story-message.tsx','utf8');
 assert.ok(messageClient.includes('signal:aborter.signal')&&client.includes('practiceOriginal'));
@@ -80,6 +80,8 @@ assert.ok(client.includes('StoryMessage')&&client.includes('visualViewport')&&cl
 assert.ok(!client.slice(client.indexOf("dialog==='reply'?")).includes('<textarea'));
 
 let messageSource=messageClient.replace("from './presentation'","from "+JSON.stringify(new URL('../app/story/presentation.js',import.meta.url).href)).replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './one-shot'","from "+JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
+const bubbleJs=ts.transpileModule(await readFile('app/story/chat-bubbles.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime')));
+messageSource=messageSource.replace("from './chat-bubbles'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(bubbleJs).toString('base64')));
 const compiled=ts.transpileModule(messageSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime'))).replace("from 'react'","from "+JSON.stringify(import.meta.resolve('react')));
 const Message=(await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'))).default;
 for(const aiAllowed of [false,true]){
@@ -151,3 +153,27 @@ assert.equal((client.match(/onClick={phoneBack}/g)||[]).length,2,'header and sys
 assert.ok(!client.includes("onClick={()=>setThread("),'navigation preserves per-thread scroll through openApp');
 assert.ok(client.includes('이전 약속 대화 보기'),'unified friend row retains older history');
 console.log('Messenger SSR passed: bounded character knowledge, unified header, inbox rows and consistent back navigation.');
+
+const parts=n.messageParts([{speaker:'지수',text:'첫 문장. 다음 문장?'}]);
+assert.equal(parts.length,2);
+assert.equal(parts[0].lastPart,false);
+assert.equal(parts[1].lastPart,true);
+assert.equal(parts[1].sourceText,'첫 문장. 다음 문장?');
+assert.equal(n.messagePreview(parts.slice(0,1)),'첫 문장.');
+assert.equal(n.messagePreview([{speaker:'나',text:'확인할게.'}]),'나: 확인할게.');
+const presentation=await import('../app/story/presentation.js');
+const oneShot=await import('../app/story/one-shot.js');
+assert.ok(!oneShot.peerOpening('offer').includes('추가 비용 설명'));
+assert.ok(oneShot.peerOpening('withdrawal').includes('추가 비용 설명'));
+assert.ok(oneShot.storyPrompt('peer','none',2,'offer').includes(oneShot.peerOpening('offer')));
+const draftMemory={...presentation.emptyMessageMemory(),draft:'작성 중'};
+assert.equal(presentation.threadReceipt(engine.createRun('demo'),'peer',draftMemory),presentation.threadReceipt(engine.createRun('demo'),'peer'));
+assert.equal(presentation.threadPreview(engine.createRun('demo'),'peer',draftMemory),presentation.messageOpening(engine.createRun('demo'),'peer'));
+let readRun=engine.createRun();
+readRun=engine.transition(readRun,{type:'read',chapter:0,data:'current:arrival:1'});
+assert.ok(readRun.read.includes('0:current:arrival:1'));
+assert.ok(!readRun.read.includes('0:current:arrival:2'));
+assert.deepEqual(engine.restoreRun(engine.serializeRun(readRun)),readRun);
+assert.ok(!client.includes('[state.stage,chat.length,resolved,visibleCount,messageMemory]'));
+assert.ok(client.includes('messagePreview(visibleMessages,c.preview)'));
+console.log('Messenger consistency passed: sentence delivery, evidence gate, previews, private read receipts and stage-aware peer context.');
