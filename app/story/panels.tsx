@@ -24,21 +24,11 @@ export function InvestmentScreen({state}:{state:Run}){
 }
 
 export function PlayGuide({state}:{state:Run}){
- const steps=state.chapter===0?[
-  ['연락 읽기','약속 대화를 읽고 ‘도착한 새 연락 보기’를 누르세요.\n새 계정의 메시지는 차례로 도착합니다.'],
-  ['답장하고 확인하기','대화 아래 답장을 고르세요.\n‘기록 확인하기’ 또는 하단 ‘홈’에서 연락처·은행·메모를 열 수 있습니다.'],
-  ['다음 장면으로','대화 아래 ‘⋯’에서 보류·차단 등을 선택해 연락을 정리하세요.\n그 뒤 나타나는 ‘점심시간으로’를 누르면 다음 사건으로 넘어갑니다.']
- ]:state.chapter===1?[
-  ['시장 노트 살펴보기','메시지를 읽고 아래 답장을 고르세요.\n안내가 끝나면 ‘자료방 들어가기’를 누를 수 있습니다.'],
-  ['화면과 기록 확인하기','‘투자 화면’으로 온결의 표시 금액을 살펴보세요.\n하단 ‘홈’ → ‘은행’에서 내 거래 기록도 볼 수 있습니다.'],
-  ['다음 장면으로','‘⋯’에서 연락을 정리한 뒤 ‘준호와의 저녁 약속으로’를 누르세요.\n준호에게 답장하거나 ‘지금은 말하지 않기’를 선택한 뒤 ‘저녁 약속으로 이어가기’를 누르세요.']
- ]:[
-  ['새 상담 연락 읽기','준호와 헤어진 뒤 도착한 연락입니다.\n메시지를 읽고 아래 답장으로 이야기를 이어가세요.'],
-  ['필요한 기록 열기','‘기록 확인하기’와 하단 ‘홈’을 이용하세요.\n이전 거래와 보관한 메모는 그대로 남아 있습니다.'],
-  ['하루 마무리하기','‘⋯’ 또는 대화의 행동 버튼으로 연락을 정리하세요.\n‘휴대폰 정리하기’를 누른 뒤 안내 버튼을 따라가면 오늘의 기록이 나옵니다.']
- ];
- return <div className="play-guide"><ol>{steps.map(([title,description])=><li key={title}><strong>{title}</strong><p>{description}</p></li>)}</ol><p className="guide-footnote">송금하지 않아도 끝까지 진행할 수 있습니다.<br/>이전 대화는 위로 스크롤하고, 잠시 멈추려면 상단 Ⅱ를 누르세요.</p></div>;
+ return state.chapter===0
+  ? <p className="guide-footnote">첫 사건의 시작에서 실제 버튼 위치를 밝게 표시하는 조작 안내가 진행됩니다.</p>
+  : <p className="guide-footnote">조작 안내는 첫 사건에서만 진행됩니다. 이후 사건에서는 같은 휴대폰 조작을 그대로 사용합니다.</p>;
 }
+
 export function Rewind({state,onReplay,onRestart}:{state:Run;onReplay:(index:number)=>void;onRestart:()=>void}) {
   const ending=endingFor(state);
   const pivots=timeline(state);
@@ -92,13 +82,12 @@ export function ContactProfile({profile,blocked,onClose,onChat,onCall,callAvaila
 }
 
 export function ChapterScene({state,page=0,resume=false,onNext,onContinue}:{state:Run;page?:number;resume?:boolean;onNext:()=>void;onContinue:()=>void}){
- const pages=chapterPages(state),scene=pages[Math.min(page,pages.length-1)],guide=!resume&&page>=pages.length,last=resume||guide;
+ const pages=chapterPages(state),scene=pages[Math.min(page,pages.length-1)],last=resume||page>=pages.length-1;
  return <section className={'chapter-scene chapter-scene-'+state.chapter} aria-label="하루의 장면">
- <small>{resume?'멈췄던 순간':guide?'잠깐, 조작 안내':scene.time}</small><h2>{resume?'다시 휴대폰을 열었다':guide?'이 휴대폰으로 할 일':scene.title}</h2>
- {guide?<PlayGuide state={state}/>:<div key={resume?'resume':page} className="chapter-copy">{(resume?resumeContext(state):scene.lines).filter(Boolean).map(line=><p key={line}>{line}</p>)}</div>}
- {resume&&<details className="resume-guide"><summary>조작 방법 다시 보기</summary><PlayGuide state={state}/></details>}
- {!resume&&<p className="chapter-count">{page+1} / {pages.length+1}</p>}
- <button className="primary" onClick={last?onContinue:onNext}>{last?(resume?'멈춘 연락으로 돌아가기':chapterAction(state)):page===pages.length-1?'조작 안내 보기':'시간을 이어가기'}</button>
+ <small>{resume?'멈췄던 순간':scene.time}</small><h2>{resume?'다시 휴대폰을 열었다':scene.title}</h2>
+ <div key={resume?'resume':page} className="chapter-copy">{(resume?resumeContext(state):scene.lines).filter(Boolean).map(line=><p key={line}>{line}</p>)}</div>
+ {!resume&&<p className="chapter-count">{page+1} / {pages.length}</p>}
+ <button className="primary" onClick={last?onContinue:onNext}>{last?(resume?'멈춘 연락으로 돌아가기':chapterAction(state)):'시간을 이어가기'}</button>
  {!last&&<button className="text-button" onClick={onContinue}>장면 건너뛰기</button>}
  </section>;
 }

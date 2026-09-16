@@ -34,6 +34,7 @@ export default function StoryClient(){
   const [aiUsed,setAiUsed]=useState(0);
   const [closingStep,setClosingStep]=useState(0);
   const [chapterPage,setChapterPage]=useState(0),[chapterResume,setChapterResume]=useState(false);
+  const [tutorialStep,setTutorialStep]=useState<number|null>(null);
   const [profileKnown,setProfileKnown]=useState(false);
   const [startRequest,setStartRequest]=useState<{mode:'full'|'demo';resume:boolean}>({mode:'full',resume:false});
   const [aiConsent,setAiConsent]=useState(false);
@@ -148,6 +149,9 @@ export default function StoryClient(){
     if(dialog||paused||showRecent||practiceDone){if(!dialogRef.current?.open)dialogRef.current?.showModal();}
     else dialogRef.current?.close();
   },[dialog,paused,showRecent,practiceDone]);
+  useEffect(()=>{
+    if(tutorialStep===0&&app==='messages'&&thread==='current')queueMicrotask(()=>setTutorialStep(1));
+  },[tutorialStep,app,thread]);
   // Active-screen time only. Backgrounding/pausing resets this optional routine cue;
   // it never advances the plot or triggers a transaction.
   useEffect(()=>{
@@ -165,7 +169,7 @@ export default function StoryClient(){
     setStartRequest({mode,resume});setAiConsent(false);setDialog('ai-choice');
   }
   function start(mode:'full'|'demo',resume=false){
-    cancelReply();setNote('');setClosingStep(0);setPracticeOriginal(null);setPracticeDone(false);
+    cancelReply();setNote('');setClosingStep(0);setPracticeOriginal(null);setPracticeDone(false);setTutorialStep(null);
     if(resume&&mainSaved.current){setState(mainSaved.current);try{budget.current=restoreBudget(localStorage.getItem(budgetKey('full')),crypto.randomUUID(),'full');setAiUsed(budget.current.counts.reduce((a,b)=>a+b,0));}catch{setAiAllowed(false);}}
     if(!resume){setMessageMemory(old=>resetMessageMemory(old,mode));setRevealed({});setState(createRun(mode));setChats({});positions.current=resetMessageMemory(positions.current,mode);budget.current=restoreBudget(null,crypto.randomUUID(),mode);persistBudget();}
     setChapterPage(0);setChapterResume(resume);setDialog(resume&&mainSaved.current?.completed?null:'chapter');setStarted(true);setApp(!resume&&mode==='full'?'messages':'home');setThread(!resume&&mode==='full'?'junho':'current');setBrowserPage('start');setPaused(false);
@@ -212,7 +216,15 @@ export default function StoryClient(){
     act('next');openApp('home');setBrowserPage('start');
     if(state.chapter<2){setChapterPage(0);setChapterResume(false);setDialog('chapter');}
   }
-  function finishChapterScene(){setDialog(null);openApp('messages',!chapterResume&&state.chapter===0?'junho':'current');}
+  function finishChapterScene(){
+    const firstTutorial=!chapterResume&&state.mode==='full'&&state.chapter===0;
+    setDialog(null);openApp('messages',firstTutorial?'junho':'current');setTutorialStep(firstTutorial?0:null);
+  }
+  function advanceTutorial(){
+    if(tutorialStep===null)return;
+    if(tutorialStep>=4){setTutorialStep(null);return;}
+    openApp('messages','current');setTutorialStep(tutorialStep+1);
+  }
   function rewind(index:number){
     const original=practiceOriginal??state,value=replayBefore(original,index);if(!value)return;
     cancelReply();setMessageMemory(old=>Object.fromEntries(Object.entries(old).filter(([key])=>!key.startsWith('practice:'))));setRevealed({});setPracticeOriginal(original);setPracticeDone(false);setState(value);setChats({});setApp('messages');setThread('current');setBrowserPage('start');setPaused(false);
@@ -266,6 +278,14 @@ thread==='list'?<><div className="conversation-list">
       {browserPage==='official'&&state.chapter===0&&<article className="record"><h3>지인 연락 확인</h3><p>새 대화에 적힌 연락처가 아닌, 이전부터 저장한 연락처에서 먼저 확인할 수 있습니다.</p><button onClick={()=>openApp('calls')}>내 연락처 열기</button></article>}
       {browserPage==='official'&&state.chapter===2&&<article className="record"><h3>자료 접수</h3><p>현재 연락의 기록을 보관하면 접수할 수 있습니다. 접수는 환급이 아닙니다.</p><button disabled={resolved||!ownEvidence.some(e=>state.saved.includes(e.uid))} onClick={()=>{act('resolve','reported');openApp('messages');}}>보관한 자료로 접수</button><button onClick={()=>openApp('notes')}>보관한 기록 보기</button></article>}</>;
   async function checkModel(){if(checking)return;setChecking(true);try{const response=await fetch('/api/ai-chat');const value=await response.json() as {enabled?:boolean};setModelStatus(response.ok&&value.enabled?'서버 연결됨 · 생성 호출 없음':'내장 대사 사용 가능');}catch{setModelStatus('연결 불가 · 내장 대사 사용 가능');}finally{setChecking(false);}}
+  const tutorialCopy=[
+    ['새 연락 열기','밝게 표시된 ‘도착한 새 연락 보기’를 직접 눌러 새 계정의 대화를 여세요.'],
+    ['답장 고르기','메시지가 모두 도착하면 이 위치에 답장 선택지가 나타납니다. 선택에 따라 상대의 반응과 다음 행동이 달라집니다.'],
+    ['기록 확인하기','대화만 믿지 않고 연락처·은행·공식 안내를 확인하려면 이 버튼을 사용합니다.'],
+    ['연락 정리하기','보류하거나 차단하려면 오른쪽의 ‘⋯’ 버튼을 사용합니다. 송금하지 않아도 끝까지 진행할 수 있습니다.'],
+    ['홈으로 이동하기','화면 아래의 홈 버튼으로 은행·연락처·메모 등 다른 앱을 열 수 있습니다.']
+  ];
+  const tutorial=tutorialStep!==null&&state.chapter===0?<><div className="tutorial-scrim" aria-hidden="true"/><section className={'phone-tutorial tutorial-card-'+tutorialStep} role="dialog" aria-label="첫 사건 조작 안내"><small>조작 안내 {tutorialStep+1} / {tutorialCopy.length}</small><h2>{tutorialCopy[tutorialStep][0]}</h2><p>{tutorialCopy[tutorialStep][1]}</p>{tutorialStep===0?<p className="tutorial-action">밝게 표시된 실제 버튼을 눌러 보세요.</p>:<button className="primary" onClick={advanceTutorial}>{tutorialStep===tutorialCopy.length-1?'안내 마치기':'다음 위치 보기'}</button>}<button className="text-button" onClick={()=>setTutorialStep(null)}>안내 건너뛰기</button></section></>:null;
   const content=app==='home'?homeContent:app==='messages'?messagesContent:app==='calls'?callsContent:app==='bank'?<><Ledger state={state}/>{comparison}{evidenceCards('bank')}{offerFor(state)&&!beat&&<button className="primary" onClick={()=>action('transfer')}>현재 요청의 송금 안내</button>}</>:app==='browser'?browserContent:app==='notes'?<><h2>오늘의 기록</h2><details className="record"><summary>지금까지의 하루</summary>{chapterPages(state).map(scene=><article key={scene.title}><h3>{scene.time}</h3>{scene.lines.filter(Boolean).map(text=><p key={text}>{text}</p>)}</article>)}<h3>멈춘 연락</h3>{resumeContext(state).map(text=><p key={text}>{text}</p>)}</details><h2>내가 보관한 기록</h2>{branchActions}{state.chapter===2&&state.events.some(e=>e.type==='branch-use'&&e.data==='compare')&&<section className="record-comparison"><h3>서로 다른 연락의 주장</h3><article className="record"><small>앞서 지수에게 보낸 기록</small><p>{attachmentText[messageStyle(state,'peer').focus as keyof typeof attachmentText]}</p><p>지수: {peerFollowupText(state)}</p></article><article className="record"><small>현재 발신자 · {c.sender}</small><p>{c.preview}</p></article><p className="fine">이전 자료와 현재 발신자의 말은 각각의 주장입니다. 같은 업체인지, 공식 접수인지 별도로 확인해야 합니다.</p><button onClick={()=>{openApp('browser');setBrowserPage('official');}}>독립된 공식 안내 열기</button></section>}{messageConsequences(state).map(text=><article className="record" key={text}><p>{text}</p></article>)}{evidenceFor(state).filter(e=>state.saved.includes(e.uid)).map(e=><article className="record" key={e.uid}><span className="eyebrow">{chapters[e.chapter].story.title}</span><h3>{e.title}</h3><small>{names[e.app as App]} · {gameTime(replayBefore(state,state.events.findIndex((event:{type:string;data:string})=>event.type==='save'&&event.data===e.uid))!)}</small><p>{e.text}</p></article>)}{state.events.some(e=>e.type==='capture'&&e.data===retainedQuestion.id)&&<article className="record"><small>온결 자료방 · 삭제 전 보관</small><h3>{retainedQuestion.speaker}</h3><p>{retainedQuestion.text}</p></article>}{!state.saved.length&&!state.events.some(e=>e.type==='capture')&&!messageConsequences(state).length&&<p>아직 보관한 기록이 없습니다.</p>}<button onClick={()=>openApp('messages')}>최근 연락으로 돌아가기</button></>:<><h2>잠깐 쉬어가기</h2><details className="settings-guide"><summary>조작 안내 다시 보기</summary><PlayGuide state={state}/></details><article className="record"><h3>지금 할 수 있는 일</h3><p>메시지에서 대화를 더 읽거나, 다른 앱에서 기록을 살펴볼 수 있습니다. 진행하지 않으려면 대화 하단의 ‘보류·차단’을 누르세요.</p><button onClick={()=>openApp('messages')}>현재 연락으로</button></article><label className="setting"><input type="checkbox" checked={large} onChange={e=>setLarge(e.target.checked)}/>글자 크게</label><label className="setting"><input type="checkbox" checked={reduced} onChange={e=>setReduced(e.target.checked)}/>움직임 줄이기</label><label className="setting"><input type="checkbox" checked={aiAllowed} onChange={e=>{cancelReply();setAiAllowed(e.target.checked);}}/>만 18세 이상이며, 선택적 AI 대화 사용</label><p className="fine">켜면 지수·준호에게 직접 보내는 메시지와 선택한 첨부만 Gemini로 전송됩니다. 개인정보를 입력하지 마세요. 사건 진행과 거래값은 코드로 결정됩니다. AI 대사의 오류 가능성은 남아 있으므로 실제 금융 안내로 사용하지 마세요. 내장 대사만으로도 끝까지 진행됩니다.</p><button disabled={checking} onClick={()=>void checkModel()}>{checking?'연결 확인 중':'연결 상태만 확인'}</button><p role="status">{modelStatus}</p><p className="fine">이번 실행의 AI 시도 {aiUsed+storyAttempts} / 2. 지수·준호에게 각각 한 번만 사용합니다. 이전 버전의 사용량도 포함하며 재시도는 하지 않습니다.</p><button onClick={()=>setDialog('restart')}>새 하루로 초기화</button><p className="fine">이 기기의 진행 기록을 바꿉니다. 입력 대화는 원래 저장하지 않습니다.</p></>;
   return <main className={'story-world '+c.story.tone+(large?' large-text':'')+(reduced?' reduce-motion':'')}><div className="desktop-caption"><span>WHATFRAUD</span><p>낯선 위험은<br/>익숙한 화면으로 온다.</p><small>하나의 휴대폰, 세 번의 선택.<br/>소리 없이도 모든 내용을 볼 수 있습니다.</small></div><section className={'phone phone-'+app+((app==='home'||!started)?' wallpaper':'')} aria-label="가상 휴대폰">
     <PhoneStatus time={started?gameTime(state):'09:10'}/>
@@ -278,6 +298,7 @@ thread==='list'?<><div className="conversation-list">
       {app==='messages'&&newMessages&&<button className="new-message-pill" onClick={()=>{if(scroll.current)scroll.current.scrollTop=scroll.current.scrollHeight;followTail.current=true;setAtTail(true);setNewMessages(false);}}>새 메시지 ↓</button>}
       {app==='messages'&&thread==='current'&&messageDock}
       <nav className="system-nav" aria-label="휴대폰 탐색"><button onClick={phoneBack} aria-label="뒤로">‹</button><button className="home-indicator" onClick={()=>openApp('home')} aria-label="홈"><span/></button><button onClick={()=>{cancelReply();setShowRecent(!showRecent);}}>최근 앱</button></nav>
+      {tutorial}
 
     </>}
     {note&&<div className="notice" role="status"><p>{note}</p><button onClick={()=>setNote('')} aria-label="안내 닫기">×</button></div>}
