@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {chapters,createRun,transition,endingFor} from '../app/story/engine.js';
 assert.deepEqual(chapters.map(c=>c.id),['familiar-request','paper-profit','recovery-team']);
-assert.deepEqual(chapters.map(c=>c.story.aiLimit),[1,2,1]);
+assert.deepEqual(chapters.map(c=>c.story.aiLimit),[2,2,1]);
 for(const c of chapters){
  assert.equal(c.mode,'chat');
  assert.ok(c.story.evidence.filter(e=>e.key).length>=2);
@@ -20,7 +20,7 @@ for(let i=0;i<3;i++){
 }
 assert.ok(state.completed);assert.equal(endingFor(state).title,'지켜낸 하루');
 const route=await readFile('app/api/ai-chat/route.ts','utf8');
-for(const guard of ['reserveSharedBudget','validateRequestEnvelope','readBoundedBody','getScriptedReply','validateAiReply','MAX_PROVIDER_CONCURRENCY','AbortController','gameCase.story.aiLimit'])assert.ok(route.includes(guard),guard);
+for(const guard of ['reserveSharedBudget','validateRequestEnvelope','readBoundedBody','getScriptedReply','validateAiReply','MAX_PROVIDER_CONCURRENCY','AbortController','AI_CASE_LIMITS','AI_RUN_LIMIT','validateDecisionContext'])assert.ok(route.includes(guard),guard);
 const hosting=JSON.parse(await readFile('.openai/hosting.json','utf8'));
 assert.equal(hosting.project_id,'appgprj_6a93064a0e288191ae08e88bafdd694a');assert.equal(hosting.d1,'DB');
 const live=await readFile('scripts/evaluate-live-gemini.mjs','utf8');

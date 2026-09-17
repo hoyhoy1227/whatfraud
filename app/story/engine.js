@@ -1,4 +1,5 @@
 import { messageEventAllowed, messageFollowupAllowed, styleEventAllowed, branchUseAllowed, messageStyle, closureComplete, canCloseMessage, attachmentEventAllowed, canAttach } from './one-shot.js';
+import {decisionEventAllowed} from './decision-message.js';
 import {chapterPages} from './context.js';
 import { findChoice, pendingBeat, choiceAllowed, chosenIds } from './narrative.js';
 import chapters from '../../content/generated/cases.json' with { type: 'json' };
@@ -15,7 +16,7 @@ export const SAVE_KEY = 'whatfraud-story-v3';
 export const INITIAL_BALANCE = 680000;
 export const APPS = ['home', 'messages', 'calls', 'bank', 'browser', 'notes', 'settings'];
 const terminal = ['verified', 'paused', 'blocked', 'reported', 'stopped', 'loss'];
-const validTypes = ['advance','platform','withdraw','confirm','inspect','save','call','resolve','next','cue','read','talk','reflect','observe','capture','message','message-followup','support','message-style','branch-use','message-close','scene-page','scene-enter','message-attachment','recovery-record'];
+const validTypes = ['advance','platform','withdraw','confirm','inspect','save','call','resolve','next','cue','read','talk','reflect','observe','capture','message','message-followup','support','message-style','branch-use','message-close','scene-page','scene-enter','message-attachment','recovery-record','decision-attempt','decision-result'];
 export const currentCase = state => chapters[state.chapter];
 export const currentStage = state => currentCase(state).story.stages.find(item => item.id === state.stage);
 export const totalSpent = state => state.transactions.reduce((sum, tx) => sum + tx.amount, 0);
@@ -89,6 +90,8 @@ export function transition(input,event) {
       if(!state.sceneEntered&&data===String(state.scenePage)&&state.scenePage<chapterPages(state).length-1){state.scenePage++;changed=true;}break;
     case 'scene-enter':
       if(!state.sceneEntered&&state.scenePage===chapterPages(state).length-1){state.sceneEntered=true;changed=true;}break;
+    case 'decision-attempt':
+    case 'decision-result': changed=decisionEventAllowed(state,event.type,data);break;
     case 'message-attachment': changed=attachmentEventAllowed(state,data);break;
     case 'recovery-record': changed=active&&state.chapter===2&&state.stage==='offer'&&['official-recovery','contact-recovery'].includes(data)&&canAttach(state,data)&&!state.events.some(e=>e.type==='recovery-record');break;
     case 'message-close': changed=canCloseMessage(state,data);break;

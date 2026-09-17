@@ -200,7 +200,7 @@ function validateStory(c,errors){
   for(const key of ['title','tone','intro','recipient','purpose'])if(typeof s[key]!=='string'||!s[key].trim())fail(key+' missing');
   if(!Number.isInteger(s.time)||s.time<0||s.time>1439)fail('invalid time');
   if(!Number.isInteger(s.amount)||s.amount<=0||s.amount>680000)fail('invalid amount');
-  if(s.aiLimit!==(c.id==='paper-profit'?2:1))fail('AI budget must be 1/2/1');
+  if(s.aiLimit!==(c.id==='recovery-team'?1:2))fail('AI budget must be 2/2/1');
   if(!Array.isArray(s.evidence)||s.evidence.length<3||s.evidence.length>5){fail('evidence count');return;}
   const eids=new Set();
   for(const e of s.evidence){

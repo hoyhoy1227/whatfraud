@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {createRun,transition,serializeRun,restoreRun,totalSpent} from '../app/story/engine.js';
+import {narratives} from '../app/story/narrative.js';
+import {AI_RUN_LIMIT,AI_CASE_LIMITS,decisionAvailable,decisionConsequence,validateDecisionContext,parseDecisionReply} from '../app/story/decision-message.js';
+assert.equal(AI_RUN_LIMIT,5);assert.deepEqual(AI_CASE_LIMITS,[2,2,1]);
+let state=createRun();const step=(type,data='')=>{state=transition(state,{type,data,chapter:state.chapter});};
+step('advance');step('inspect','familiar-request:recipient');
+for(const beat of narratives[0].beats.filter(b=>b.required&&b.stage==='request'))step('talk',beat.options[0].id);
+assert.equal(decisionAvailable(state),true);
+step('decision-attempt','familiar-check:attempt');const attempted=state;
+step('decision-attempt','familiar-check:attempt');assert.equal(state,attempted);
+step('decision-result','familiar-check:verify:recipient-note');
+assert.equal(totalSpent(state),0);assert.match(decisionConsequence(state)[0],/대조/);
+assert.deepEqual(restoreRun(serializeRun(state)),state);
+assert.equal(parseDecisionReply('{"reply":"계정 정보를 다시 설명할게.","reaction":"clarify"}').reaction,'clarify');
+assert.equal(parseDecisionReply('{"reply":"다시 보내 줄래?","reaction":"share"}'),null);
+assert.equal(validateDecisionContext({caseId:'familiar-request',sceneId:'familiar-check',stageId:'paid',resolved:false,joined:false,attachment:'none',choices:[],checks:[]}),false);
+console.log('Decision message guards passed.');

@@ -1,3 +1,4 @@
+import {validateDecisionContext,decisionPrompt,parseDecisionReply,decisionReactions,AI_CASE_LIMITS,AI_RUN_LIMIT} from '../../story/decision-message.js';
 import { validateStoryContext, storyPrompt, parseStoryReply, branchModes, branchFocus } from '../../story/one-shot.js';
 import { reserveSharedBudget } from '../ai-budget';
 import { sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
@@ -207,16 +208,17 @@ async function handleChat(request: Request, body: ChatBody) {
   const messages = parseMessages(body.messages);
   if (!messages) return json({ code: 'invalid_messages' }, 400);
   // Old clients may still request built-in lines, but never reach the provider.
-  if(body.inputMode!=='story-message'){
+  if(body.inputMode!=='story-message'&&body.inputMode!=='decision-message'){
     const scripted=body.inputMode===undefined?getScriptedReply(gameCase,messages):null;
     if(scripted!==null)return json({reply:scripted,provider:'scripted',model:null});
     return json({code:'story_message_required'},409);
   }
   if(messages.length!==1||messages[0].role!=='user'||body.userTurnCount!==1)return json({code:'invalid_messages'},400);
-  if((body.contractVersion!==undefined&&body.contractVersion!==2)||!validateStoryContext(body)||body.choices!==undefined||body.checks!==undefined)return json({code:'invalid_story_context'},400);
+  const isDecision=body.inputMode==='decision-message';
+  if((body.contractVersion!==undefined&&body.contractVersion!==2)||(isDecision?!validateDecisionContext(body):(!validateStoryContext(body)||body.choices!==undefined||body.checks!==undefined)))return json({code:'invalid_story_context'},400);
   const sceneId=body.sceneId as 'peer'|'friend';
   const contractVersion=body.contractVersion===2?2:1;
-  const moment='story-'+sceneId;
+  const moment=(isDecision?'decision-':'story-')+body.sceneId;
   const conversation=messages;
   if (!aiEnabled()) return json({ code: 'ai_disabled' }, 503, { 'Retry-After': '300' });
   const apiKey = process.env.GEMINI_API_KEY?.trim();
@@ -236,11 +238,12 @@ async function handleChat(request: Request, body: ChatBody) {
   }
 
 
+  if(!consumeRateLimit(`run:${ip}:${session}`,AI_RUN_LIMIT,AI_RUN_LIMIT))return json({code:'run_limit'},429);
   const momentKey = `moment:${ip}:${session}:${moment}`;
   if (!consumeRateLimit(momentKey, 1, 1)) return json({ code: 'moment_used' }, 429);
   const caseKey = `case:${ip}:${session}:${gameCase.id}`;
   // Supplemental isolate-local throttle; not a project-wide quota or billing cap.
-  if (!consumeRateLimit(caseKey, gameCase.story.aiLimit, gameCase.story.aiLimit)) {
+  if (!consumeRateLimit(caseKey, AI_CASE_LIMITS[cases.findIndex(c=>c.id===gameCase.id)], AI_CASE_LIMITS[cases.findIndex(c=>c.id===gameCase.id)])) {
     return json({ code: 'rate_limit' }, 429, { 'Retry-After': '60' });
   }
   // Aggregate brake remains isolate-local and does not claim a billing cap.
@@ -265,15 +268,15 @@ async function handleChat(request: Request, body: ChatBody) {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: storyPrompt(sceneId,body.attachment as string,contractVersion,body.stageId as string) }] },
+        systemInstruction: { parts: [{ text: isDecision?decisionPrompt(body):storyPrompt(sceneId,body.attachment as string,contractVersion,body.stageId as string) }] },
         contents: conversation.map((message) => ({
           role: message.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: message.content }],
         })),
         generationConfig: {
-          maxOutputTokens: contractVersion===2?220:180,
+          maxOutputTokens: contractVersion===2?280:180,
           responseMimeType: 'application/json',
-          responseSchema: {type:'OBJECT',properties:{reply:{type:'STRING'},reaction:{type:'STRING',enum:sceneId==='peer'?['check','acknowledge','boundary']:['together','space']}},required:['reply','reaction'],...(contractVersion===2?{properties:{reply:{type:'STRING'},reaction:{type:'STRING',enum:sceneId==='peer'?['check','acknowledge','boundary']:['together','space']},supportMode:{type:'STRING',enum:branchModes[sceneId]},focus:{type:'STRING',enum:branchFocus}},required:['reply','reaction','supportMode','focus']}: {})},
+          responseSchema: isDecision?{type:'OBJECT',properties:{reply:{type:'STRING'},reaction:{type:'STRING',enum:decisionReactions}},required:['reply','reaction']}:{type:'OBJECT',properties:{reply:{type:'STRING'},reaction:{type:'STRING',enum:sceneId==='peer'?['check','acknowledge','boundary']:['together','space']}},required:['reply','reaction'],...(contractVersion===2?{properties:{reply:{type:'STRING'},reaction:{type:'STRING',enum:sceneId==='peer'?['check','acknowledge','boundary']:['together','space']},supportMode:{type:'STRING',enum:branchModes[sceneId]},focus:{type:'STRING',enum:branchFocus}},required:['reply','reaction','supportMode','focus']}: {})},
           thinkingConfig: { thinkingLevel: 'minimal' },
         },
       }),
@@ -289,10 +292,10 @@ async function handleChat(request: Request, body: ChatBody) {
     }
     const payload = await response.json() as { candidates?: Array<{ finishReason?: string }> };
     if (payload.candidates?.[0]?.finishReason !== 'STOP') return json({ code: 'incomplete_response' }, 502);
-    const result = parseStoryReply(extractGeminiText(payload),sceneId,contractVersion,body.attachment as string);
+    const result = isDecision?parseDecisionReply(extractGeminiText(payload)):parseStoryReply(extractGeminiText(payload),sceneId,contractVersion,body.attachment as string);
     if (!result) return json({ code: 'unsafe_response', validation: 'story_contract' }, 502);
     if (!validateAiReply(result.reply, undefined, replyMode, 'story')) return json({ code: 'unsafe_response', validation: 'reply_policy' }, 502);
-    return json({ reply:result.reply, reaction:result.reaction, provider: 'gemini', model: GEMINI_MODEL, ...(contractVersion===2?{supportMode:result.supportMode,focus:result.focus}: {}) });
+    return json({ reply:result.reply, reaction:result.reaction, provider: 'gemini', model: GEMINI_MODEL, ...(!isDecision&&contractVersion===2?{supportMode:result.supportMode,focus:result.focus}: {}) });
   } catch (error) {
     providerPausedUntil = Date.now() + 30_000;
     return json({ code: error instanceof Error && error.name === 'AbortError' ? 'provider_timeout' : 'provider_error' }, 504);

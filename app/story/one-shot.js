@@ -39,7 +39,7 @@ export function messageEventAllowed(state,data){
  const [id,value,...extra]=data.split(':');
  if(extra.length||!messageWindow(state,id))return false;
  const status=messageStatus(state,id);
- if(value==='attempt')return status==='ready';
+ if(value==='attempt')return status==='ready'&&state.events.filter(e=>['message','decision-attempt'].includes(e.type)&&e.data.endsWith(':attempt')).length<5;
  if(value==='skip')return status==='ready'||status==='attempt';
  return reactions[id].includes(value)&&(status==='ready'||status==='attempt');
 }

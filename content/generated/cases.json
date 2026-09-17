@@ -204,7 +204,7 @@
       "amount": 80000,
       "recipient": "한별 서비스",
       "purpose": "대리 결제",
-      "aiLimit": 1,
+      "aiLimit": 2,
       "evidence": [
         {
           "id": "saved-contact",
