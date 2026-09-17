@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {ChatBubbles} from './chat-bubbles';
 import {sanitizePlayerText,validateAiReply} from '../ai-dialogue';
-import {storyMessages,messageStatus,messageWindow,canAttach,attachmentText,reactions,preparedMessages,peerFollowupText,friendFollowupLines,validBranch,messageStyle,canCloseMessage} from './one-shot';
+import {storyMessages,messageStatus,messageWindow,canAttach,attachmentText,reactions,preparedMessages,peerFollowupText,friendFollowupLines,validBranch,messageStyle,canCloseMessage,attachmentLabel,attachmentReply,messageAttachment} from './one-shot';
 import {currentCase} from './engine';
 import {emptyMessageMemory,messageOpening,peerRecordReady,minimumReplyDelay} from './presentation';
 export type MessageMemory=ReturnType<typeof emptyMessageMemory>;
@@ -11,7 +11,8 @@ type Scene='peer'|'friend';
 type Props={embedded?:boolean;memory?:MessageMemory;onMemory?:(patch:Partial<MessageMemory>)=>void;state:Run;scene:Scene;aiAllowed:boolean;getSession:()=>string;remaining:number;practice:boolean;reduced:boolean;paused:boolean;onEvent:(type:string,data:string)=>boolean;onBack:()=>void;onContinue:()=>void;onProfile:()=>void};
 export default function StoryMessage({embedded=false,memory=emptyMessageMemory(),onMemory,state,scene,aiAllowed,getSession,remaining,practice,reduced,paused,onEvent,onBack,onContinue,onProfile}:Props){
  const person=storyMessages[scene],status=messageStatus(state,scene),available=messageWindow(state,scene);
- const {draft,sent,reply,attachment,sentAttachment,preparedSent}=memory;
+ const {draft,sent,reply,attachment:memoryAttachment,sentAttachment,preparedSent}=memory;
+ const attachment=messageAttachment(state,scene)!=='none'?messageAttachment(state,scene):memoryAttachment;
  const setDraft=(draft:string)=>onMemory?.({draft}),setSent=(sent:string)=>onMemory?.({sent}),setReply=(reply:string)=>onMemory?.({reply}),setAttachment=(attachment:string)=>onMemory?.({attachment});
  const [picker,setPicker]=useState(false);
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -20,16 +21,18 @@ export default function StoryMessage({embedded=false,memory=emptyMessageMemory()
  useEffect(()=>{if(paused||!aiAllowed)controller.current?.abort();},[paused,aiAllowed]);
  useEffect(()=>{const hide=()=>{if(document.hidden)controller.current?.abort();};document.addEventListener('visibilitychange',hide);return()=>document.removeEventListener('visibilitychange',hide);},[]);
  const done=!['ready','attempt'].includes(status);
- const canGenerate=available&&status==='ready'&&aiAllowed&&!practice&&remaining>0;
+ const canGenerate=available&&!paused&&status==='ready'&&aiAllowed&&!practice&&remaining>0;
  const recovered=status==='attempt'&&!busy;
  function prepared(choice:typeof preparedMessages.peer[number]){
   if(pending.current||!available||done)return;
-  const focus=scene==='peer'&&choice.mode==='compare'?attachment:choice.mode==='records'?'records':choice.mode==='verify'?'contact':'none';
+  const selectedAttachment=['space','distance'].includes(choice.mode)?'none':attachment;
+  const focus=scene==='peer'&&choice.mode==='compare'?selectedAttachment:choice.mode==='records'?'records':choice.mode==='verify'?'contact':'none';
   if(!validBranch(scene,choice.reaction,choice.mode,focus)||!canAttach(state,scene==='peer'?focus:'none'))return;
+  if(selectedAttachment!=='none'&&canAttach(state,selectedAttachment))onEvent('message-attachment',scene+':'+selectedAttachment);
   if(onEvent('message',scene+':'+choice.reaction)){
    onEvent('message-style',scene+':'+choice.mode+':'+focus);
-   if(sent)onMemory?.({preparedSent:choice.text});else{onMemory?.({sentAttachment:scene==='peer'&&choice.mode==='compare'?attachment:'none'});setSent(choice.text);}
-   setReply(choice.reply);setError('');
+   if(sent)onMemory?.({preparedSent:choice.text});else{onMemory?.({sentAttachment:selectedAttachment});setSent(choice.text);}
+   setReply(selectedAttachment!=='none'&&!['space','listen','distance'].includes(choice.mode)?attachmentReply(scene,selectedAttachment):choice.reply);setError('');
   }
  }
  async function send(event:React.FormEvent){
@@ -41,12 +44,13 @@ export default function StoryMessage({embedded=false,memory=emptyMessageMemory()
   pending.current=true;
   // Persist attempt before dispatch: reload, abort and double submit cannot retry.
   if(!onEvent('message',scene+':attempt')){pending.current=false;return;}
+  if(attachment!=='none')onEvent('message-attachment',scene+':'+attachment);
   onMemory?.({sentAttachment:attachment});setSent(text);setDraft('');setError('');setBusy(true);
   const aborter=new AbortController();controller.current=aborter;
   const dispatched=performance.now();
   const timer=setTimeout(()=>aborter.abort(),10000);
   try{
-   const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':getSession()},signal:aborter.signal,body:JSON.stringify({contractVersion:2,caseId:currentCase(state).id,stageId:state.stage,sceneId:scene,resolved:state.results.some(r=>r.chapter===state.chapter),joined:state.joined,attachment:scene==='peer'?attachment:'none',inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1})});
+   const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':getSession()},signal:aborter.signal,body:JSON.stringify({contractVersion:2,caseId:currentCase(state).id,stageId:state.stage,sceneId:scene,resolved:state.results.some(r=>r.chapter===state.chapter),joined:state.joined,attachment,inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1})});
    const value=await response.json() as {reply?:unknown;provider?:unknown;reaction?:unknown;supportMode?:unknown;focus?:unknown};
    if(!response.ok||value.provider!=='gemini'||typeof value.reply!=='string'||!validateAiReply(value.reply,undefined,'normal','story')||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply)||!validBranch(scene,value.reaction,value.supportMode,value.focus))throw Error('unavailable');
    if(!reduced)await new Promise<void>(resolve=>{const wait=setTimeout(resolve,minimumReplyDelay(performance.now()-dispatched,reduced));aborter.signal.addEventListener('abort',()=>{clearTimeout(wait);resolve();},{once:true});});
@@ -76,12 +80,12 @@ export default function StoryMessage({embedded=false,memory=emptyMessageMemory()
   {!available&&!done&&<p className="system-message">이 대화는 해당 사건의 마지막에 열립니다.</p>}
   {available&&!done&&!busy&&<>
    {canGenerate?<form className="story-message-composer" onSubmit={send}>
-    {scene==='peer'&&<div className="attachment-picker"><button type="button" aria-expanded={picker} onClick={()=>setPicker(!picker)}>＋ 기록 첨부</button>{picker&&<fieldset><legend>이 대화에 함께 보낼 기록</legend>{!Object.keys(attachmentText).some(id=>id!=='none'&&canAttach(state,id))&&<p>아직 첨부할 기록이 없습니다. 기록 없이도 보낼 수 있습니다.</p>}{Object.keys(attachmentText).filter(id=>id!=='none'&&canAttach(state,id)).map(id=><button type="button" aria-pressed={attachment===id} key={id} onClick={()=>{setAttachment(id);setPicker(false);}}>{id==='first-notice'?'처음 참여 안내':'보관한 지수의 질문'}</button>)}<button type="button" onClick={()=>setPicker(false)}>닫기</button></fieldset>}{attachment!=='none'&&<div className="attachment-preview"><small>{attachmentText[attachment as keyof typeof attachmentText]}</small><button type="button" aria-label="첨부 제거" onClick={()=>setAttachment('none')}>×</button></div>}</div>}
+    {<div className="attachment-picker"><button type="button" aria-expanded={picker} onClick={()=>setPicker(!picker)}>＋ 기록 첨부</button>{picker&&<fieldset><legend>이 대화에 함께 보낼 기록</legend>{!Object.keys(attachmentText).some(id=>id!=='none'&&canAttach(state,id))&&<p>아직 첨부할 기록이 없습니다. 기록 없이도 보낼 수 있습니다.</p>}{Object.keys(attachmentText).filter(id=>id!=='none'&&canAttach(state,id)).map(id=><button type="button" aria-pressed={attachment===id} key={id} onClick={()=>{setAttachment(id);setPicker(false);}}>{attachmentLabel[id as keyof typeof attachmentLabel]}</button>)}<button type="button" onClick={()=>setPicker(false)}>닫기</button></fieldset>}{attachment!=='none'&&<div className="attachment-preview"><small>{attachmentText[attachment as keyof typeof attachmentText]}</small><button type="button" aria-label="첨부 제거" onClick={()=>setAttachment('none')}>×</button></div>}</div>}
     <label htmlFor="story-message-draft">자유답변(개인정보는 입력하지 마세요)</label>
     <textarea id="story-message-draft" rows={3} maxLength={500} value={draft} onChange={e=>setDraft(e.target.value)} placeholder={scene==='peer'?'지수에게 전하고 싶은 말':'준호에게 지금 하고 싶은 말'}/>
     <button className="primary" disabled={!draft.trim()} type="submit">보내기</button><small>보내면 한 번의 답장으로 이 장면이 이어집니다.</small>
    </form>:<p className="fine">{practice?'되감기에서는 준비된 메시지를 사용합니다.':!aiAllowed?'AI를 사용하지 않는 플레이입니다.':'이 장면에서 AI를 추가로 요청하지 않습니다.'}</p>}
-   <details className="prepared-message"><summary>준비된 메시지로 보내기</summary>{scene==='peer'&&!canGenerate&&<label>함께 보낼 기록<select value={attachment} onChange={e=>setAttachment(e.target.value)}>{Object.keys(attachmentText).filter(id=>canAttach(state,id)).map(id=><option value={id} key={id}>{id==='none'?'첨부 안 함':id==='first-notice'?'처음 안내':'보관한 지수의 질문'}</option>)}</select></label>}{preparedMessages[scene].filter(choice=>choice.mode!=='compare'||attachment!=='none').map(choice=><button key={choice.mode} onClick={()=>prepared(choice)}>{choice.text}</button>)}</details>
+   <details className="prepared-message"><summary>준비된 메시지로 보내기</summary>{!canGenerate&&<label>함께 보낼 기록<select disabled={status==='attempt'} value={attachment} onChange={e=>setAttachment(e.target.value)}>{Object.keys(attachmentText).filter(id=>canAttach(state,id)).map(id=><option value={id} key={id}>{attachmentLabel[id as keyof typeof attachmentLabel]}</option>)}</select></label>}{preparedMessages[scene].filter(choice=>choice.mode!=='compare'||attachment!=='none').map(choice=><button key={choice.mode} onClick={()=>prepared(choice)}>{choice.text}</button>)}</details>
    <button className="text-button" onClick={()=>{if(onEvent('message',scene+':skip')){onEvent('message-close',scene);onContinue();}}}>지금은 말하지 않기</button>
   </>}
   {done&&<>

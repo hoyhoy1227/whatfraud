@@ -184,3 +184,6 @@ html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR'
 .phone:has(.tutorial-card-0) .new-account,.phone:has(.tutorial-card-1) .dock-actions,.phone:has(.tutorial-card-2) .input-placeholder,.phone:has(.tutorial-card-3) .input-rail>button:last-child,.phone:has(.tutorial-card-4) .home-indicator{box-shadow:0 0 0 3px #fff,0 0 0 6px #4b92f4;border-radius:12px}
 .large-text .phone-tutorial p{font-size:16px}
 @media(max-height:560px){.phone-tutorial{max-height:36%;padding:10px}.phone:has(.phone-tutorial) .screen-scroll{min-height:56px}}
+.attachment-picker,.attachment-picker fieldset,.attachment-preview,.prepared-message{min-width:0;max-width:100%;box-sizing:border-box}
+.attachment-picker button,.attachment-preview small,.prepared-message button{white-space:normal;overflow-wrap:anywhere;word-break:keep-all;line-height:1.6}
+.attachment-picker fieldset{max-height:35vh;overflow-y:auto;overscroll-behavior:contain}
