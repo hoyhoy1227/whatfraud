@@ -166,21 +166,21 @@ html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR'
 .chat-stage .message-group{margin:5px 0}.message-group .bubble p{margin:0}.message-group:has(.message-sender){margin-top:14px}
 @media(max-width:380px){.message-dock{max-height:44%}.dock-actions{grid-template-columns:minmax(0,1fr)}}
 
-/* First-case tutorial: keep the real control in place and dim everything else. */
-.tutorial-scrim{position:absolute;inset:0;z-index:40;background:#07101bcc;pointer-events:auto}
-.phone-tutorial{position:absolute;z-index:50;top:72px;left:16px;right:16px;padding:18px;border-radius:18px;background:#fff;color:#17283f;box-shadow:0 18px 50px #07101b66;pointer-events:auto}
-.phone-tutorial small{color:#41658d;font-weight:700}.phone-tutorial h2{font-size:20px;line-height:1.35;margin:7px 0}.phone-tutorial p{font-size:14px;line-height:1.65;margin:8px 0}.phone-tutorial button{display:block;width:100%;margin-top:10px}.phone-tutorial .tutorial-action{color:#23569c;font-weight:700}
-.phone:has(.tutorial-card-0) .screen-scroll{position:relative;z-index:42}
-.phone:has(.tutorial-card-0) .screen-scroll>*{filter:brightness(.35);opacity:.28;pointer-events:none}
-.phone:has(.tutorial-card-0) .screen-scroll>.new-account{filter:none;opacity:1;pointer-events:auto;position:relative;box-shadow:0 0 0 4px #fff,0 0 0 8px #4b92f4,0 8px 26px #07101b55}
-.phone:has(.tutorial-card-1) .message-dock,.phone:has(.tutorial-card-2) .message-dock,.phone:has(.tutorial-card-3) .message-dock{z-index:42;background:#e8edf5}
-.phone:has(.tutorial-card-1) .message-dock>*{filter:brightness(.35);opacity:.25;pointer-events:none}
-.phone:has(.tutorial-card-1) .message-dock>.dock-actions{filter:none;opacity:1;box-shadow:0 0 0 4px #fff,0 0 0 8px #4b92f4;border-radius:10px}
-.phone:has(.tutorial-card-2) .message-dock>*,.phone:has(.tutorial-card-3) .message-dock>*{filter:brightness(.35);opacity:.25;pointer-events:none}
-.phone:has(.tutorial-card-2) .message-dock>.input-rail,.phone:has(.tutorial-card-3) .message-dock>.input-rail{filter:none;opacity:1}
-.phone:has(.tutorial-card-2) .input-rail>*,.phone:has(.tutorial-card-3) .input-rail>*{filter:brightness(.35);opacity:.25}
-.phone:has(.tutorial-card-2) .input-rail>.input-placeholder,.phone:has(.tutorial-card-3) .input-rail>button:last-child{filter:none;opacity:1;box-shadow:0 0 0 4px #fff,0 0 0 8px #4b92f4}
-.phone:has(.tutorial-card-4) .system-nav{position:relative;z-index:42;background:#dfe6ef}
-.phone:has(.tutorial-card-4) .system-nav>button{filter:brightness(.35);opacity:.25;pointer-events:none}
-.phone:has(.tutorial-card-4) .system-nav>.home-indicator{filter:none;opacity:1;box-shadow:0 0 0 4px #fff,0 0 0 8px #4b92f4;border-radius:12px}
-@media(max-height:700px){.phone-tutorial{top:50px;padding:14px}.phone-tutorial h2{font-size:18px}.phone-tutorial p{line-height:1.5}}
+
+/* The card has its own row, so neither text nor controls can cover the target. */
+.desktop-caption{max-width:300px}.desktop-caption>p{margin:0;line-height:1.6}
+.phone-tutorial{position:relative;flex:0 1 auto;min-height:0;max-height:40%;overflow-y:auto;overscroll-behavior:contain;margin:8px 12px 12px;padding:14px;border-radius:16px;background:#fff;color:#17283f;box-shadow:0 5px 20px #07101b22}
+.phone-tutorial small{color:#41658d;font-weight:700}.phone-tutorial h2{margin:5px 0;font-size:18px;line-height:1.4}.phone-tutorial p{margin:6px 0;font-size:14px;line-height:1.6}.phone-tutorial button{display:block;width:100%;margin-top:6px}.tutorial-action{color:#23569c;font-weight:700}
+.phone:has(.phone-tutorial) .screen-scroll{min-height:80px;touch-action:pan-y}
+.phone:has(.phone-tutorial) .app-header,.phone:has(.phone-tutorial) .system-nav,.phone:has(.phone-tutorial) .statusbar{opacity:.3;pointer-events:none}
+.phone:has(.phone-tutorial) .screen-scroll>*{opacity:.22;pointer-events:none}
+.phone:has(.phone-tutorial) .message-dock{max-height:32%;background:#d5dce7}
+.phone:has(.phone-tutorial) .message-dock>*{opacity:.22;pointer-events:none}
+.phone:has(.tutorial-card-0) .screen-scroll>.new-account{opacity:1;pointer-events:auto;scroll-margin:12px}
+.phone:has(.tutorial-card-1) .dock-actions,.phone:has(.tutorial-card-2) .input-rail,.phone:has(.tutorial-card-3) .input-rail{opacity:1}
+.phone:has(.tutorial-card-2) .input-rail>*,.phone:has(.tutorial-card-3) .input-rail>*{opacity:.22}
+.phone:has(.tutorial-card-2) .input-placeholder,.phone:has(.tutorial-card-3) .input-rail>button:last-child{opacity:1;background:#fff}
+.phone:has(.tutorial-card-4) .system-nav{opacity:1}.phone:has(.tutorial-card-4) .system-nav>button:not(.home-indicator){opacity:.22}
+.phone:has(.tutorial-card-0) .new-account,.phone:has(.tutorial-card-1) .dock-actions,.phone:has(.tutorial-card-2) .input-placeholder,.phone:has(.tutorial-card-3) .input-rail>button:last-child,.phone:has(.tutorial-card-4) .home-indicator{box-shadow:0 0 0 3px #fff,0 0 0 6px #4b92f4;border-radius:12px}
+.large-text .phone-tutorial p{font-size:16px}
+@media(max-height:560px){.phone-tutorial{max-height:36%;padding:10px}.phone:has(.phone-tutorial) .screen-scroll{min-height:56px}}

@@ -18,7 +18,7 @@ async function freshRoute() {
     .replace("import { cases } from '../../game-data';", 'const cases = ' + JSON.stringify(cases) + ';');
   return import(moduleUrl(source) + '#' + serial++);
 }
-const request=(text='안내부터 확인해 보세요',session='test-session-000001',overrides={})=>new Request('https://example.invalid/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':session,'cf-connecting-ip':'192.0.2.1'},body:JSON.stringify({caseId:'paper-profit',stageId:'withdrawal',sceneId:'peer',resolved:false,joined:true,attachment:'none',inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1,...overrides})});
+const request=(text='안내부터 확인해 보세요',session='test-session-000001',overrides={})=>new Request('https://example.invalid/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':session,'cf-connecting-ip':'192.0.2.1'},body:JSON.stringify({caseId:'paper-profit',stageId:'withdrawal',sceneId:'peer',resolved:false,joined:true,attachment:'none',inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1,...(overrides.sceneId==='friend'?{caseId:'familiar-request',stageId:'waiting'}:{}),...overrides})});
 let calls=0;
 const originalFetch=globalThis.fetch,originalKey=process.env.GEMINI_API_KEY,originalEnabled=process.env.GEMINI_ENABLED,originalNow=Date.now;
 let clock=1_800_000_000_000;

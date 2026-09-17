@@ -10,6 +10,7 @@ export function priorResult(state,chapter){
  return chapterSpent(snapshot)>0?'은행'+'에는 '+money(chapterSpent(snapshot))+' 출금이 남아 있다. 돌아온 돈은 아직 없다.':outcomeText(snapshot);
 }
 export function dinnerContext(state){
+ if(state.version!==3)return '준호와 저녁을 먹고 역 앞에서 헤어졌다. 이제 집으로 돌아가는 길이다.';
  const mode=messageStyle(state,'friend').mode;
  if(messageStatus(state,'friend')==='space')return '준호와 저녁을 먹었다. 오늘 일은 더 묻지 않았고, 평소처럼 서로의 근황을 이야기했다.';
  if(mode==='listen'&&messageStatus(state,'friend')==='together')return '준호와 저녁을 먹었다. 조언보다 들어 달라는 말대로, 급히 답을 내리려 하지 않았다.';

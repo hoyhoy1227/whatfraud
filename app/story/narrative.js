@@ -21,7 +21,7 @@ export const narratives=[
   scenes:{
    arrival:[line('준호','나야. 오늘 약속 기억하지?'),line('준호','잠깐 부탁할 게 있어서 연락했어.')],
    request:[line('준호','수리 맡긴 태블릿을 오늘 찾으려는데 수리비 8만 원이 남았어. 내 폰에서 결제가 안 돼.'),line('준호','수리점 쪽으로 대신 보내줄 수 있을까? 저녁에 만나서 돌려주려고.'),line('준호','받는 이름은 한별 서비스로 나올 거야. 먼저 안내를 봐 줘.')],
-   waiting:[line('준호','응, 메시지는 볼 수 있어.'),line('준호','확인할 게 있으면 물어봐. 나는 답장 기다리고 있을게.')],
+   waiting:[line('준호','메시지는 되니까, 물어볼 게 있으면 물어봐.')],
    paid:[line('준호','보냈다는 건 봤어. 처리되는지 확인할게.'),line('알림','읽음 표시가 생긴다. 다음 답장은 오지 않는다.')]
   },
   beats:[
@@ -188,6 +188,7 @@ export function conversationTimeline(lines,chat,visible=lines.length){
 }
 /** Only the real friend's conversation can see earlier voluntary disclosures. */
 export function friendFollowup(state){
+ if(state.version!==3)return state.chapter===2?'오늘 만나서 반가웠어. 집에 도착하면 연락 줘.':'퇴근하고 연락할게. 오늘은 서로 늦으면 미리 얘기하자.';
  if(state.chapter===2&&messageStyle(state,'friend').mode==='listen')return '아까 못다 한 얘기는 나중에 해도 돼. 집에 가는 길엔 잠깐 쉬어.';
  if(state.chapter===2&&messageStyle(state,'friend').mode==='records')return '아까 같이 봐 달라고 한 기록, 필요하면 꺼내 보자. 화면에 적힌 것과 실제 거래는 따로 보면 돼.';
  if(state.chapter===2&&state.events.some(e=>e.type==='message-style'&&e.data==='friend:neutral:none'))return '아까 만나서 반가웠어. 집에 도착하면 연락 줘.';

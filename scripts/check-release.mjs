@@ -15,6 +15,7 @@ for(const c of chapters){
 let state=createRun();
 for(let i=0;i<3;i++){
  state=transition(state,{type:'resolve',chapter:i,data:'paused'});
+ if(i===0){state=transition(state,{type:'message',chapter:i,data:'friend:skip'});state=transition(state,{type:'message-close',chapter:i,data:'friend'});}
  state=transition(state,{type:'next',chapter:i,data:''});
 }
 assert.ok(state.completed);assert.equal(endingFor(state).title,'지켜낸 하루');

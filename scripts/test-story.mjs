@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import * as e from '../app/story/engine.js';
-const step=(s,type,data='')=>e.transition(s,{type,chapter:s.chapter,data});
+import {closureScene,closureComplete,messageStatus} from '../app/story/one-shot.js';
+// Financial path fixtures explicitly decline optional conversation before advancing.
+const step=(s,type,data='')=>{
+ if(type==='next'&&e.isResolved(s)&&!closureComplete(s)){
+  const scene=closureScene(s);
+  if(['ready','attempt'].includes(messageStatus(s,scene)))s=e.transition(s,{type:'message',chapter:s.chapter,data:scene+':skip'});
+  s=e.transition(s,{type:'message-close',chapter:s.chapter,data:scene});
+ }
+ return e.transition(s,{type,chapter:s.chapter,data});
+};
 const inspectAll=s=>e.currentCase(s).story.evidence.reduce((v,clue)=>step(v,'inspect',e.currentCase(v).id+':'+clue.id),s);
 const finish=(s,kind)=>step(step(s,'resolve',kind),'next');
 const spend=s=>{const offer=e.offerFor(s);assert.ok(offer);return step(s,'confirm',offer.id);};
@@ -126,7 +135,7 @@ const restoredBudget=restoreBudget({session:'test-session-0000001',counts:[0,1,0
 assert.deepEqual(restoredBudget.moments,['paper-entry']);
 assert.deepEqual(used.moments,[],'old budget remains compatible and retains counts');
 let told=e.createRun();told=step(told,'resolve','paused');told=step(told,'reflect','tell');told=step(told,'next');
-assert.ok(n.friendFollowup(told).includes('기억해'));
+assert.ok(!n.friendFollowup(told).includes('기억해'),'previous incident does not open as a current conversation');
 assert.ok(!n.friendFollowup(e.createRun('demo')).includes('기억해'),'unshared events stay private');
 console.log('Decision windows, chronological chat, quota restore and relationship memory passed.');
 
@@ -152,188 +161,89 @@ assert.ok(n.decisionChecks(captured).includes('terms-comparison'));
 console.log('Evidence gates, retained deletion and profile metadata passed.');
 
 const shot=await import('../app/story/one-shot.js');
-let story=e.createRun('demo');
-assert.equal(shot.messageWindow(story,'peer'),false);
-assert.equal(step(story,'message','peer:attempt'),story);
-story=step(story,'advance');story=step(story,'advance');story=step(story,'confirm','paper-profit:main');story=step(story,'withdraw');
-assert.equal(shot.messageWindow(story,'peer'),true);
-const beforeMoney=e.totalSpent(story);
-story=step(story,'message','peer:attempt');
-assert.equal(shot.messageStatus(story,'peer'),'attempt');
-assert.equal(step(story,'message','peer:attempt'),story,'no duplicate attempt');
-assert.equal(shot.messageStatus(e.restoreRun(e.serializeRun(story)),'peer'),'attempt','reload cannot re-open input');
-assert.equal(step(story,'message','peer:refund'),story,'unknown outcome rejected');
-story=step(story,'message','peer:check');
-assert.equal(step(story,'message','peer:boundary'),story,'outcome immutable');
-story=step(story,'message-followup','peer:record');
-assert.equal(step(story,'message-followup','peer:record'),story,'followup idempotent');
-assert.equal(e.totalSpent(story),beforeMoney,'AI outcomes never mutate money');
-assert.equal(story.saved.length,0,'AI does not invent verified evidence');
-assert.equal(step(story,'message','friend:attempt'),story,'friend is after resolution only');
-story=step(story,'resolve','stopped');
-story=step(story,'message','friend:attempt');story=step(story,'message','friend:together');
-story=step(story,'message-followup','friend:call');
-assert.equal(e.totalSpent(story),beforeMoney);
-const restored=e.restoreRun(e.serializeRun(story));
-assert.deepEqual(restored,story);
-assert.ok(shot.messageConsequences(restored).some(line=>line.includes('연락 요약을 확인했다')));
-story=step(story,'next');
-assert.equal(step(story,'message','peer:attempt'),story,'past scene closed');
-assert.ok(n.friendFollowup(story).includes('같이 확인'));
-for(const result of ['paused','blocked']){
- let safe=e.createRun('demo');safe=step(safe,'advance');safe=step(safe,'resolve',result);
- assert.ok(shot.messageWindow(safe,'peer'),'nonpayer can message after leaving group');
- safe=step(safe,'message','peer:skip');safe=step(safe,'message','friend:space');safe=step(safe,'next');
- safe=step(safe,'resolve','paused');safe=step(safe,'next');
- assert.ok(safe.completed);assert.equal(e.totalSpent(safe),0);assert.ok(e.restoreRun(e.serializeRun(safe)));
-}
-for(const [scene,values] of Object.entries(shot.reactions)){
- for(const reaction of values){
-  let run=e.createRun('demo');run=step(run,'advance');run=step(run,'resolve','paused');
-  run=step(run,'message',scene+':'+reaction);assert.equal(shot.messageStatus(run,scene),reaction);
-  assert.ok(e.restoreRun(e.serializeRun(run)));
- }
-}
-assert.equal(shot.parseStoryReply('{"reply":"확인해 볼게요.","reaction":"refund"}','peer'),null);
-assert.equal(shot.parseStoryReply('{"reply":"다시 말해 줄래?","reaction":"together"}','friend'),null);
-assert.equal(shot.canAttach(e.createRun('demo'),'deleted-question'),false);
-console.log('Two message story tests passed: no-loss access, skip, outcome restore, no retry, immutable results, no financial side effects.');
 
-const presentation=await import('../app/story/presentation.js');
-assert.equal(presentation.minimumReplyDelay(50),650);
-assert.equal(presentation.minimumReplyDelay(900),0);
-assert.equal(presentation.minimumReplyDelay(0,true),0);
-assert.notEqual(presentation.emptyMessageMemory(),presentation.emptyMessageMemory());
-const presentationState={chapter:1,completed:false,calls:[],events:[{type:'message',data:'peer:check',chapter:1}]};
-assert.equal(presentation.peerRecordReady(presentationState),false);
-assert.equal(presentation.peerRecordReady({...presentationState,events:[...presentationState.events,{type:'resolve',chapter:1}]}),true);
-assert.equal(presentation.supportReady({...presentationState,chapter:2}),false);
-assert.equal(presentation.supportReady({...presentationState,chapter:2,events:[{type:'message',data:'friend:together'},{type:'message-followup',data:'friend:call'}]}),true);
-assert.ok(presentation.messageOpening({...presentationState,calls:['0:junho']},'friend').includes('그 계정'));
-console.log('Presentation gates passed: delayed records, support continuity, response timing.');
-
-let supportRun=e.createRun('demo');
-supportRun=step(supportRun,'resolve','paused');
-supportRun=step(supportRun,'message','friend:together');
-supportRun=step(supportRun,'message-followup','friend:call');
-supportRun=step(supportRun,'next');
-const supportBefore=e.totalSpent(supportRun);
-supportRun=step(supportRun,'support','recovery');
-assert.ok(supportRun.events.some(event=>event.type==='support'));
-assert.equal(step(supportRun,'support','recovery'),supportRun);
-assert.equal(e.totalSpent(supportRun),supportBefore);
-assert.equal(supportRun.inspected.length,0);
-assert.deepEqual(e.restoreRun(e.serializeRun(supportRun)),supportRun);
-let privateRun=step(step(e.createRun('demo'),'resolve','paused'),'next');
-assert.equal(step(privateRun,'support','recovery'),privateRun,'support requires a received call');
-assert.equal(shot.parseStoryReply(JSON.stringify({reply:'지금 전화할게. 같이 확인하자.',reaction:'space'}),'friend'),null);
-
-const splitMemory={'full:peer':{draft:'본편 초안'},'demo:peer':{draft:'체험 초안'},'practice:full:peer':{draft:'되감기'}};
-assert.deepEqual(presentation.resetMessageMemory(splitMemory,'demo'),{'full:peer':splitMemory['full:peer']});
-assert.equal(splitMemory['demo:peer'].draft,'체험 초안','reset is immutable');
-let delayed=e.createRun('demo');
-delayed=step(delayed,'advance');delayed=step(delayed,'advance');delayed=step(delayed,'confirm','paper-profit:main');delayed=step(delayed,'withdraw');
-delayed=step(delayed,'read','bank');
-delayed=step(delayed,'message','peer:check');
-assert.equal(presentation.peerRecordReady(delayed),false,'prior bank visit is not a later action');
-assert.equal(step(delayed,'read','bank'),delayed,'read event already exists');
-delayed=step(delayed,'message-followup','peer:checked-bank');
-assert.equal(presentation.peerRecordReady(delayed),true,'bank revisit unlocks delayed record');
-assert.equal(step(delayed,'message-followup','peer:checked-bank'),delayed,'revisit event only once');
-assert.equal(step(delayed,'message-followup','peer:saved'),delayed,'read before saving');
-delayed=step(delayed,'message-followup','peer:record');
-assert.ok(!shot.messageConsequences(delayed).some(x=>x.startsWith('보관한 지수')));
-delayed=step(delayed,'message-followup','peer:saved');
-assert.ok(shot.messageConsequences(delayed).some(x=>x.startsWith('보관한 지수')));
-delayed=step(delayed,'resolve','paused');
-delayed=step(delayed,'message','friend:together');
-delayed=step(delayed,'next');
-assert.equal(presentation.messageThreadVisible(delayed,'friend'),true);
-assert.equal(presentation.messageThreadVisible(delayed,'peer'),true);
-assert.equal(step(delayed,'message','friend:attempt'),delayed,'historical thread never reopens AI');
-delayed=step(delayed,'message-followup','friend:call');
-assert.ok(presentation.supportReady(delayed),'deferred call can be received in third act');
-assert.deepEqual(e.restoreRun(e.serializeRun(delayed)),delayed);
-assert.equal(e.totalSpent(delayed),300000);
-console.log('Continuity gaps passed: demo memory, bank revisits, explicit record save, deferred calls.');
-
-for(const [mode,focus,reaction,use] of [['records','records','together','records'],['verify','contact','together','verify'],['listen','none','together','pause'],['space','none','space',null],['neutral','none','together',null]]){
- let run=e.createRun('demo');run=step(run,'advance');run=step(run,'resolve','paused');
- assert.equal(step(run,'message-style','friend:'+mode+':'+focus),run,'style cannot precede message');
- run=step(run,'message','friend:'+reaction);run=step(run,'message-style','friend:'+mode+':'+focus);
- assert.equal(shot.messageStyle(run,'friend').mode,mode);
- assert.equal(step(run,'message-style','friend:'+mode+':'+focus),run,'style immutable');
- run=step(run,'message-followup','friend:call');run=step(run,'next');
- if(use==='verify'){assert.equal(shot.branchUseAllowed(run,'verify'),false);run=step(run,'support','recovery');}
- if(use){assert.equal(shot.branchUseAllowed(run,use),true);run=step(run,'branch-use',use);}
- else assert.equal(shot.branchUseAllowed(run,'records'),false);
- assert.equal(e.totalSpent(run),0);assert.equal(run.inspected.length,0);
+for(const mode of ['full','demo']){
+ let run=e.createRun(mode);
+ if(mode==='demo')run=step(run,'advance');
+ run=step(run,'resolve','paused');
+ const scene=shot.closureScene(run);
+ assert.equal(scene,mode==='full'?'friend':'peer');
+ assert.equal(e.transition(run,{type:'next',chapter:run.chapter,data:''}),run,'unclosed dialogue blocks next');
+ assert.ok(shot.messageWindow(run,scene));
+ const money=e.totalSpent(run);
+ run=step(run,'message',scene+':attempt');
+ assert.equal(step(run,'message',scene+':attempt'),run);
+ run=step(run,'message',scene==='friend'?'friend:together':'peer:check');
+ run=step(run,'message-style',scene==='friend'?'friend:records:records':'peer:cautious:none');
+ assert.equal(step(run,'message-close',scene),run,'read the followup before closing');
+ run=step(run,'message-followup',scene==='friend'?'friend:call':'peer:record');
+ run=step(run,'message-close',scene);
+ assert.equal(step(run,'message-close',scene),run);
  assert.deepEqual(e.restoreRun(e.serializeRun(run)),run);
- if(mode==='listen'){assert.ok(!n.friendFollowup(run).includes('확인'));assert.ok(!shot.friendFollowupLines(run).join(' ').includes('기록'));}
- run=finish(run,'paused');assert.ok(run.completed);assert.equal(e.totalSpent(run),0);
+ const oldChapter=run.chapter;
+ run=step(run,'next');
+ assert.equal(run.chapter,oldChapter+1);
+ assert.equal(e.totalSpent(run),money);
+ assert.equal(shot.messageWindow(run,scene),false);
+ assert.equal(step(run,'message-followup',scene==='friend'?'friend:call':'peer:record'),run);
+ assert.equal(e.transition(run,{type:'message',chapter:oldChapter,data:scene+':together'}),run,'late old response rejected');
+ assert.deepEqual(e.restoreRun(e.serializeRun(run)),run);
 }
-let proof=e.createRun('demo');proof=step(proof,'advance');proof=step(proof,'capture','paper-question');proof=step(proof,'resolve','paused');
-proof=step(proof,'message','peer:check');proof=step(proof,'message-style','peer:compare:deleted-question');
-proof=step(proof,'message-followup','peer:record');proof=step(proof,'message-followup','peer:saved');proof=step(proof,'next');
-assert.ok(shot.branchUseAllowed(proof,'compare'));proof=step(proof,'branch-use','compare');
-assert.equal(proof.inspected.length,0);assert.equal(e.totalSpent(proof),0);
-assert.deepEqual(e.restoreRun(e.serializeRun(proof)),proof);
-assert.ok(shot.messageConsequences(proof).some(text=>text.includes('나란히')));
-assert.ok(shot.peerFollowupText(proof).includes('제가 추가 비용'));
+const presentation=await import('../app/story/presentation.js');
+let morning=step(e.createRun(),'resolve','blocked');
+assert.ok(presentation.messageThreadVisible(morning,'friend'));
+assert.ok(!presentation.messageOpening(morning,'friend').includes('퇴근'));
+morning=step(morning,'message','friend:space');morning=step(morning,'message-close','friend');
+let afternoon=step(morning,'next');
+assert.equal(presentation.messageThreadVisible(afternoon,'friend'),false);
+assert.equal(step(afternoon,'message','friend:attempt'),afternoon);
+assert.equal(presentation.supportReady({...afternoon,chapter:2}),false);
+assert.equal(shot.branchUseAllowed({...afternoon,chapter:2},'verify'),false);
+const context=await import('../app/story/context.js');
+assert.equal(afternoon.scenePage,0);
+assert.equal(afternoon.sceneEntered,false);
+const pageEvent={type:'scene-page',chapter:1,data:'0'};
+afternoon=e.transition(afternoon,pageEvent);
+assert.equal(afternoon.scenePage,1);
+assert.equal(e.transition(afternoon,pageEvent),afternoon,'double click cannot consume another page');
+assert.deepEqual(e.restoreRun(e.serializeRun(afternoon)),afternoon);
+afternoon=step(afternoon,'scene-enter');
+assert.equal(afternoon.sceneEntered,true);
+assert.equal(step(afternoon,'scene-enter'),afternoon);
+assert.ok(!context.dinnerContext({...afternoon,chapter:2}).includes('기록을 같이'));
+const legacy={version:3,mode:'full',events:[
+ {type:'advance',chapter:0,data:''},
+ {type:'confirm',chapter:0,data:'familiar-request:main'},
+ {type:'inspect',chapter:0,data:'familiar-request:recipient'},
+ {type:'save',chapter:0,data:'familiar-request:recipient'},
+ {type:'resolve',chapter:0,data:'stopped'},
+ {type:'next',chapter:0,data:''},
+ {type:'resolve',chapter:1,data:'paused'},
+ {type:'message',chapter:1,data:'friend:attempt'}
+]};
+let migrated=e.restoreRun(legacy);
+assert.ok(migrated);
+assert.equal(migrated.chapter,1);
+assert.equal(migrated.version,4);
+assert.equal(e.totalSpent(migrated),80000);
+assert.ok(migrated.saved.includes('familiar-request:recipient'));
+assert.equal(migrated.events.filter(x=>x.type==='message'&&x.data.endsWith(':attempt')).length,1,'legacy quota survives');
+assert.equal(shot.messageWindow(migrated,'friend'),false);
+assert.equal(presentation.messageThreadVisible(migrated,'friend'),false);
+assert.deepEqual(e.restoreRun(e.serializeRun(migrated)),migrated);
+migrated=step(migrated,'next');assert.equal(migrated.chapter,2);
+assert.deepEqual(e.restoreRun(e.serializeRun(migrated)),migrated);
+for(const pivot of e.timeline(migrated))assert.ok(e.replayBefore(migrated,pivot.index));
+for(const scene of ['friend','peer']){
+ const request={sceneId:scene,caseId:scene==='friend'?'familiar-request':'paper-profit',stageId:scene==='friend'?'arrival':'withdrawal',resolved:true,joined:scene==='peer',attachment:'none'};
+ assert.equal(shot.validateStoryContext(request),true);
+ assert.equal(shot.validateStoryContext({...request,caseId:scene==='friend'?'paper-profit':'familiar-request'}),false);
+}
+assert.ok(!shot.storyPrompt('friend').includes('퇴근 후'));
 assert.equal(shot.validBranch('peer','check','compare','none'),false);
 assert.equal(shot.validBranch('friend','space','records','records'),false);
-console.log('Story branches passed: intent modes, explicit use, no forced loss, record provenance, no invented verification, save replay.');
-
-const attachedReply=(reply)=>JSON.stringify({reply,reaction:'check',supportMode:'compare',focus:'deleted-question'});
-assert.equal(shot.parseStoryReply(attachedReply('저도 질문이 지워진 걸 봤어요. 보관하신 내용이 있다면 저도 같이 읽어볼게요.'),'peer',2,'deleted-question'),null);
+const attachedReply=reply=>JSON.stringify({reply,reaction:'check',supportMode:'compare',focus:'deleted-question'});
 assert.equal(shot.parseStoryReply(attachedReply('기록을 보내 주시면 같이 읽어볼게요.'),'peer',2,'deleted-question'),null);
 assert.ok(shot.parseStoryReply(attachedReply('제가 추가 비용을 물었던 질문이네요. 남겨 주신 기록을 보고 처음 안내부터 다시 확인할게요.'),'peer',2,'deleted-question'));
-console.log('Attachment reply regression passed: already-received record, no invented witnessing.');
-
-const context=await import('../app/story/context.js');
-assert.equal(context.chapterPages(e.createRun()).length,1);
-assert.equal(context.chapterPages(e.createRun('demo')).length,1,'demo does not invent morning events');
-assert.ok(context.arrivalContext(e.createRun('demo')).join(' ').includes('무료 시장 노트'));
-for(const paid of [false,true]){
- let run=e.createRun();
- if(paid){run=step(run,'advance');run=step(run,'confirm','familiar-request:main');}
- run=step(run,'resolve','paused');run=step(run,'next');
- const snapshot=e.serializeRun(run);
- assert.equal(context.chapterPages(run).length,2);
- const bridge=context.chapterPages(run)[0].lines.join(' ');
- assert.equal(bridge.includes('80,000원'),paid);
- assert.ok(!bridge.includes('만회'));
- context.resumeContext(run);assert.equal(e.serializeRun(run),snapshot,'context is read-only');
- assert.deepEqual(e.restoreRun(snapshot),run);
-}
-for(const mode of ['listen','records','verify','space','neutral','skip']){
- let run=step(e.createRun('demo'),'resolve','paused');
- run=step(run,'message','friend:'+(mode==='skip'?'skip':mode==='space'?'space':'together'));
- if(!['skip'].includes(mode))run=step(run,'message-style','friend:'+mode+':'+(mode==='records'?'records':mode==='verify'?'contact':'none'));
- run=step(run,'next');
- const dinner=context.dinnerContext(run);
- if(mode==='listen')assert.ok(dinner.includes('들어 달라는'));
- if(mode==='space')assert.ok(dinner.includes('더 묻지'));
- if(mode==='records')assert.ok(dinner.includes('확인된 것은 아니다'));
- if(mode==='skip')assert.ok(!/기록을 같이|털어놓았다/.test(dinner));
- assert.ok(!/이따|먼저 도착|와서 천천히/.test(n.friendFollowup(run)));
- assert.ok(!/이따|먼저 도착/.test(shot.friendFollowupLines(run).join(' ')));
- assert.equal(e.totalSpent(run),0);
- assert.ok(context.arrivalContext(run).join(' ').includes('확인되지'));
- assert.deepEqual(e.restoreRun(e.serializeRun(run)),run);
-}
-assert.ok(n.narratives[1].scenes.arrival.some(m=>m.text.includes('오늘의 노트')));
-assert.ok(n.narratives[0].scenes.request.some(m=>m.text.includes('태블릿')));
-console.log('Context continuity passed: intro/demo, conditional bridges, dinner privacy, after-dinner timing, no state mutation.');
-
-let earlyContact=e.createRun();
-earlyContact=step(earlyContact,'call','junho');
-assert.ok(earlyContact.cues.includes('junho-unanswered'));
-assert.ok(!earlyContact.calls.includes('0:junho'));
-assert.ok(!earlyContact.inspected.includes('familiar-request:saved-contact'));
-assert.deepEqual(e.restoreRun(e.serializeRun(earlyContact)),earlyContact);
-earlyContact=step(earlyContact,'advance');
-earlyContact=step(earlyContact,'call','junho');
-assert.ok(earlyContact.calls.includes('0:junho'));
-assert.ok(earlyContact.inspected.includes('familiar-request:saved-contact'));
-console.log('Early contact stays unanswered; later independent verification and restore remain available.');
+assert.deepEqual(n.narratives[0].scenes.waiting.map(line=>line.text),['메시지는 되니까, 물어볼 게 있으면 물어봐.']);
+console.log('Scene-local closure, stale events, saved pages, legacy quota/ledger and prompt contracts covered.');

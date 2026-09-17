@@ -12,7 +12,10 @@ const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext
 const ui=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
 const noop=()=>{};
 let state=engine.createRun();
-const step=(type,data='')=>{state=engine.transition(state,{type,data,chapter:state.chapter});};
+const step=(type,data='')=>{
+ if(type==='next'&&state.chapter===0){state=engine.transition(state,{type:'message',data:'friend:skip',chapter:0});state=engine.transition(state,{type:'message-close',data:'friend',chapter:0});}
+ state=engine.transition(state,{type,data,chapter:state.chapter});
+};
 let ledger=renderToStaticMarkup(createElement(ui.Ledger,{state}));
 assert.ok(ledger.includes('680,000원')&&ledger.includes('출금된 거래가 없습니다'));
 step('advance');step('confirm','familiar-request:main');
@@ -79,7 +82,7 @@ for(let step=0;step<4;step++)assert.ok(renderToStaticMarkup(createElement(ui.Clo
 assert.ok(client.includes('StoryMessage')&&client.includes('visualViewport')&&client.includes('openProfile'));
 assert.ok(!client.slice(client.indexOf("dialog==='reply'?")).includes('<textarea'));
 
-let messageSource=messageClient.replace("from './presentation'","from "+JSON.stringify(new URL('../app/story/presentation.js',import.meta.url).href)).replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './one-shot'","from "+JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
+let messageSource=messageClient.replace("from './engine'","from "+JSON.stringify(new URL('../app/story/engine.js',import.meta.url).href)).replace("from './presentation'","from "+JSON.stringify(new URL('../app/story/presentation.js',import.meta.url).href)).replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './one-shot'","from "+JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
 const bubbleJs=ts.transpileModule(await readFile('app/story/chat-bubbles.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime')));
 messageSource=messageSource.replace("from './chat-bubbles'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(bubbleJs).toString('base64')));
 const compiled=ts.transpileModule(messageSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime'))).replace("from 'react'","from "+JSON.stringify(import.meta.resolve('react')));
@@ -92,10 +95,10 @@ for(const aiAllowed of [false,true]){
 }
 console.log('One-shot message SSR passed: input opt-in, prepared alternative, profile and story context.');
 
-let late=engine.createRun('demo');
-for(const [type,data] of [['resolve','paused'],['message','friend:together'],['next','']])late=engine.transition(late,{type,data,chapter:late.chapter});
+let late=engine.createRun();
+for(const [type,data] of [['resolve','paused'],['message','friend:together']])late=engine.transition(late,{type,data,chapter:late.chapter});
 const lateHtml=renderToStaticMarkup(createElement(Message,{state:late,scene:'friend',aiAllowed:true,getSession:()=> 'test-ui-session-0001',remaining:1,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
-assert.ok(lateHtml.includes('연락 내용 보기')&&lateHtml.includes('내 연락으로 돌아가기'));
+assert.ok(lateHtml.includes('연락 내용 보기')&&lateHtml.includes('이 사건 마무리하기'));
 assert.ok(!lateHtml.includes('<textarea'),'history permits call, not another generation');
 const restoredHtml=renderToStaticMarkup(createElement(Message,{state:investment,scene:'peer',memory:{draft:'작성 중인 문장',sent:'첫 메시지',reply:'받은 답장',attachment:'none',sentAttachment:'none',preparedSent:'준비된 후속 메시지',callStep:0},aiAllowed:true,getSession:()=> 'test-ui-session-0001',remaining:1,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
 for(const line of ['작성 중인 문장','첫 메시지','받은 답장','준비된 후속 메시지'])assert.ok(restoredHtml.includes(line));
@@ -106,8 +109,8 @@ assert.ok(!messageClient.includes('음성 통화')&&!messageClient.includes('계
 assert.ok(messageClient.includes('연락 요약')&&client.includes('연락 요약 보기'));
 
 for(const [mode,focus] of [['records','records'],['listen','none']]){
- let branch=engine.createRun('demo');
- for(const [type,data] of [['resolve','paused'],['message','friend:together'],['message-style','friend:'+mode+':'+focus],['message-followup','friend:call']])branch=engine.transition(branch,{type,data,chapter:1});
+ let branch=engine.createRun();
+ for(const [type,data] of [['resolve','paused'],['message','friend:together'],['message-style','friend:'+mode+':'+focus],['message-followup','friend:call']])branch=engine.transition(branch,{type,data,chapter:0});
  const html=renderToStaticMarkup(createElement(Message,{state:branch,scene:'friend',memory:{draft:'',sent:'',reply:'',attachment:'none',sentAttachment:'none',preparedSent:'',callStep:4},aiAllowed:false,getSession:()=>'',remaining:0,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
  assert.ok(html.includes(mode==='listen'?'지금 다 설명':'화면에 적힌 금액'));
  if(mode==='listen')assert.ok(!html.includes('은행에서 실제로'));
@@ -129,10 +132,11 @@ interlude=engine.transition(interlude,{type:'next',data:'',chapter:1});
 for(const page of [0,1]){
  const html=renderToStaticMarkup(createElement(ui.ChapterScene,{state:interlude,page,onNext:noop,onContinue:noop}));
  assert.ok(html.includes(page===0?'약속은 그대로였다':'귀갓길에 도착한 연락'));
- assert.equal(html.includes('장면 건너뛰기'),page===0);
+ assert.equal(html.includes('장면 건너뛰기'),false);
+ assert.equal(html.includes('계속 진행'),page===0);
 }
 assert.ok(client.includes("setDialog(resume&&mainSaved.current?.completed?null:'chapter')"));
-assert.ok(client.includes("if(state.chapter<2){setChapterPage(0);setChapterResume(false);setDialog('chapter');}"));
+assert.ok(client.includes("if(current.chapter<2){setChapterResume(false);setDialog('chapter');}"));
 for(const label of ['점심시간으로','지금까지의 하루','도착한 새 연락 보기'])assert.ok(client.includes(label));
 console.log('Context SSR passed: entry, demo, resume, bridge skip, new-contact affordance.');
 
