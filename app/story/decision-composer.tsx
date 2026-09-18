@@ -11,6 +11,7 @@ export default function DecisionComposer({state,enabled,remaining,blocked,getSes
  const window=decisionWindow(state),available=decisionAvailable(state);
  const [draft,setDraft]=useState(''),[attachment,setAttachment]=useState('none'),[sent,setSent]=useState(''),[reply,setReply]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const pending=useRef(false),controller=useRef<AbortController|null>(null),mounted=useRef(true);
+ const [scripted,setScripted]=useState(false);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;controller.current?.abort();};},[]);
  useEffect(()=>{if(blocked||!enabled)controller.current?.abort();},[blocked,enabled]);
  const attempted=window&&decisionAttempted(state,window.id);
@@ -24,10 +25,11 @@ export default function DecisionComposer({state,enabled,remaining,blocked,getSes
   try{
    const checks=decisionChecks(state);if(state.events.some(e=>e.type==='capture'&&e.data==='paper-question'))checks.push('paper-question');
    const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':getSession()},signal:aborter.signal,body:JSON.stringify({contractVersion:2,inputMode:'decision-message',caseId:window.caseId,sceneId:window.id,stageId:state.stage,resolved:false,joined:state.joined,attachment,choices:chosenIds(state),checks,messages:[{role:'user',content:text}],userTurnCount:1})});
-   const value=await response.json() as {provider?:unknown;reply?:unknown;reaction?:unknown};
-   if(!response.ok||value.provider!=='gemini'||typeof value.reply!=='string'||typeof value.reaction!=='string'||!decisionReactions.includes(value.reaction)||!validateAiReply(value.reply,undefined,'normal','story')||/[?？]/.test(value.reply))throw Error('unavailable');
+   const value=await response.json() as {provider?:unknown;reply?:unknown;reaction?:unknown;fallbackReason?:unknown};
+   const fallback=value.provider==='scripted'&&value.fallbackReason==='reply_quality';
+   if(!response.ok||(value.provider!=='gemini'&&!fallback)||typeof value.reply!=='string'||typeof value.reaction!=='string'||!decisionReactions.includes(value.reaction)||!validateAiReply(value.reply,undefined,'normal','story')||/[?？]/.test(value.reply))throw Error('unavailable');
    if(!mounted.current||aborter.signal.aborted)return;
-   if(onEvent('decision-result',window.id+':'+value.reaction+':'+attachment))setReply(value.reply);
+   if(onEvent('decision-result',window.id+':'+value.reaction+':'+attachment)){setReply(value.reply);setScripted(fallback);}
   }catch{if(mounted.current)setError('AI 답장을 받지 못했습니다. 다시 요청하지 않고 준비된 답장으로 계속할 수 있습니다.');}
   finally{clearTimeout(timer);pending.current=false;if(mounted.current){setBusy(false);if(aborter.signal.aborted)setError('전송이 중단됐습니다. 재요청 없이 준비된 답장으로 계속할 수 있습니다.');}}
  }
@@ -36,6 +38,7 @@ export default function DecisionComposer({state,enabled,remaining,blocked,getSes
   {sent&&<ChatBubbles speaker="나" text={sent}>{attachment!=='none'&&<small>첨부 · {attachmentText[attachment as keyof typeof attachmentText]}</small>}</ChatBubbles>}
   {busy&&<p className="typing" role="status">{['준호 · 새 계정','온결 리서치','회복 지원 상담'][state.chapter]} 입력 중 …</p>}
   {reply&&<ChatBubbles speaker={['준호','온결 리서치','회복 지원 상담'][state.chapter]} text={reply}/>}
+  {scripted&&<small className="fine">답변 품질 기준에 따라 준비된 대사로 이어졌습니다. 추가 AI 호출은 없습니다.</small>}
   {error&&<p className="message-error" role="status">{error}</p>}
   {attempted&&!busy&&!reply&&!error&&<p className="fine">이 확인 구간에서는 이미 AI를 사용했습니다. 원문은 저장하지 않으며 아래 선택으로 계속할 수 있습니다.</p>}
   {!attempted&&<details className="prepared-message"><summary>직접 답장하기</summary>{enabled&&remaining>0?<form className="story-message-composer" onSubmit={send}>

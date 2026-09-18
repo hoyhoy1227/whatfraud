@@ -32,6 +32,8 @@ for(const [index,test] of tests.entries()){
    replies++;
    if(payload.reaction!==test.expected)problems.push('intent '+payload.reaction+' expected '+test.expected);
    if(typeof payload.reply!=='string'||payload.reply.length>140||/[?？]/.test(payload.reply))problems.push('reply format');
+   if(test.body.attachment!=='none'&&test.expected!=='refuse'&&typeof payload.reply==='string'&&payload.reply.length<25)problems.push('attachment reaction too generic/short');
+   if(test.body.inputMode==='decision-message'&&/진행하지 않는 것이 맞|올바른 판단|잘하셨/.test(payload.reply))problems.push('NPC sounds like safety instructor');
    if(/환급.*완료|신고.*완료|돌려받았|고객님/.test(payload.reply))problems.push('unsupported fact/tone');
   }
   if(problems.length)failures++;

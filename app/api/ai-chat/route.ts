@@ -1,4 +1,4 @@
-import {validateDecisionContext,decisionPrompt,parseDecisionReply,decisionReactions,AI_CASE_LIMITS,AI_RUN_LIMIT} from '../../story/decision-message.js';
+import {validateDecisionContext,decisionPrompt,parseDecisionReply,decisionReplyIssue,decisionFallback,decisionReactions,AI_CASE_LIMITS,AI_RUN_LIMIT} from '../../story/decision-message.js';
 import { validateStoryContext, storyPrompt, parseStoryReply, branchModes, branchFocus } from '../../story/one-shot.js';
 import { reserveSharedBudget } from '../ai-budget';
 import { sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
@@ -295,6 +295,12 @@ async function handleChat(request: Request, body: ChatBody) {
     const result = isDecision?parseDecisionReply(extractGeminiText(payload)):parseStoryReply(extractGeminiText(payload),sceneId,contractVersion,body.attachment as string);
     if (!result) return json({ code: 'unsafe_response', validation: 'story_contract' }, 502);
     if (!validateAiReply(result.reply, undefined, replyMode, 'story')) return json({ code: 'unsafe_response', validation: 'reply_policy' }, 502);
+    const qualityIssue=isDecision?decisionReplyIssue(result,body.attachment as string):null;
+    if(qualityIssue){
+      const reply=decisionFallback(body,result.reaction);
+      if(!validateAiReply(reply,undefined,replyMode,'story'))return json({code:'unsafe_response',validation:'fallback_policy'},502);
+      return json({reply,reaction:result.reaction,provider:'scripted',model:null,fallbackReason:'reply_quality'});
+    }
     return json({ reply:result.reply, reaction:result.reaction, provider: 'gemini', model: GEMINI_MODEL, ...(!isDecision&&contractVersion===2?{supportMode:result.supportMode,focus:result.focus}: {}) });
   } catch (error) {
     providerPausedUntil = Date.now() + 30_000;
