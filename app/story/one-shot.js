@@ -205,8 +205,8 @@ export function attachmentEventAllowed(state,data){
 }
 export function attachmentReply(scene,id){
  if(scene==='friend')return ({
- 'account-profile':'내 이름인데 친구로 등록도 안 된 계정이네. 나한테 먼저 보여 줘서 다행이야. 그 계정은 내가 쓰는 게 아니야.',
- 'recipient-note':'한별 서비스? 내가 결제해 달라고 한 곳이 아니야. 내 이름으로 다른 곳에 보내 달라는 거였구나.',
+  'account-profile':'내 이름이지만 그 새 계정은 내가 쓰는 게 아니야. 나한테 먼저 보여 줘서 다행이야.',
+  'recipient-note':'한별 서비스는 내가 결제해 달라고 한 곳이 아니야. 그 새 계정도 내가 쓰는 게 아니야.',
  'old-chat-note':'맞아, 어제 약속은 원래 번호로 연락하자고 했지. 결제 부탁은 안 했어.',
  'contact-check':'아까 확인한 대화 그대로야. 그 새 계정은 내 것이 아니고, 결제를 부탁하지도 않았어.'
  })[id]??storyMessages.friend.reply;

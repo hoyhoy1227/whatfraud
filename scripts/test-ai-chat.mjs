@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
+import { attachmentReply, parseStoryReply } from '../app/story/one-shot.js';
 
 const cases = JSON.parse(await readFile(new URL('../content/generated/cases.json', import.meta.url), 'utf8'));
 const dialogueSource = await readFile(new URL('../app/ai-dialogue.ts', import.meta.url), 'utf8');
@@ -127,7 +128,28 @@ try{
  assert.equal((await (await route.POST(request('첨부 없음',undefined,{contractVersion:2}))).json()).validation,'story_contract');
  route=await freshRoute();globalThis.fetch=async()=>Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({reply:'기록부터 같이 보자.',reaction:'together',supportMode:'listen',focus:'none'})}]}}]});
  assert.equal((await (await route.POST(request('그냥 들어 줘',undefined,{sceneId:'friend',resolved:true,contractVersion:2}))).json()).validation,'story_contract');
- console.log('One-shot AI tests passed: two windows, legacy disabled, exact coalescing, no retry, schema, provider and shared-budget failures.');
+ // Reproduce an otherwise valid model response that omits Junho's known identity.
+ // Canonical replacements must satisfy BOTH server policy and the client contract.
+ for(const attachment of ['none','account-profile','recipient-note','old-chat-note','contact-check']){
+  route=await freshRoute();calls=0;
+  const generated={reply:'내 이름으로 온 연락이라니 당황스럽네. 기록부터 같이 보자.',reaction:'together',supportMode:'records',focus:'records'};
+  globalThis.fetch=async()=>{calls++;return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(generated)}]}}]});};
+  const overrides={sceneId:'friend',resolved:true,attachment,contractVersion:2};
+  const input='네 이름으로 새 계정에서 연락이 왔어. 이 기록 같이 확인해 줘.';
+  const response=await route.POST(request(input,undefined,overrides));
+  assert.equal(response.status,200,attachment+': canonical fallback must not cause 502');
+  const result=await response.json();
+  assert.equal(result.provider,'scripted');
+  assert.equal(result.fallbackReason,'reply_quality');
+  assert.equal(result.model,null);
+  if(attachment!=='none')assert.equal(result.reply,attachmentReply('friend',attachment));
+  assert.equal(dialogue.validateAiReply(result.reply,undefined,'normal','story'),true,attachment);
+  assert.ok(parseStoryReply(JSON.stringify({...generated,reply:result.reply}),'friend',2,attachment),attachment+': client must accept fallback');
+  assert.equal(calls,1,'fallback must not retry Gemini');
+  assert.equal((await route.POST(request(input,undefined,overrides))).status,200);
+  assert.equal(calls,1,'duplicate must reuse fallback');
+ }
+ console.log('One-shot AI tests passed, including all five friend identity fallback variants without provider retries.');
 }finally{
  if(originalEnabled===undefined)delete process.env.GEMINI_ENABLED;else process.env.GEMINI_ENABLED=originalEnabled;
  if(originalKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=originalKey;
