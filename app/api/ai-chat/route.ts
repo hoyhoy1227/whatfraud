@@ -1,5 +1,5 @@
 import {validateDecisionContext,decisionPrompt,parseDecisionReply,decisionReplyIssue,decisionFallback,decisionReactions,AI_CASE_LIMITS,AI_RUN_LIMIT} from '../../story/decision-message.js';
-import { validateStoryContext, storyPrompt, parseStoryReply, branchModes, branchFocus } from '../../story/one-shot.js';
+import { validateStoryContext, storyPrompt, parseStoryReply, branchModes, branchFocus, friendIdentityFallback } from '../../story/one-shot.js';
 import { reserveSharedBudget } from '../ai-budget';
 import { sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
 import { cases } from '../../game-data';
@@ -295,6 +295,11 @@ async function handleChat(request: Request, body: ChatBody) {
     const result = isDecision?parseDecisionReply(extractGeminiText(payload)):parseStoryReply(extractGeminiText(payload),sceneId,contractVersion,body.attachment as string);
     if (!result) return json({ code: 'unsafe_response', validation: 'story_contract' }, 502);
     if (!validateAiReply(result.reply, undefined, replyMode, 'story')) return json({ code: 'unsafe_response', validation: 'reply_policy' }, 502);
+    const identityReply=!isDecision&&sceneId==='friend'&&contractVersion===2?friendIdentityFallback(result,body.attachment as string,messages.at(-1)?.content??''):null;
+    if(identityReply){
+      if(!validateAiReply(identityReply,undefined,replyMode,'story'))return json({code:'unsafe_response',validation:'fallback_policy'},502);
+      return json({reply:identityReply,reaction:result.reaction,supportMode:result.supportMode,focus:result.focus,provider:'scripted',model:null,fallbackReason:'reply_quality'});
+    }
     const qualityIssue=isDecision?decisionReplyIssue(result,body.attachment as string,messages.at(-1)?.content??''):null;
     if(qualityIssue){
       const reply=decisionFallback(body,result.reaction);

@@ -16,6 +16,10 @@ assert.equal(parseDecisionReply('{"reply":"계정 정보를 다시 설명할게.
 assert.equal(parseDecisionReply('{"reply":"다시 보내 줄래?","reaction":"share"}'),null);
 assert.equal(validateDecisionContext({caseId:'familiar-request',sceneId:'familiar-check',stageId:'paid',resolved:false,joined:false,attachment:'none',choices:[],checks:[]}),false);
 console.log('Decision message guards passed.');
+const {friendIdentityFallback}=await import('../app/story/one-shot.js');
+assert.match(friendIdentityFallback({supportMode:'records',reply:'내 이름으로 온 건데 받는 곳이 다르다니 이상하네. 보낸 기록 같이 확인해 보자.'},'recipient-note'),/내가 결제해 달라고 한 곳이 아니야/);
+assert.equal(friendIdentityFallback({supportMode:'verify',reply:'그 계정은 내가 아니야. 알려줘서 고마워.'},'account-profile'),null);
+assert.equal(friendIdentityFallback({supportMode:'listen',reply:'응, 지금은 그냥 들을게.'},'recipient-note'),null);
 assert.equal(decisionReplyIssue({reaction:'refuse',reply:'알겠습니다. 다시 연락하지 않겠습니다.'}),null);
 assert.equal(decisionReplyIssue({reaction:'refuse',reply:'알겠습니다. 언제든 다시 연락해 주세요.'}),'reopened_boundary');
 assert.equal(decisionReplyIssue({reaction:'verify',reply:'알겠어. 그럼 그렇게 해.'}),'generic_reply');

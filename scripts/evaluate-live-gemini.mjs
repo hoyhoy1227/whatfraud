@@ -35,9 +35,10 @@ for(const [index,test] of tests.entries()){
    if(test.body.attachment!=='none'&&test.expected!=='refuse'&&typeof payload.reply==='string'&&payload.reply.length<25)problems.push('attachment reaction too generic/short');
    if(test.body.inputMode==='decision-message'&&/진행하지 않는 것이 맞|올바른 판단|잘하셨/.test(payload.reply))problems.push('NPC sounds like safety instructor');
    if(/환급.*완료|신고.*완료|돌려받았|고객님/.test(payload.reply))problems.push('unsupported fact/tone');
+   if(test.label==='실제 준호'&&!/(?:내(?:가|\s*(?:것|계정))|나(?:는|랑)?).{0,18}(?:아니|달라)|부탁.{0,12}(?:안\s*했|한\s*적\s*없)/.test(payload.reply))problems.push('real friend omitted identity confirmation');
   }
   if(problems.length)failures++;
-  console.log(JSON.stringify({label:test.label,status:response.status,provider:payload.provider,reply:payload.reply,reaction:payload.reaction,supportMode:payload.supportMode,focus:payload.focus,problems}));
+  console.log(JSON.stringify({label:test.label,status:response.status,provider:payload.provider,reply:payload.reply,reaction:payload.reaction,supportMode:payload.supportMode,focus:payload.focus,validation:payload.validation,problems}));
   // Never retry; stop on quota/cooldown/server failure.
   if(!response.ok&&(response.status===429||response.status>=500))break;
  }catch(error){failures++;console.log(JSON.stringify({label:test.label,error:error.name}));break;}

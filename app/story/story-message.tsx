@@ -51,8 +51,9 @@ export default function StoryMessage({embedded=false,memory=emptyMessageMemory()
   const timer=setTimeout(()=>aborter.abort(),10000);
   try{
    const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':getSession()},signal:aborter.signal,body:JSON.stringify({contractVersion:2,caseId:currentCase(state).id,stageId:state.stage,sceneId:scene,resolved:state.results.some(r=>r.chapter===state.chapter),joined:state.joined,attachment,inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1})});
-   const value=await response.json() as {reply?:unknown;provider?:unknown;reaction?:unknown;supportMode?:unknown;focus?:unknown};
-   if(!response.ok||value.provider!=='gemini'||typeof value.reply!=='string'||!validateAiReply(value.reply,undefined,'normal','story')||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply)||!validBranch(scene,value.reaction,value.supportMode,value.focus))throw Error('unavailable');
+   const value=await response.json() as {reply?:unknown;provider?:unknown;reaction?:unknown;supportMode?:unknown;focus?:unknown;fallbackReason?:unknown};
+   const preparedFallback=value.provider==='scripted'&&value.fallbackReason==='reply_quality';
+   if(!response.ok||(value.provider!=='gemini'&&!preparedFallback)||typeof value.reply!=='string'||!validateAiReply(value.reply,undefined,'normal','story')||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply)||!validBranch(scene,value.reaction,value.supportMode,value.focus))throw Error('unavailable');
    if(!reduced)await new Promise<void>(resolve=>{const wait=setTimeout(resolve,minimumReplyDelay(performance.now()-dispatched,reduced));aborter.signal.addEventListener('abort',()=>{clearTimeout(wait);resolve();},{once:true});});
    if(!mounted.current||aborter.signal.aborted)return;
    if(onEvent('message',scene+':'+value.reaction)){onEvent('message-style',scene+':'+value.supportMode+':'+value.focus);setReply(value.reply);}

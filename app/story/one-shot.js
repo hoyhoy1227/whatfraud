@@ -212,6 +212,14 @@ export function attachmentReply(scene,id){
  })[id]??storyMessages.friend.reply;
  return id==='terms-note'?'처음에는 없던 비용이 여기서 붙었네요. 바로 보내지 말고 이 부분부터 확인해 볼게요.':id==='deleted-question'?'제가 남긴 질문이네요. 아직 답을 못 받았어요. 이 내용 확인할 때까지 입금은 미룰게요.':'자료를 읽는 것과 참여는 별개라고 적혀 있네요. 지금 요구와 같은 조건인지 먼저 확인할게요.';
 }
+// Canonical identity is known to the real friend; do not make the player
+// ask the same person again when a generated response omits that answer.
+export function friendIdentityFallback(result,attachment='none',text=''){
+ if(!['records','verify'].includes(result.supportMode))return null;
+ if(attachment==='none'&&!/새\s*계정|사칭|네\s*이름|너\s*맞|너야/.test(text))return null;
+ if(/(?:내(?:가|\s*(?:것|계정))|나(?:는|랑)?|쓰는\s*(?:게|거)).{0,18}(?:아니|달라)|부탁.{0,12}(?:안\s*했|한\s*적\s*없)/.test(result.reply))return null;
+ return attachment==='none'?'그 새 계정은 내가 아니야. 내 이름으로 온 연락이라니 나도 당황스럽네.':attachmentReply('friend',attachment);
+}
 export function attachmentOutcome(scene,id){
  return scene==='friend'?(id==='contact-check'?'이미 확인한 사칭 연락을 함께 정리했다.':id==='old-chat-note'?'원래 연락처로 확인하기로 한 약속을 대조했다.':'새 계정의 주장과 실제 준호의 설명을 구분했다.')
  :id==='terms-note'?'추가 비용이 뒤늦게 등장한 지점을 짚었다.':id==='deleted-question'?'답을 받지 못한 질문을 남겼다.':'처음 안내의 조건을 기준으로 비교했다.';
