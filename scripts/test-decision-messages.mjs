@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createRun,transition,serializeRun,restoreRun,totalSpent} from '../app/story/engine.js';
 import {narratives} from '../app/story/narrative.js';
-import {AI_RUN_LIMIT,AI_CASE_LIMITS,decisionAvailable,decisionConsequence,validateDecisionContext,parseDecisionReply} from '../app/story/decision-message.js';
+import {AI_RUN_LIMIT,AI_CASE_LIMITS,decisionAvailable,decisionConsequence,validateDecisionContext,parseDecisionReply,decisionReplyIssue} from '../app/story/decision-message.js';
 assert.equal(AI_RUN_LIMIT,5);assert.deepEqual(AI_CASE_LIMITS,[2,2,1]);
 let state=createRun();const step=(type,data='')=>{state=transition(state,{type,data,chapter:state.chapter});};
 step('advance');step('inspect','familiar-request:recipient');
@@ -16,3 +16,11 @@ assert.equal(parseDecisionReply('{"reply":"계정 정보를 다시 설명할게.
 assert.equal(parseDecisionReply('{"reply":"다시 보내 줄래?","reaction":"share"}'),null);
 assert.equal(validateDecisionContext({caseId:'familiar-request',sceneId:'familiar-check',stageId:'paid',resolved:false,joined:false,attachment:'none',choices:[],checks:[]}),false);
 console.log('Decision message guards passed.');
+assert.equal(decisionReplyIssue({reaction:'refuse',reply:'알겠습니다. 다시 연락하지 않겠습니다.'}),null);
+assert.equal(decisionReplyIssue({reaction:'refuse',reply:'알겠습니다. 언제든 다시 연락해 주세요.'}),'reopened_boundary');
+assert.equal(decisionReplyIssue({reaction:'verify',reply:'알겠어. 그럼 그렇게 해.'}),'generic_reply');
+assert.equal(decisionReplyIssue({reaction:'clarify',reply:'안내는 모두 이곳에서 드리고 있습니다. 남겨주신 말씀은 잘 읽었습니다.'},'none','왜 접수비를 먼저 내나요?'),'missing_question_reaction');
+const beforeResolution=state;
+step('resolve','paused');
+assert.equal(transition(state,{type:'decision-result',data:'familiar-check:pause:recipient-note',chapter:0}),state,'late reply cannot change a resolved case');
+assert.equal(transition({...beforeResolution,chapter:1},{type:'decision-result',data:'familiar-check:verify:recipient-note',chapter:0}).chapter,1,'old-case event cannot move the current case');

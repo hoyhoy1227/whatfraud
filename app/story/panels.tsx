@@ -74,7 +74,7 @@ export function Closing({state,step,onNext,onSkip}:{state:Run;step:number;onNext
  const told=state.events.some(e=>e.type==='reflect'&&e.data==='tell'),last=state.results.find(r=>r.chapter===2);
  return <div className={'closing closing-'+step}>
  {step===0?<><small>마지막 대화</small><h2>회복 지원 상담</h2><p className="system-message">{last?.kind==='loss'?'접수 내용 확인 중':last?.kind==='reported'?'자료 접수 기록이 남아 있다.':'이 연락은 여기서 멈췄다.'}</p></>:step===1?<><small>생활 계좌</small><Ledger state={state}/><p>돌아오지 않은 금액 {money(totalSpent(state))}</p></>:step===2?<><small>준호 · 기존 연락처</small><div className="bubble"><p>{told?'오늘 얘기해 줘서 고마워. 내일도 연락할게. 혼자 급하게 해결하려고 하진 말자.':'집에 도착했어? 오늘 만나서 좋았어. 내일 연락할게.'}</p></div><p>{state.saved.length||state.events.some(e=>e.type==='capture')?'메모에 보관한 기록이 남아 있다.':'은행에는 오늘의 거래 내역이 남아 있다.'}</p></>:<><div className="lock-clock">22:10</div><p>휴대폰을 잠갔다.</p><small>하루가 끝나도 다음 선택은 남아 있다.</small></>}
- <button className="primary" onClick={onNext}>{['은행 내역 보기','준호의 연락 보기','화면 잠그기','하루를 마무리하고 결과 보기'][step]}</button>{step<3&&<button className="text-button" onClick={onSkip}>오늘의 기록으로 바로 가기</button>}
+ <button className="primary" onClick={onNext}>{['은행 내역 보기','준호의 연락 보기','화면 잠그기','결과 보기'][step]}</button>{step<3&&<button className="text-button" onClick={onSkip}>오늘의 기록으로 바로 가기</button>}
  </div>;
 }
 type Profile={name:string;initial:string;status:string;relationship:string;kind:string};

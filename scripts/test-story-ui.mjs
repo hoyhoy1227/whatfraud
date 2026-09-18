@@ -7,6 +7,7 @@ import * as engine from '../app/story/engine.js';
 let source=await readFile('app/story/panels.tsx','utf8');
 source=source.replace("from './context'","from "+JSON.stringify(new URL('../app/story/context.js',import.meta.url).href));
 source=source.replace("from './one-shot'","from "+JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
+source=source.replace("from './decision-message'","from "+JSON.stringify(new URL('../app/story/decision-message.js',import.meta.url).href));
 source=source.replace("from './engine'","from "+JSON.stringify(new URL('../app/story/engine.js',import.meta.url).href));
 const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime')));
 const ui=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
@@ -104,6 +105,30 @@ const restoredHtml=renderToStaticMarkup(createElement(Message,{state:investment,
 for(const line of ['작성 중인 문장','첫 메시지','받은 답장','준비된 후속 메시지'])assert.ok(restoredHtml.includes(line));
 assert.ok(client.includes("act('message-followup','peer:checked-bank')"));
 console.log('Deferred call and in-memory transcript SSR passed.');
+
+// Remounting the decision composer after navigation must retain the transcript,
+// including at later stages; a reload intentionally receives empty memory.
+let decisionSource=await readFile('app/story/decision-composer.tsx','utf8');
+for(const name of ['decision-message','one-shot','narrative'])decisionSource=decisionSource.replace("from './"+name+"'","from "+JSON.stringify(new URL('../app/story/'+name+'.js',import.meta.url).href));
+decisionSource=decisionSource.replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './chat-bubbles'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(bubbleJs).toString('base64')));
+const decisionJs=ts.transpileModule(decisionSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime'))).replace("from 'react'","from "+JSON.stringify(import.meta.resolve('react')));
+const decisionUi=await import('data:text/javascript;base64,'+Buffer.from(decisionJs).toString('base64'));
+const memory={...decisionUi.emptyDecisionMemory(),sent:'받는 이름을 확인할게.',reply:'받는 이름이 달라서 확인하려는 거구나.'};
+for(const stage of ['request','waiting','paid']){
+ const run={...engine.createRun(),stage};
+ const props={state:run,memory,onMemory:noop,enabled:false,remaining:0,blocked:false,getSession:()=>'',onEvent:()=>false};
+ const first=renderToStaticMarkup(createElement(decisionUi.default,props));
+ const remounted=renderToStaticMarkup(createElement(decisionUi.default,props));
+ assert.equal(first,remounted);
+ assert.ok(remounted.includes(memory.sent)&&remounted.includes(memory.reply));
+ assert.ok(!renderToStaticMarkup(createElement(decisionUi.default,{...props,memory:decisionUi.emptyDecisionMemory()})).includes(memory.reply));
+}
+const {dinnerContext}=await import('../app/story/context.js');
+for(const [mode,focus,expected] of [['listen','none','조언보다 들어'],['verify','contact','함께 확인']]){
+ let run=engine.createRun();
+ for(const [type,data] of [['resolve','paused'],['message','friend:together'],['message-style','friend:'+mode+':'+focus]])run=engine.transition(run,{type,data,chapter:0});
+ assert.ok(dinnerContext({...run,chapter:2}).includes(expected),'current saves preserve dinner choice');
+}
 
 assert.ok(!messageClient.includes('음성 통화')&&!messageClient.includes('계속 듣기'));
 assert.ok(messageClient.includes('연락 요약')&&client.includes('연락 요약 보기'));

@@ -164,6 +164,7 @@ html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR'
 .profile-actions,.quick-questions{gap:10px}.profile-actions>button{min-width:0}
 .app-calls .contact-card>button{background:#e7eef9;color:#234c79}
 .chat-stage .message-group{margin:5px 0}.message-group .bubble p{margin:0}.message-group:has(.message-sender){margin-top:14px}
+.room-entry{display:grid;justify-items:center;gap:3px;margin:18px 0 14px;color:#52627a;text-align:center;font-size:13px}.room-entry::before{content:"";width:100%;height:1px;background:#cad5e2;margin-bottom:8px}.room-entry span,.room-entry small{position:relative;background:#eef3f8;padding:0 10px}.room-entry span{font-weight:750;color:#2d4968}.room-entry small{font-size:12px}
 @media(max-width:380px){.message-dock{max-height:44%}.dock-actions{grid-template-columns:minmax(0,1fr)}}
 
 

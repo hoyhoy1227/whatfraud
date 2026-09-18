@@ -77,6 +77,7 @@ export function storyPrompt(id,attachment='none',version=1,stage='group'){
  const peer=id==='peer';
  return `가상 스마트폰 스릴러 수익률 24시의 일회성 메시지 장면이다.
 인물: ${peer?'지수. 같은 투자 자료방의 참여자. 아직 입금하기 전이며 자신의 판단으로 확인하려 한다. 낯선 참여자에게 쓰는 짧고 편한 해요체. 상담원이나 운영자가 아니다.':'준호. 이전부터 저장된 실제 친구. 오전 출근 후 잠시 메시지를 확인했다. 첫 사건의 새 계정 연락에 관해 듣는 중이다. 평소 약속을 잡고 밥을 먹는 친구의 짧은 반말. 금융 전문가나 심리 상담사가 아니다.'}
+${peer?'':'본인이 아는 사실: 새 계정은 준호의 것이 아니며 결제를 부탁한 적도 없다. 사칭 연락을 알리거나 본인 여부를 물으면 먼저 이 사실을 분명히 말한 뒤 첨부에 반응한다. 이미 실제 준호와 대화 중이므로 준호에게 다시 연락하라거나 저장된 연락처로 본인 확인하라고 하지 않는다.'}
 말투: ${peer?'합니다/하겠습니다/고객님/원하시지 않는다면 같은 응대 문구를 쓰지 않는다. 공감 한 마디 뒤 자신의 확인 또는 경계 존중으로 끝낸다.':'알겠어/응처럼 짧게 받아 주고 함께할 일을 하나만 말한다. 훈계·평가·해결 보장 없이 가까운 친구처럼 말한다.'}
 말투 예시(현재 입력에 맞는 경우만 참고하고 그대로 반복하지 않는다):
 ${peer?'확인 제안: 저도 바로 보내지는 않을게요. 처음 안내부터 다시 볼게요.\n공유 거절: 네, 내역은 안 보여 주셔도 돼요. 더 묻지 않을게요.':'함께 확인: 응, 지금 송금하지 말고 기록부터 같이 보자.\n대화 거절: 알겠어, 지금은 더 묻지 않을게. 저녁에 다른 얘기 하자.'}
@@ -139,18 +140,18 @@ export function styleEventAllowed(state,data){
 }
 export function peerFollowupText(state){
  const {mode,focus}=messageStyle(state,'peer');
- if(mode==='compare'&&focus==='terms-note')return '처음에는 없던 확인 비용이 나중에 붙었네요. 이 차이에 대한 답을 받기 전까지는 입금을 미룰게요.';
- if(mode==='compare')return focus==='deleted-question'?'제가 추가 비용을 물었던 내용이네요. 답을 듣기 전에는 결정하지 않으려고요. 남겨 주셔서 고마워요.':'처음 안내에는 자료를 읽는 것과 별도 참여가 구분돼 있어요. 뒤에 온 요청과 나눠서 보려고요.';
+ if(mode==='compare'&&focus==='terms-note')return '비용이 언제부터 붙었는지 제 안내에서도 찾아볼게요. 그 부분에 답을 받기 전까지는 결정하지 않으려고요.';
+ if(mode==='compare')return focus==='deleted-question'?'남겨 주신 질문은 따로 보관할게요. 답이 오면 처음 안내와 나란히 놓고 확인해 보려고요.':'구독 신청할 때 받은 안내부터 따로 남겨 둘게요. 참여 조건이 적힌 부분도 찾아보려고요.';
  if(mode==='safeguard')return '다른 분이 괜찮다고 하셔도 제 경우까지 같은지는 모르겠어요. 저는 안내부터 확인할게요.';
  return '걱정해 주신 건 알겠어요. 아직 확인되지 않은 부분이 있어서 저는 안내를 더 보고 결정할게요.';
 }
 export function friendFollowupLines(state){
  const {mode}=messageStyle(state,'friend');
  const attachment=messageAttachment(state,'friend');
- if(!['listen','space'].includes(mode)&&attachment!=='none')return [attachmentReply('friend',attachment), '네가 보내 준 내용만 보고 있어. 원래 대화는 지우지 말고 남겨 두자.'];
+ if(!['listen','space'].includes(mode)&&attachment!=='none')return ['내 이름을 쓰고 있으니까 나도 주변에 그런 연락이 온 건 없는지 살펴볼게.', '그 계정과 주고받은 말은 지우지 말고 남겨 두자. 저녁에 만나서 얘기하자.'];
  if(mode==='listen')return state.chapter===2?['아까 못다 한 얘기는 나중에 해도 돼.','집에 가는 길엔 잠깐 쉬어. 도착하면 연락 줘.']:['지금 다 설명하려고 하지 않아도 돼.','지금은 각자 일 보고, 저녁에 천천히 얘기하자.'];
  if(mode==='records')return ['확인하고 싶은 부분부터 같이 보자.','화면에 적힌 금액과 은행에서 실제로 오간 돈은 따로 보면 돼.','이 대화에 남긴 내용만 보고 있어. 다른 앱의 기록은 내가 볼 수 없어.'];
- if(mode==='verify')return ['새 연락은 그 사람이 알려 준 경로 말고 따로 확인하자.','이름이 같아도 같은 사람인지는 모르니까, 예전부터 저장해 둔 연락처로 확인해 보자.'];
+ if(mode==='verify')return ['내 이름으로 다른 사람한테도 연락했을 수 있겠네. 나도 주변에 한번 알아볼게.','그 계정과 주고받은 말은 남겨 두자. 저녁 약속은 그대로야.'];
  return ['응, 남긴 말 읽었어.',state.chapter===2?'오늘 만나서 반가웠어. 집에 도착하면 연락 줘.':'이따 약속한 데서 보자.'];
 }
 export function branchUseAllowed(state,data){
@@ -167,7 +168,7 @@ export const preparedMessages={
  ],
  friend:[
  {text:'이번 부탁과 은행 거래 내역을 같이 확인해 줬으면 해.',reply:'응, 확인하고 싶은 기록부터 같이 보자.',reaction:'together',mode:'records'},
- {text:'네 이름으로 새 계정에서 연락이 왔어. 그 연락을 같이 확인해 줬으면 해.',reply:'응, 이름만 보고 믿지는 말고 그 연락부터 같이 확인해 보자.',reaction:'together',mode:'verify'},
+ {text:'네 이름으로 새 계정에서 연락이 왔어. 그 연락을 같이 확인해 줬으면 해.',reply:'뭐? 그 새 계정은 내가 아니야. 내가 무슨 부탁을 한 것처럼 연락했나 보네.',reaction:'together',mode:'verify'},
  {text:'지금은 조언보다 그냥 들어 줬으면 해. 자세한 얘기는 저녁에 할게.',reply:'응, 지금 다 설명 안 해도 돼. 저녁에 천천히 얘기하자.',reaction:'together',mode:'listen'},
  {text:'지금은 이 얘기를 하고 싶지 않아. 저녁에 다른 얘기 하자.',reply:'알겠어, 더 묻지 않을게. 저녁에 보자.',reaction:'space',mode:'space'}
  ]

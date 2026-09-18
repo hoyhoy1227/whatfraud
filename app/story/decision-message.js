@@ -48,10 +48,14 @@ export function decisionPrompt(body){
 }
 export function parseDecisionReply(text){try{const v=JSON.parse(text);return v&&Object.keys(v).sort().join(',')==='reaction,reply'&&typeof v.reply==='string'&&decisionReactions.includes(v.reaction)&&!/[?？]/.test(v.reply)?v:null;}catch{return null;}}
 // Heuristic quality gate, not proof of semantic correctness. No additional model call.
-export function decisionReplyIssue(result,attachment='none'){
+export function decisionReplyIssue(result,attachment='none',question=''){
  if(/올바른 판단|현명한 (?:선택|판단)|잘하셨|진행하지 않는 것이 맞/.test(result.reply))return 'instructor_tone';
  if(/(?:환급|신고|접수|취소|차단).{0,8}(?:완료|처리했|해드렸)|돈을 돌려드렸/.test(result.reply))return 'invented_action';
- if(result.reaction==='refuse')return /다시 연락|언제든|알려\s*주세요|보내\s*주세요/.test(result.reply)?'reopened_boundary':null;
+ if(result.reaction==='refuse'){
+  const remaining=result.reply.replace(/(?:다시|더\s*이상|추가로|더)?\s*연락(?:을)?\s*(?:하지\s*않(?:겠|을|아)|드리지\s*않(?:겠|을|아)|안\s*(?:하|할|드리)|하지\s*말)[^.!?。]*/g,'');
+  return /다시 연락|언제든|알려\s*주세요|보내\s*주세요/.test(remaining)?'reopened_boundary':null;
+ }
+ if(result.reply.trim().length<25||/^(?:응[,.]?\s*)?(?:알겠어|알겠습니다)[.!]?\s*(?:그럼\s*)?(?:그렇게\s*(?:해|하세요)[.!]?)?$/.test(result.reply.trim()))return 'generic_reply';
  const anchors={
   'recipient-note':/수취인|받는\s*(?:이름|곳|사람)|한별/,
   'account-profile':/계정|프로필|친구\s*등록/,
@@ -63,6 +67,11 @@ export function decisionReplyIssue(result,attachment='none'){
   'contact-recovery':/연락처|소속|연결|기관/
  };
  if(anchors[attachment]&&(result.reply.trim().length<25||!anchors[attachment].test(result.reply)))return 'missing_attachment_reaction';
+ if(question&&['clarify','verify'].includes(result.reaction)){
+  const topics=[[/수취인|받는\s*이름/,/수취인|받는\s*이름|명의|한별/],[/소속|기관|연락처/,/소속|기관|연락처|계정|창구|경로/],[/비용|접수비|선입금/,/비용|접수비|선입금|납부/],[/구독|자료/,/구독|자료|참여/]];
+  const requested=topics.filter(([pattern])=>pattern.test(question));
+  if(requested.length&&!requested.some(([,answer])=>answer.test(result.reply)))return 'missing_question_reaction';
+ }
  return null;
 }
 export function decisionFallback(body,reaction){

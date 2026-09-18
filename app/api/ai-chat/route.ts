@@ -295,7 +295,7 @@ async function handleChat(request: Request, body: ChatBody) {
     const result = isDecision?parseDecisionReply(extractGeminiText(payload)):parseStoryReply(extractGeminiText(payload),sceneId,contractVersion,body.attachment as string);
     if (!result) return json({ code: 'unsafe_response', validation: 'story_contract' }, 502);
     if (!validateAiReply(result.reply, undefined, replyMode, 'story')) return json({ code: 'unsafe_response', validation: 'reply_policy' }, 502);
-    const qualityIssue=isDecision?decisionReplyIssue(result,body.attachment as string):null;
+    const qualityIssue=isDecision?decisionReplyIssue(result,body.attachment as string,messages.at(-1)?.content??''):null;
     if(qualityIssue){
       const reply=decisionFallback(body,result.reaction);
       if(!validateAiReply(reply,undefined,replyMode,'story'))return json({code:'unsafe_response',validation:'fallback_policy'},502);

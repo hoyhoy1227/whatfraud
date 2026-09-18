@@ -15,6 +15,7 @@ async function freshRoute() {
     .replace("import { reserveSharedBudget } from '../ai-budget';", "const reserveSharedBudget = async () => globalThis.__budgetOutcome ?? 'allowed';")
     .replace("'../../ai-dialogue'", JSON.stringify(dialogueUrl))
     .replace("'../../story/one-shot.js'",JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href))
+    .replace("'../../story/decision-message.js'",JSON.stringify(new URL('../app/story/decision-message.js',import.meta.url).href))
     .replace("import { cases } from '../../game-data';", 'const cases = ' + JSON.stringify(cases) + ';');
   return import(moduleUrl(source) + '#' + serial++);
 }
