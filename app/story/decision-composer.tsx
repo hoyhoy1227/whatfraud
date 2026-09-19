@@ -9,8 +9,8 @@ import AttachmentPicker from './attachment-picker';
 type Run=ReturnType<typeof import('./engine').createRun>;
 export type DecisionMemory={draft:string;attachment:string;sent:string;reply:string;error:string;scripted:boolean};
 export const emptyDecisionMemory=():DecisionMemory=>({draft:'',attachment:'none',sent:'',reply:'',error:'',scripted:false});
-type Props={memory:DecisionMemory;onMemory:(patch:Partial<DecisionMemory>)=>void;state:Run;enabled:boolean;remaining:number;blocked:boolean;getSession:()=>string;onEvent:(type:string,data:string)=>boolean};
-export default function DecisionComposer({memory,onMemory,state,enabled,remaining,blocked,getSession,onEvent}:Props){
+type Props={memory:DecisionMemory;onMemory:(patch:Partial<DecisionMemory>)=>void;state:Run;enabled:boolean;remaining:number;blocked:boolean;getSession:()=>string;onEvent:(type:string,data:string)=>boolean;onIncoming?:()=>void};
+export default function DecisionComposer({memory,onMemory,state,enabled,remaining,blocked,getSession,onEvent,onIncoming}:Props){
  const window=decisionWindows.find(w=>w.chapter===state.chapter),available=decisionAvailable(state);
  const {draft,attachment,sent,reply,error,scripted}=memory;
  const setDraft=(draft:string)=>onMemory({draft}),setAttachment=(attachment:string)=>onMemory({attachment}),setSent=(sent:string)=>onMemory({sent}),setReply=(reply:string)=>onMemory({reply}),setError=(error:string)=>onMemory({error}),setScripted=(scripted:boolean)=>onMemory({scripted});
@@ -33,7 +33,7 @@ export default function DecisionComposer({memory,onMemory,state,enabled,remainin
    const fallback=value.provider==='scripted'&&value.fallbackReason==='reply_quality';
    if(!response.ok||(value.provider!=='gemini'&&!fallback)||typeof value.reply!=='string'||typeof value.reaction!=='string'||!decisionReactions.includes(value.reaction)||!validateAiReply(value.reply,undefined,'normal','story')||/[?？]/.test(value.reply))throw Error('unavailable');
    if(!mounted.current||aborter.signal.aborted)return;
-   if(onEvent('decision-result',window.id+':'+value.reaction+':'+attachment)){setReply(value.reply);setScripted(fallback);}
+   if(onEvent('decision-result',window.id+':'+value.reaction+':'+attachment)){setReply(value.reply);setScripted(fallback);onIncoming?.();}
   }catch{if(mounted.current)setError('AI 답장을 받지 못했습니다. 다시 요청하지 않고 준비된 답장으로 계속할 수 있습니다.');}
   finally{clearTimeout(timer);pending.current=false;if(mounted.current){setBusy(false);if(aborter.signal.aborted)setError('전송이 중단됐습니다. 재요청 없이 준비된 답장으로 계속할 수 있습니다.');}}
  }

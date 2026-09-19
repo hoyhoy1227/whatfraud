@@ -199,6 +199,13 @@ assert.ok(!client.includes('notification peer-invitation'),'other-thread notific
 assert.equal((client.match(/onClick={phoneBack}/g)||[]).length,2,'header and system back agree');
 assert.ok(!client.includes("onClick={()=>setThread("),'navigation preserves per-thread scroll through openApp');
 assert.ok(client.includes('이전 약속 대화 보기'),'unified friend row retains older history');
+const audioSource=await readFile('app/story/use-game-audio.ts','utf8');
+const ost=await readFile('public/audio/main-ost.wav');
+assert.equal(ost.toString('ascii',0,4),'RIFF');
+assert.equal(ost.toString('ascii',8,12),'WAVE');
+assert.ok(ost.length>1_000_000&&audioSource.includes("new Audio('/audio/main-ost.wav')"),'main OST is packaged and wired');
+for(const effect of ['tap','message','transfer','result'])assert.ok(audioSource.includes(effect));
+assert.ok(client.includes('음악 <output>')&&client.includes('효과음 <output>')&&client.includes("onIncoming={()=>playEffect('message')}"));
 console.log('Messenger SSR passed: bounded character knowledge, unified header, inbox rows and consistent back navigation.');
 
 const parts=n.messageParts([{speaker:'지수',text:'첫 문장. 다음 문장?'}]);

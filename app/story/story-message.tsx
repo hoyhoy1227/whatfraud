@@ -9,8 +9,8 @@ import {emptyMessageMemory,messageOpening,peerRecordReady,minimumReplyDelay} fro
 export type MessageMemory=ReturnType<typeof emptyMessageMemory>;
 type Run=ReturnType<typeof import('./engine').createRun>;
 type Scene='peer'|'friend';
-type Props={embedded?:boolean;memory?:MessageMemory;onMemory?:(patch:Partial<MessageMemory>)=>void;state:Run;scene:Scene;aiAllowed:boolean;getSession:()=>string;remaining:number;practice:boolean;reduced:boolean;paused:boolean;onEvent:(type:string,data:string)=>boolean;onBack:()=>void;onContinue:()=>void;onProfile:()=>void};
-export default function StoryMessage({embedded=false,memory=emptyMessageMemory(),onMemory,state,scene,aiAllowed,getSession,remaining,practice,reduced,paused,onEvent,onBack,onContinue,onProfile}:Props){
+type Props={embedded?:boolean;memory?:MessageMemory;onMemory?:(patch:Partial<MessageMemory>)=>void;state:Run;scene:Scene;aiAllowed:boolean;getSession:()=>string;remaining:number;practice:boolean;reduced:boolean;paused:boolean;onEvent:(type:string,data:string)=>boolean;onIncoming?:()=>void;onBack:()=>void;onContinue:()=>void;onProfile:()=>void};
+export default function StoryMessage({embedded=false,memory=emptyMessageMemory(),onMemory,state,scene,aiAllowed,getSession,remaining,practice,reduced,paused,onEvent,onIncoming,onBack,onContinue,onProfile}:Props){
  const person=storyMessages[scene],status=messageStatus(state,scene),available=messageWindow(state,scene);
  const {draft,sent,reply,attachment:memoryAttachment,sentAttachment,preparedSent}=memory;
  const attachment=messageAttachment(state,scene)!=='none'?messageAttachment(state,scene):memoryAttachment;
@@ -32,7 +32,7 @@ export default function StoryMessage({embedded=false,memory=emptyMessageMemory()
   if(onEvent('message',scene+':'+choice.reaction)){
    onEvent('message-style',scene+':'+choice.mode+':'+focus);
    if(sent)onMemory?.({preparedSent:choice.text});else{onMemory?.({sentAttachment:selectedAttachment});setSent(choice.text);}
-   setReply(selectedAttachment!=='none'&&!['space','listen','distance'].includes(choice.mode)?attachmentReply(scene,selectedAttachment):choice.reply);setError('');
+   setReply(selectedAttachment!=='none'&&!['space','listen','distance'].includes(choice.mode)?attachmentReply(scene,selectedAttachment):choice.reply);onIncoming?.();setError('');
   }
  }
  async function send(event:React.FormEvent){
@@ -56,7 +56,7 @@ export default function StoryMessage({embedded=false,memory=emptyMessageMemory()
    if(!response.ok||(value.provider!=='gemini'&&!preparedFallback)||typeof value.reply!=='string'||!validateAiReply(value.reply,undefined,'normal','story')||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply)||!validBranch(scene,value.reaction,value.supportMode,value.focus))throw Error('unavailable');
    if(!reduced)await new Promise<void>(resolve=>{const wait=setTimeout(resolve,minimumReplyDelay(performance.now()-dispatched,reduced));aborter.signal.addEventListener('abort',()=>{clearTimeout(wait);resolve();},{once:true});});
    if(!mounted.current||aborter.signal.aborted)return;
-   if(onEvent('message',scene+':'+value.reaction)){onEvent('message-style',scene+':'+value.supportMode+':'+value.focus);setReply(value.reply);}
+   if(onEvent('message',scene+':'+value.reaction)){onEvent('message-style',scene+':'+value.supportMode+':'+value.focus);setReply(value.reply);onIncoming?.();}
   }catch{
    if(mounted.current)setError('AI 답장을 받지 못했습니다. 다시 요청하지 않습니다. 준비된 메시지를 보내거나 이 대화를 건너뛸 수 있습니다.');
   }finally{
