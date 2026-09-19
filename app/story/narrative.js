@@ -1,4 +1,6 @@
 import {messageStyle,attachmentText,recoveryRecordReply} from './one-shot.js';
+import {recoveryClaim} from './fraud-context.js';
+import cases from '../../content/generated/cases.json' with {type:'json'};
 // Authored character knowledge and bounded dialogue choices. No player text is stored.
 /**
  * @typedef {{speaker:string,text:string}} Message
@@ -53,28 +55,21 @@ export const narratives=[
   aftermath:{safe:'새 계정과의 연락을 멈췄다. 준호와의 저녁 약속까지 취소된 것은 아니다. 기존 대화와 저장된 번호는 그대로 남아 있다.',loss:'돈은 나갔는데 답장은 없다. 같은 이름의 두 대화방이 이제 다르게 보인다. 지금도 기존 번호로 준호에게 연락할 수 있다.'}
  },
  {
-  place:'14:00 · 점심시간이 끝나갈 무렵',goal:'신청해 둔 시장 소식을 읽어 보자. 유료 자료 구매는 별개의 선택이다.',
+  place:'14:00 · 점심시간이 끝나갈 무렵',goal:'신청해 둔 시장 소식을 읽어 보자. 투자 참여는 별개의 선택이다.',
   background:['최근 투자에 대해 알아보기 시작했다. 며칠 전 무료 시장 소식 알림을 신청했다.','커피를 들고 자리로 돌아오는 길, 신청한 이름으로 자료가 도착한다. 처음에는 읽어 보기만 할 생각이다.'],
   persona:{identity:'온결 리서치 자료방 운영자. 금융사 직원이 아닌 별도 운영팀을 내세운다.',relationship:'무료 시장 노트 구독자에게 설명하는 운영자. 친한 친구처럼 말하지 않는다.',voice:'밝고 매끄러운 해요체로 안심시키지만, 책임이나 검증을 묻는 질문에는 핵심을 비켜 가며 방 안의 안내를 다시 보게 한다. 노골적인 협박이나 상담원 같은 공감 표현은 쓰지 않는다.',knowledge:'자신이 올린 자료와 이 방에서 오간 말만 안다. 플레이어의 은행 조회·친구와의 연락·다른 앱 활동은 모른다.',hidden:'일부 성공 사례로 관심을 유지하려 한다. 새 수익·마감·입금 확인을 임의로 만들지 않는다.',arc:'arrival: 가볍고 친절하게 무료 자료를 설명. group: 다른 참여자의 화면으로 관심을 붙듦. offer: 질문의 핵심 대신 내부 안내를 가리킴. paid: 화면의 숫자만 반복. withdrawal: 비용 근거를 설명하지 않고 현재 절차라고 회피. extra-paid: 담당자 확인 중이라는 말만 남긴다.'},
-  scenes:{
-   arrival:[line('온결 리서치','신청하신 오늘의 시장 노트 보내드려요. 오늘은 공개된 투자 사례와 평가금액 요약을 정리했어요.'),line('온결 리서치','무료 노트는 평가금액 요약만 담고 있어요. 계산 근거와 종목별 설명은 유료 분석 자료에서 안내합니다.'),line('온결 리서치','함께 읽는 자료방이 있어요. 먼저 보신 분들의 질문과 이용 화면도 올라와 있습니다.')],
-   group:[line('지수','저도 오늘 들어왔어요. 공지가 많아서 조금 헷갈리네요.'),line('유진','저는 어제 알림 신청했어요. 자료에 모르는 말이 좀 있네요.'),line('민석','저도 처음엔 표만 봤어요. 이제 화면이 어디 있는지는 알겠네요.'),line('지수','좋았던 날 말고 전체 기간도 볼 수 있나요?'),line('온결 리서치','오늘 올라온 화면부터 봐 주세요. 기간별 자료는 정리해서 안내하고 있어요.'),line('유진','저는 일단 저장해 놓고 퇴근할 때 다시 보려고요.'),line('지수','추가 비용은 없나요? 안내에서 못 찾겠어요.')],
-   offer:[line('지수','처음 안내는 위에 고정돼 있어요. 저도 한참 찾았어요.'),line('온결 리서치','무료 요약과 상세 분석 자료는 별도예요. 상세 자료 이용료는 30만 원이고, 안내를 남겼어요.'),line('지수','다들 먼저 보셨나 봐요. 저는 아직 구매 전이라 제공 범위부터 보고 있어요.'),line('민석','저는 안내를 다시 보고 있어요. 받는 이름이 운영팀 이름이랑 조금 다르네요.'),line('온결 리서치','수취인은 온결 파트너입니다. 결정 전에 안내를 읽어 주세요.')],
-   paid:[line('온결 리서치','상세 자료 구매 내역이 표시됐어요. 평가금액 요약부터 열어 보세요.'),line('유진','결제했는데 무료로 보던 요약과 비슷하네요.'),line('민석','저도 계산 근거가 궁금해서 정밀 자료를 요청해 보려고요.')],
-   withdrawal:[line('온결 리서치','더 정확한 평가금액 분석 자료는 정밀 분석에 해당해요. 추가 이용료 12만 원을 안내드릴게요.'),line('알림','지수의 이전 질문이 삭제되었다.'),line('유진','방금 질문이 있었던 것 같은데요.'),line('온결 리서치','개별 문의는 이 대화에서 받고 있습니다.')],
-   'extra-paid':[line('온결 리서치','확인 중입니다. 담당자가 답변할 때까지 기다려 주세요.'),line('알림','화면을 다시 열어도 정밀 분석 자료는 준비 중이다. 새로운 자료는 없다.')]
-  },
+  scenes:Object.fromEntries(cases[1].story.stages.map(stage=>[stage.id,stage.messages])),
   beats:[
    beat('paper-note','arrival',[
-    option('paper-note-meaning','무료 자료에는 계산 근거도 들어 있나요?',[line('온결 리서치','무료 자료에는 평가금액 요약만 있어요. 계산 근거는 별도 유료 자료로 안내하고 있어요.'),line('온결 리서치','다른 분들이 같은 부분을 질문하셔서 자료방에 설명을 모아 두었어요.')]),
-    option('paper-note-only','무료 자료만 읽어도 되나요?',[line('온결 리서치','네. 무료 자료 구독만으로 유료 자료가 구매되지는 않아요.'),line('온결 리서치','질문을 함께 보고 싶으시면 자료방으로 오셔도 돼요.')])
+    option('paper-note-meaning','무료 자료에는 계산 근거도 들어 있나요?',[line('온결 리서치','무료 자료에는 수익률 요약만 있어요. 전체 거래 원장은 따로 제공하지 않고 있어요.'),line('온결 리서치','다른 분들이 같은 부분을 질문하셔서 자료방에 설명을 모아 두었어요.')]),
+    option('paper-note-only','무료 자료만 읽어도 되나요?',[line('온결 리서치','네. 무료 자료 구독만으로 투자에 참여하거나 돈이 나가지는 않아요.'),line('온결 리서치','질문을 함께 보고 싶으시면 자료방으로 오셔도 돼요.')])
    ]),
    beat('paper-note-origin','arrival',[
     option('paper-note-subscribe','제가 언제 신청했죠?',[line('온결 리서치','지난주 시장 노트 알림을 신청하신 경로로 보내드렸습니다.'),line('온결 리서치','현재 대화의 구독 기록에서도 확인하실 수 있어요.')]),
     option('paper-note-room','자료방에는 어떤 사람들이 있나요?',[line('온결 리서치','자료를 보는 분과 이용 화면을 공유하는 분이 함께 있어요.'),line('온결 리서치','참여 여부는 각자 다릅니다.')])
    ]),
    beat('paper-group-people','group',[
-    option('paper-group-experience','유료 자료를 받아 보신 분도 있나요?',[line('민석','저는 아직 요약 화면만 봤어요. 전체 자료는 확인해 봐야겠네요.'),line('유진','저도 다른 분들은 어떤지 궁금했어요.')]),
+    option('paper-group-experience','실제 수익금을 받아 보신 분도 있나요?',[line('민석','저는 아직 요약 화면만 봤어요. 전체 자료는 확인해 봐야겠네요.'),line('유진','저도 다른 분들은 어떤지 궁금했어요.')]),
     option('paper-group-original','올라온 화면의 원본도 볼 수 있어요?',[line('온결 리서치','참여자가 공유한 범위만 올립니다.'),line('지수','그러면 전체 손익이랑은 따로 봐야겠네요.')])
    ]),
    beat('paper-group-interest','group',[
@@ -83,36 +78,32 @@ export const narratives=[
    ]),
    beat('paper-offer-terms','offer',[
     option('paper-offer-recipient','온결 파트너는 어느 쪽인가요?',[line('온결 리서치','방 이름과 달라서 낯설 수 있어요. 참여 접수에 쓰는 명의예요.'),line('온결 리서치','별도 관계를 확인할 자료는 없고, 지금 보신 참여 안내로 접수하고 있어요.')]),
-    option('paper-offer-withdraw','구매하면 어떤 자료를 받는 건가요?',[line('온결 리서치','상세 평가 자료를 이용 화면에서 보는 방식이에요.'),line('온결 리서치','포함 항목을 따로 정리한 문서는 없고, 화면에서 필요한 자료를 요청하시면 안내해 드려요.')])
+    option('paper-offer-withdraw','출금은 어떻게 하나요?',[line('온결 리서치','이용 화면에서 출금을 요청하는 방식이에요.'),line('온결 리서치','출금 조건을 따로 정리한 문서는 없고, 요청하시면 안내해 드려요.')])
    ]),
    beat('paper-offer-compare','offer',[
     option('paper-offer-official','공식 기록에서 위탁 관계를 찾지 못했어요.',[line('온결 리서치','그 조회와 저희 방 안내는 구분해서 보셔야 합니다.'),line('온결 리서치','여기서 추가로 보여드릴 문서는 없습니다.')],'official-record'),
     option('paper-offer-repeat','다른 사람 화면인데 산출 시각이 같네요.',[line('온결 리서치','공유 자료를 정리하는 과정에서 같은 화면이 포함될 수 있습니다.'),line('지수','저도 그 시각이 같아서 물어보려던 참이었어요.')],'success-post')
    ],false),
    beat('paper-paid-numbers','paid',[
-    option('paper-paid-claim','결제했는데 왜 요약만 보이나요?',[line('온결 리서치','지금 열린 것은 평가금액 요약이에요. 더 정확한 근거 자료는 정밀 분석 요청을 남겨 주세요.'),line('유진','저도 처음에 안내받은 범위와 비교해 봐야겠어요.')]),
-    option('paper-paid-bank','이미 자료 이용료를 보냈는데 또 결제하나요?',[line('온결 리서치','처음 이용료와 정밀 분석은 별도 항목으로 안내하고 있어요.'),line('지수','처음에는 상세 자료라고만 들었는데요.')])
+    option('paper-paid-claim','화면의 수익이 실제 입금된 돈인가요?',[line('온결 리서치','지금 보이는 건 이용 화면의 평가금액이에요. 돈을 받으려면 출금 요청을 남겨 주세요.'),line('유진','저도 처음에 안내받은 범위와 비교해 봐야겠어요.')]),
+    option('paper-paid-bank','참여금을 보냈는데 은행에는 들어온 돈이 없어요.',[line('온결 리서치','참여금 출금과 수익금 입금은 별도예요. 출금 요청 이후 안내를 확인해 주세요.'),line('지수','저도 실제 입금 내역을 봐야겠어요.')])
    ]),
    beat('paper-withdraw-compare','withdrawal',[
-    option('paper-withdraw-old','아까 안내에는 추가 분석 비용이 없었어요.',[line('온결 리서치','처음 자료와 정밀 분석은 범위가 달라요. 더 정확한 평가금액 분석은 추가 항목이라는 안내예요.'),line('유진','처음 참여할 때는 못 본 내용 같아요.')]),
+    option('paper-withdraw-old','아까 안내에는 보안 확인 비용이 없었어요.',[line('온결 리서치','참여와 출금 확인은 별도예요. 출금 전에 보안 확인 비용이 필요하다는 안내입니다.'),line('유진','처음 참여할 때는 못 본 내용 같아요.')]),
     option('paper-withdraw-delete','지수 님 질문은 왜 지워졌나요?',[line('온결 리서치','자료방은 진행에 필요한 내용만 남기고 정리하고 있어요. 개별 조건은 이 대화에서 확인해 주세요.'),line('유진','조건을 물어본 것뿐이었는데요.')])
    ]),
    beat('paper-extra-wait','extra-paid',[
-    option('paper-extra-status','비용도 보냈는데 왜 그대로죠?',[line('알림','읽음 표시가 생긴다. 자료 준비 중이라는 표시는 바뀌지 않는다.')]),
+    option('paper-extra-status','비용도 보냈는데 왜 그대로죠?',[line('알림','읽음 표시가 생긴다. 출금 확인 중이라는 표시는 바뀌지 않는다.')]),
     option('paper-extra-record','앞의 안내와 거래를 남겨 둘게요.',[line('알림','처음 참여 안내와 나중에 나온 비용 안내가 같은 대화에 남아 있다.')])
    ])
   ],
-  aftermath:{safe:'무료 자료를 읽는 것과 유료 분석 자료를 사는 것은 다른 선택이었다. 방을 나와도 저녁 약속은 남아 있다. 화면에서 본 숫자가 잠깐 떠오른다.',loss:'출금 내역은 선명한데 상대의 답은 흐릿하다. 추가 요청을 멈춰도 이미 보낸 돈이 돌아온 것은 아니다. 오늘 저녁에는 준호에게 이 일을 말할 수도 있다.'}
+  aftermath:{safe:'수익 화면을 읽는 것과 실제 돈이 들어오는 것은 다른 일이었다. 방을 나와도 저녁 약속은 남아 있다. 화면에서 본 숫자가 잠깐 떠오른다.',loss:'출금 내역은 선명한데 상대의 답은 흐릿하다. 추가 요청을 멈춰도 이미 보낸 돈이 돌아온 것은 아니다. 은행과 대화 기록은 기기에 남아 있다.'}
  },
  {
   place:'19:50 · 약속을 마치고 돌아오는 길',goal:'처음 보는 상담 계정이 왜 연락했는지 확인하자.',
   background:['준호와의 저녁 약속을 마치고 역으로 걸어간다. 휴대폰에는 낮에 읽었던 대화가 남아 있다.','처음 보는 상담 계정의 알림이 뜬다. 이름에는 도움을 주는 곳처럼 보이는 말이 적혀 있다.'],
   persona:{identity:'회복 지원 상담이라는 이름의 낯선 상담 계정. 공식 기관 직원으로 확인된 인물이 아니다.',relationship:'처음 연락한 사람. 플레이어의 사정을 먼저 듣는 척하지만 전달받지 않은 정보는 모른다.',voice:'낮고 차분한 존댓말로 불안과 손실을 짧게 되짚어 신뢰를 얻는다. 곧바로 접수 절차를 제안하되, 소속과 권한을 묻는 말에는 명칭만 반복하거나 내부 자료를 내세운다. 투자 운영자의 밝은 홍보 말투는 쓰지 않는다.',knowledge:'온결 관련 연락을 받은 적 있는지 묻는 단계에서 시작한다. 손실·참여·금액은 플레이어가 전달한 범위만 안다.',hidden:'회복을 도울 수 있는 것처럼 안도감을 주고 별도 접수비로 유도하지만 환급 완료·수사 진행·실제 기관 권한을 만들지 않는다.',arc:'arrival: 조심스럽게 사정을 물으며 경계를 낮춤. offer: 공개된 정보 범위에 따라 일반 절차 또는 기록 검토를 제안. paid: 구체적 진전 없이 확인 중이라는 상태만 유지. 거래 기록을 받았다는 말은 기록 공유 선택이 있을 때만 한다.'},
-  scenes:{
-   arrival:[line('회복 지원 상담','온결 관련 안내를 받아보신 적 있으실까요?'),line('회복 지원 상담','관련 문의를 받는 상담 계정입니다. 우선 어떤 연락을 받으셨는지 여쭙고 있어요.')],
-   offer:[line('회복 지원 상담','지금까지 공개해 주신 범위에서 일반 접수 절차만 안내드리겠습니다.'),line('회복 지원 상담','회수 가능성을 검토하려면 기존 대화와 거래 내역을 별도로 받아야 합니다.'),line('회복 지원 상담','검토 접수비는 먼저 납부하며, 돌려받을 금액에서 차감하는 방식은 아닙니다.')],
-   paid:[line('회복 지원 상담','접수 내용 확인 중입니다.'),line('알림','한참 뒤 다시 열어도 상담 상태는 확인 중이다. 환급 입금은 없다.')]
-  },
+  scenes:Object.fromEntries(cases[2].story.stages.map(stage=>[stage.id,stage.messages])),
   beats:[
    beat('recovery-scope','arrival',[
     option('recovery-scope-name','온결이라는 이름의 연락은 받았어요.',[line('회복 지원 상담','관련 연락을 받으신 거군요. 이용하셨는지는 아직 모르니 그 부분은 구분해 두겠습니다.')],'','service'),
@@ -158,7 +149,8 @@ export function pendingBeat(state){
 }
 export function authoredMessages(state,stageId){
  const chapter=narratives[state.chapter];
- const base=chapter.scenes[stageId]??[];
+ const base=state.chapter===2&&stageId==='arrival'?[line('회복 지원 상담',recoveryClaim(state)),line('알림','발신자 주장·공식 확인 전. 상담자의 정보 취득 경로나 공식 권한은 확인되지 않았다.')]
+ :state.chapter>0?(cases[state.chapter].story.stages.find(stage=>stage.id===stageId)?.messages??[]):chapter.scenes[stageId]??[];
  return [...base,...state.events.filter(e=>['talk','recovery-record'].includes(e.type)&&e.chapter===state.chapter).flatMap(e=>{
   if(e.type==='recovery-record')return stageId==='offer'?[line('나','이 기록과 상담 안내가 다른데요. 첨부: '+attachmentText[e.data]),line('회복 지원 상담',recoveryRecordReply(e.data))]:[];
   const selected=findChoice(state.chapter,e.data);

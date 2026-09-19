@@ -31,7 +31,7 @@ export function chapterPages(state){
 export function resumeContext(state){
  if(state.completed)return ['오늘의 연락을 모두 정리했다.','남은 거래 기록과 선택을 다시 살펴볼 수 있다.'];
  const place=narratives[state.chapter].place;
- const status=isResolved(state)?outcomeText(state):({arrival:'새 연락을 살펴보던 중이다.',request:'대신 결제해 달라는 부탁을 받은 상태다.',waiting:'요청을 남겨 두고 확인하고 있다.',group:'자료방의 대화를 읽고 있다.',offer:'별도 안내를 받은 상태다. 결정은 아직 내 몫이다.',paid:'송금한 거래가 남아 있다. 이후 연락을 확인하고 있다.',withdrawal:'정밀 분석 자료를 요청한 뒤 추가 비용 안내를 받은 상태다.','extra-paid':'추가 비용을 보냈지만 정밀 분석 자료는 도착하지 않았다.'}[state.stage]??'진행 중인 연락이 남아 있다.');
+ const status=isResolved(state)?outcomeText(state):({arrival:'새 연락을 살펴보던 중이다.',request:'대신 결제해 달라는 부탁을 받은 상태다.',waiting:'요청을 남겨 두고 확인하고 있다.',group:'자료방의 대화를 읽고 있다.',offer:'별도 안내를 받은 상태다. 결정은 아직 내 몫이다.',paid:'송금한 거래가 남아 있다. 이후 연락을 확인하고 있다.',withdrawal:'출금을 요청한 뒤 보안 확인 비용을 요구받은 상태다.','extra-paid':'추가 비용을 보냈지만 은행에 수익금은 들어오지 않았다.'}[state.stage]??'진행 중인 연락이 남아 있다.');
  const last=[...state.events].reverse().find(e=>['confirm','inspect','save','capture','resolve','talk','message'].includes(e.type));
  const lastLine=last?({confirm:'마지막으로 게임 안에서 송금했다.',inspect:'마지막으로 확인 자료를 열어 보았다.',save:'마지막으로 기록을 메모에 보관했다.',capture:'마지막으로 대화의 질문을 보관했다.',resolve:'마지막으로 연락에 대한 결정을 남겼다.',talk:'마지막으로 준비된 답장을 보냈다.',message:'마지막으로 메시지 장면을 진행했다.'}[last.type]):'아직 이 하루에 새 선택을 남기지 않았다.';
  return [place+' · '+status,lastLine];

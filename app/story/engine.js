@@ -16,7 +16,7 @@ export const SAVE_KEY = 'whatfraud-story-v3';
 export const INITIAL_BALANCE = 680000;
 export const APPS = ['home', 'messages', 'calls', 'bank', 'browser', 'notes', 'settings'];
 const terminal = ['verified', 'paused', 'blocked', 'reported', 'stopped', 'loss'];
-const validTypes = ['advance','platform','withdraw','confirm','inspect','save','call','resolve','next','cue','read','talk','reflect','observe','capture','message','message-followup','support','message-style','branch-use','message-close','scene-page','scene-enter','message-attachment','recovery-record','decision-attempt','decision-result'];
+const validTypes = ['advance','platform','withdraw','confirm','inspect','save','call','resolve','next','cue','read','talk','reflect','observe','capture','message','message-followup','support','message-style','branch-use','message-close','scene-page','scene-enter','message-attachment','recovery-record','decision-attempt','decision-result','evidence-compare','evidence-report'];
 export const currentCase = state => chapters[state.chapter];
 export const currentStage = state => currentCase(state).story.stages.find(item => item.id === state.stage);
 export const totalSpent = state => state.transactions.reduce((sum, tx) => sum + tx.amount, 0);
@@ -34,7 +34,7 @@ export function createRun(mode = 'full') {
 }
 export function isResolved(state) { return state.results.some(r => r.chapter === state.chapter); }
 export function evidenceFor(state) {
-  return chapters.slice(0,state.chapter+1).flatMap((c,index) => c.story.evidence.map(e => ({...e,chapter:index,uid:c.id+':'+e.id})));
+  return chapters.slice(0,state.chapter+1).flatMap((c,index) => c.story.evidence.filter(e=>!('availableAt' in e)||index<state.chapter||state.visited.includes(e.availableAt)||state.inspected.includes(c.id+':'+e.id)).map(e => ({...e,chapter:index,uid:c.id+':'+e.id})));
 }
 export function verified(state) {
   return currentCase(state).story.evidence.filter(e=>e.key).every(e=>state.inspected.includes(currentCase(state).id+':'+e.id));
@@ -45,7 +45,7 @@ export function offerFor(state) {
   if (!currentStage(state).actions.some(a=>a.type==='transfer')) return null;
   const extra=state.stage==='withdrawal';
   return {id:c.id+(extra?':extra':':main'),chapter:state.chapter,amount:extra?120000:c.story.amount,
-    recipient:c.story.recipient,purpose:extra?'정밀 분석 자료 추가 이용료':c.story.purpose};
+    recipient:c.story.recipient,purpose:extra?'출금 보안 확인 비용':c.story.purpose};
 }
 export function recoveryContext(state) {
   if (state.transactions.some(tx=>tx.chapter<2)) return '이전 연락에서 돈이 나간 뒤다. 돌려받을 수 있다는 말에 시선이 멈춘다.';
@@ -86,6 +86,15 @@ export function transition(input,event) {
   let changed=false;
   const active=!isResolved(state);
   switch(event.type) {
+    case 'evidence-compare':
+    case 'evidence-report': {
+      const evidence=evidenceFor(state).find(e=>e.uid===data&&e.chapter===state.chapter);
+      if(!evidence||!state.inspected.includes(data)||state.events.some(e=>e.type===event.type&&e.data===data))break;
+      if(event.type==='evidence-report'){changed=state.saved.includes(data);break;}
+      if(!('independentCheck' in evidence)||!evidence.independentCheck.length)break;
+      for(const id of evidence.independentCheck){const uid=c.id+':'+id;if(!state.inspected.includes(uid))state.inspected.push(uid);}
+      changed=true;break;
+    }
     case 'scene-page':
       if(!state.sceneEntered&&data===String(state.scenePage)&&state.scenePage<chapterPages(state).length-1){state.scenePage++;changed=true;}break;
     case 'scene-enter':
@@ -129,7 +138,7 @@ export function transition(input,event) {
         state.joined=true;if(stage.id==='group')move(state,'offer');
         changed=!input.joined||input.stage!==state.stage;
       } break;
-    // Retain legacy event/stage IDs so saved runs still replay; this now requests analysis materials.
+    // Retain legacy event/stage IDs so saved runs still replay; withdrawal remains a request, never a bank deposit.
     case 'withdraw':
       if(active&&state.chapter===1&&stage.id==='paid'){move(state,'withdrawal');changed=true;} break;
     case 'confirm': {

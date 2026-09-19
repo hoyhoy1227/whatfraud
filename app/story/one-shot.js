@@ -1,17 +1,21 @@
 // Two authored story windows. Only categorical events are saved; never message text.
+import cases from '../../content/generated/cases.json' with {type:'json'};
+import {sourceLabels} from './fraud-context.js';
+const extraAttachments=cases.slice(1).flatMap(c=>c.story.evidence.filter(e=>['profit-report','recovery-intake','identity-request','recovery-ledger'].includes(e.id)));
 export const storyMessages = {
- peer: {name:'지수',initial:'지',title:'송금 전에 잠깐',opening:'온결 자료방에서 같은 안내를 받은 지수예요. 자료 이용료를 보낼지 고민 중인데, 처음 참여 안내와 추가 비용 설명이 헷갈려요. 확인한 안내나 보관한 질문이 있으면 같이 볼 수 있을까요?',prepared:'저도 아직 확인 중이에요. 보내기 전에 처음 안내와 지금 안내를 따로 확인해 보세요.',reply:'알려주셔서 고마워요. 입금은 미루고 안내부터 다시 볼게요.',reaction:'check'},
+ peer: {name:'지수',initial:'지',title:'송금 전에 잠깐',opening:'온결 자료방에서 같은 안내를 받은 지수예요. 참여금을 보낼지 고민 중인데, 처음 참여 안내와 추가 비용 설명이 헷갈려요. 확인한 안내나 보관한 질문이 있으면 같이 볼 수 있을까요?',prepared:'저도 아직 확인 중이에요. 보내기 전에 처음 안내와 지금 안내를 따로 확인해 보세요.',reply:'알려주셔서 고마워요. 입금은 미루고 안내부터 다시 볼게요.',reaction:'check'},
  friend: {name:'준호',initial:'준',title:'오전 · 기존 연락처',opening:'이제 잠깐 메시지 볼 수 있어. 아침에 무슨 일 있었어?',prepared:'오늘 낯선 돈 얘기가 있어서 좀 복잡했어. 잠깐 같이 확인해 줄래?',reply:'말해 줘서 고마워. 혼자 정리하지 않아도 돼, 내가 같이 볼게.',reaction:'together'}
 };
 export const sceneIds=Object.keys(storyMessages);
 export const reactions={peer:['check','acknowledge','boundary'],friend:['together','space']};
 export const attachmentText={
+ ...Object.fromEntries(extraAttachments.map(e=>[e.id,'출처 · '+sourceLabels[e.sourceType]+' / '+e.text])),
  none:'',
  'account-profile':'새 연락의 계정 정보: 준호라는 이름이지만 친구로 등록되지 않은 계정이다.',
  'recipient-note':'송금 요청의 수취인 이름은 한별 서비스이며, 저장된 준호의 이름과 다르다. 실제 송금 여부는 이 자료에 없다.',
  'old-chat-note':'어제 준호가 남긴 약속: 저녁 일곱 시 역 앞, 늦으면 원래 번호로 연락하기.',
  'contact-check':'저장된 연락처의 준호가 결제를 부탁한 적 없으며 새 계정도 자기 것이 아니라고 답했다.',
- 'terms-note':'상세 자료 구매 안내에는 없던 추가 이용료가 정밀 분석 요청 뒤 등장했다.',
+ 'terms-note':'처음 참여 안내에는 없던 보안 확인 비용이 출금 요청 뒤 등장했다.',
  'official-recovery':'직접 연 공식 안내에는 이 상담 계정으로 접수비를 먼저 보내라는 절차가 없다.',
  'contact-recovery':'상담 계정이 안내한 소속과 기존에 저장된 공식 연락처의 연결을 확인하지 못했다.',
  'first-notice':'온결의 참여 안내: 자료를 읽는 것과 별도 참여는 구분됩니다.',
@@ -31,10 +35,10 @@ const storyContextLabels={
  'peer-joined-room':'온결 자료방에 들어갔다.',
  'peer-offer-seen':'처음 자료 구매 안내와 이용 화면을 확인했다.',
  'peer-question-saved':'지수가 남긴 추가 비용 질문을 기록으로 보관했다.',
- 'peer-main-transfer':'상세 투자 분석 자료 이용료 300,000원을 가상 송금했다.',
- 'peer-withdrawal-requested':'정밀 분석을 요청한 뒤 추가 이용료 안내를 받았다.',
- 'peer-terms-compared':'처음 안내와 나중에 등장한 추가 이용료를 대조했다.',
- 'peer-extra-transfer':'정밀 분석 자료 추가 이용료 120,000원도 가상 송금했다.',
+ 'peer-main-transfer':'투자 참여금 300,000원을 가상 송금했다.',
+ 'peer-withdrawal-requested':'출금을 요청했지만 보안 확인 비용 요구로 보류됐다. 실제 수익금 입금은 없다.',
+ 'peer-terms-compared':'처음 안내와 출금 전 보안 확인 비용을 대조했다.',
+ 'peer-extra-transfer':'보안 확인 비용 120,000원도 가상 송금했지만 실제 수익금 입금은 없다.',
  'peer-resolved-verified':'공식 기록을 확인하고 두 번째 사건을 마쳤다.',
  'peer-resolved-paused':'돈을 더 보내지 않고 두 번째 사건의 결정을 미뤘다.',
  'peer-resolved-blocked':'연락을 차단하고 두 번째 사건을 마쳤다.',
@@ -94,6 +98,8 @@ export function messageWindow(state,id){
 }
 export function canAttach(state,id){
  if(id==='none')return true;
+ const extra=extraAttachments.find(e=>e.id===id);
+ if(extra)return state.chapter===(id==='profit-report'?1:2)&&state.inspected.includes(cases[state.chapter].id+':'+id);
  const keys={'account-profile':'familiar-request:profile','recipient-note':'familiar-request:recipient','old-chat-note':'familiar-request:old-chat','contact-check':'familiar-request:saved-contact','official-recovery':'recovery-team:official-help','contact-recovery':'recovery-team:contact-history'};
  if(keys[id])return state.chapter===(id.endsWith('recovery')?2:0)&&state.inspected.includes(keys[id]);
  if(id==='terms-note')return state.chapter===1&&state.events.some(e=>e.chapter===1&&e.type==='observe'&&e.data==='terms-comparison');
@@ -136,12 +142,12 @@ export function validateStoryContext(body){
  return ['none','first-notice','deleted-question','terms-note'].includes(body.attachment)&&body.joined&&(body.resolved||['withdrawal','extra-paid'].includes(body.stageId))&&(body.attachment!=='first-notice'||['offer','paid','withdrawal','extra-paid'].includes(body.stageId));
 }
 export function peerOpening(stage='group'){
- return ['withdrawal','extra-paid'].includes(stage)?storyMessages.peer.opening:'온결 자료방에서 같은 안내를 받은 지수예요. 분석 자료를 구매할지 고민 중인데, 처음 안내만으로는 조건을 잘 모르겠어요. 확인한 안내나 보관한 질문이 있으면 같이 볼 수 있을까요?';
+ return ['withdrawal','extra-paid'].includes(stage)?storyMessages.peer.opening:'온결 자료방에서 같은 안내를 받은 지수예요. 투자에 참여할지 고민 중인데, 처음 안내만으로는 조건을 잘 모르겠어요. 확인한 안내나 보관한 질문이 있으면 같이 볼 수 있을까요?';
 }
 export function storyPrompt(id,attachment='none',version=1,stage='group',storyContext=''){
  const peer=id==='peer';
  return `가상 스마트폰 스릴러 사기방지위원회의 일회성 메시지 장면이다.
-사건 설정: ${peer?'온결은 투자금을 운용하는 서비스가 아니라 유료 투자 분석 자료를 판매하는 계정이다. 상세 자료 구매 뒤 정밀 분석을 빌미로 추가 이용료를 요구한다. 출금 제한이나 실제 수익 실현을 만들지 않는다.':'첫 사건의 사칭 계정에 관한 연락이다.'}
+사건 설정: ${peer?'온결은 수익률 보고서로 투자 참여를 유도한 뒤 출금 전에 보안 확인 비용을 요구하는 가상 사기 계정이다. 화면의 수익은 실제 은행 입금이 아니다. 은행 입금이나 출금 완료를 만들지 않는다.':'첫 사건의 사칭 계정에 관한 연락이다.'}
 인물: ${peer?'지수. 같은 투자 자료방의 참여자. 아직 입금하기 전이며 자신의 판단으로 확인하려 한다. 낯선 참여자에게 쓰는 짧고 편한 해요체. 상담원이나 운영자가 아니다.':'준호. 이전부터 저장된 실제 친구. 오전 출근 후 잠시 메시지를 확인했다. 첫 사건의 새 계정 연락에 관해 듣는 중이다. 평소 약속을 잡고 밥을 먹는 친구의 짧은 반말. 금융 전문가나 심리 상담사가 아니다.'}
 ${peer?'':'본인이 아는 사실: 새 계정은 준호의 것이 아니며 결제를 부탁한 적도 없다. 사칭 연락을 알리거나 본인 여부를 물으면 먼저 이 사실을 분명히 말한 뒤 첨부에 반응한다. 이미 실제 준호와 대화 중이므로 준호에게 다시 연락하라거나 저장된 연락처로 본인 확인하라고 하지 않는다.'}
 말투: ${peer?'합니다/하겠습니다/고객님/원하시지 않는다면 같은 응대 문구를 쓰지 않는다. 공감 한 마디 뒤 자신의 확인 또는 경계 존중으로 끝낸다.':'알겠어/응처럼 짧게 받아 주고 함께할 일을 하나만 말한다. 훈계·평가·해결 보장 없이 가까운 친구처럼 말한다.'}
@@ -254,6 +260,7 @@ export function closureComplete(state){
 
 
 export const attachmentLabel={
+ ...Object.fromEntries(extraAttachments.map(e=>[e.id,e.title])),
  none:'첨부 안 함','account-profile':'새 계정의 프로필','recipient-note':'수취인 이름 메모','old-chat-note':'어제 약속 대화','contact-check':'원래 연락처의 확인 답장',
  'first-notice':'처음 참여 안내','deleted-question':'보관한 지수의 질문','terms-note':'처음 안내와 추가 비용 비교',
  'official-recovery':'공식 접수 안내','contact-recovery':'상담 연락처 대조 기록'
