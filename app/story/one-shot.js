@@ -65,9 +65,12 @@ export function storyContextFor(state,scene){
  return values;
 }
 export function storyContextText(values){
+ if(values===undefined)return '이전 클라이언트에서 상세 진행 기록이 전달되지 않았다. 메시지와 첨부 밖의 행동을 추측하지 않는다.';
  return Array.isArray(values)&&values.length?values.map(id=>storyContextLabels[id]).join('\n'):'아직 이 사건에서 확정된 행동이 없다.';
 }
 function validStoryProgress(body){
+ // Previously deployed clients omit this optional field; all scene gates still apply.
+ if(body.storyContext===undefined)return true;
  const values=body.storyContext,prefix=body.sceneId==='friend'?'friend-':'peer-';
  if(!Array.isArray(values)||values.length>8||values.some(id=>typeof id!=='string'||!id.startsWith(prefix)||!Object.hasOwn(storyContextLabels,id))||new Set(values).size!==values.length)return false;
  if(values.some((id,index)=>index&&storyContextOrder.indexOf(values[index-1])>=storyContextOrder.indexOf(id)))return false;

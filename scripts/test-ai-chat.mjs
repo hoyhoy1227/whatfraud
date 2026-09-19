@@ -76,9 +76,27 @@ try{
   [{reply:'https://example.invalid로 연락하세요',reaction:'check'},'unsafe_response']
  ]){
   route=await freshRoute();calls=0;globalThis.fetch=async()=>{calls++;return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(value)}]}}]});};
-  assert.equal((await (await route.POST(request())).json()).code,code);assert.equal(calls,1);
-  clock+=12000;assert.equal((await (await route.POST(request('재시도'))).json()).code,'moment_used');assert.equal(calls,1);
+  assert.equal((await (await route.POST(request())).json()).code,code);assert.equal(calls,2);
+  clock+=12000;assert.equal((await (await route.POST(request('재시도'))).json()).code,'moment_used');assert.equal(calls,2);
  }
+ // A failed contract is repaired once with the original message and attachment.
+ route=await freshRoute();calls=0;let repairBody;
+ globalThis.fetch=async(_url,options)=>{
+  calls++;repairBody=JSON.parse(options.body);
+  return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(calls===1
+   ?{reply:'어떻게 할까요?',reaction:'check',supportMode:'compare',focus:'none'}
+   :{reply:'추가 비용을 물었던 제 질문이네요. 저도 돈을 보내지 않고 조건부터 확인할게요.',reaction:'check',supportMode:'compare',focus:'deleted-question'})}]}}]});
+ };
+ const repaired=await route.POST(request('여기 수상하네요 돈 보내지 맙시다',undefined,{attachment:'deleted-question',contractVersion:2}));
+ assert.equal(repaired.status,200);assert.equal((await repaired.json()).provider,'gemini');assert.equal(calls,2);
+ assert.equal(repairBody.contents[0].parts[0].text,'여기 수상하네요 돈 보내지 맙시다');
+ assert.ok(repairBody.contents[1].parts[0].text.includes('검사를 통과하지 못했다'));
+ assert.ok(repairBody.systemInstruction.parts[0].text.includes('추가 비용'));
+ // A repair is a real provider call and must reserve shared budget again.
+ route=await freshRoute();calls=0;
+ globalThis.fetch=async()=>{calls++;globalThis.__budgetOutcome='exhausted';return successful('refund');};
+ assert.equal((await (await route.POST(request())).json()).code,'budget_exhausted');assert.equal(calls,1);
+ delete globalThis.__budgetOutcome;
  route=await freshRoute();calls=0;globalThis.fetch=async()=>{calls++;return Response.json({candidates:[{finishReason:'MAX_TOKENS',content:{parts:[{text:'{}'}]}}]});};
  assert.equal((await (await route.POST(request())).json()).code,'provider_token_limit');assert.equal(calls,1);
  route=await freshRoute();calls=0;globalThis.fetch=async()=>{calls++;return new Response(null,{status:429});};
@@ -89,6 +107,13 @@ try{
   assert.equal((await (await route.POST(request())).json()).code,outcome==='exhausted'?'budget_exhausted':'budget_unavailable');assert.equal(calls,0);
  }
  delete globalThis.__budgetOutcome;
+ route=await freshRoute();calls=0;
+ globalThis.fetch=async()=>{calls++;throw new DOMException('mock timeout','AbortError');};
+ assert.equal((await (await route.POST(request())).json()).code,'provider_timeout');assert.equal(calls,1);
+ route=await freshRoute();calls=0;
+ globalThis.fetch=async()=>{calls++;return successful();};
+ assert.equal((await route.POST(request('이전 화면에서 보낸 질문',undefined,{storyContext:undefined}))).status,200);
+ assert.equal(calls,1,'cached clients without optional progress stay compatible');
  await testClientCancellation();await testSecurity();
  route=await freshRoute();let captured;
  globalThis.fetch=async(_url,options)=>{captured=JSON.parse(options.body);return successful();};
@@ -162,11 +187,11 @@ try{
   if(attachment!=='none')assert.equal(result.reply,attachmentReply('friend',attachment));
   assert.equal(dialogue.validateAiReply(result.reply,undefined,'normal','story'),true,attachment);
   assert.ok(parseStoryReply(JSON.stringify({...generated,reply:result.reply}),'friend',2,attachment),attachment+': client must accept fallback');
-  assert.equal(calls,1,'fallback must not retry Gemini');
+  assert.equal(calls,2,'quality failure permits only one Gemini repair');
   assert.equal((await route.POST(request(input,undefined,overrides))).status,200);
-  assert.equal(calls,1,'duplicate must reuse fallback');
+  assert.equal(calls,2,'duplicate must reuse fallback');
  }
- console.log('One-shot AI tests passed, including all five friend identity fallback variants without provider retries.');
+ console.log('One-shot AI tests passed, including bounded validation repair and identity fallbacks.');
 }finally{
  if(originalEnabled===undefined)delete process.env.GEMINI_ENABLED;else process.env.GEMINI_ENABLED=originalEnabled;
  if(originalKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=originalKey;
