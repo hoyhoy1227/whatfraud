@@ -19,7 +19,7 @@ export function dinnerContext(state){
 }
 export function arrivalContext(state){
  if(state.chapter===0)return ['당신은 출근길에 지하철을 기다리고 있다.\n월급날까지 나흘. 생활 계좌의 68만 원으로 당분간의 생활비를 챙겨야 한다.','오늘 저녁에는 오랜 친구 준호와 약속이 있다.\n어제 정한 장소를 확인하려고 휴대폰을 연다.\n이제부터 연락을 읽고 답장하거나, 다른 앱에서 내용을 확인하며 하루를 진행한다.'];
- if(state.chapter===1)return ['점심을 먹고 자리로 돌아오는 길이다.\n며칠 전 부수입이 궁금해 신청한 무료 시장 노트가 도착했다.','월급까지 남은 나흘이 유난히 길게 느껴진다.\n점심값을 확인하다가, 부수입을 알아보며 남겨 둔 구독 신청이 생각났다.\n책상에 앉자 자료방 초대와 먼저 들어온 사람들의 메시지가 차례로 뜬다.'];
+ if(state.chapter===1)return ['점심을 먹고 자리로 돌아오는 길이다.\n며칠 전 투자에 대해 알아보다 신청한 무료 시장 노트가 도착했다.','월급까지 남은 나흘이 유난히 길게 느껴진다.\n점심값을 확인하다가, 투자 정보를 찾아보며 신청했던 시장 노트가 생각났다.\n책상에 앉자 자료방 초대와 먼저 들어온 사람들의 메시지가 차례로 뜬다.'];
  const loss=state.transactions.some(tx=>tx.chapter<2);
  return ['준호와 헤어진 뒤 역으로 걷는다. 처음 보는 상담 계정의 알림에 낮에 보았던 온결이라는 이름이 적혀 있다.',loss?'돌아오지 않은 돈과 답 없는 연락이 남아 있다. 이 계정이 내 거래를 알고 연락했는지는 아직 모른다.':state.joined?'자료방을 보았지만 돈을 보내지는 않았다. 이 계정이 왜 나에게 연락했는지 알 수 없다.':'거래에 참여한 적은 없다. 이 상담 계정과 연락하게 된 경로도 확인되지 않았다.'];
 }
@@ -31,7 +31,7 @@ export function chapterPages(state){
 export function resumeContext(state){
  if(state.completed)return ['오늘의 연락을 모두 정리했다.','남은 거래 기록과 선택을 다시 살펴볼 수 있다.'];
  const place=narratives[state.chapter].place;
- const status=isResolved(state)?outcomeText(state):({arrival:'새 연락을 살펴보던 중이다.',request:'대신 결제해 달라는 부탁을 받은 상태다.',waiting:'요청을 남겨 두고 확인하고 있다.',group:'자료방의 대화를 읽고 있다.',offer:'별도 안내를 받은 상태다. 결정은 아직 내 몫이다.',paid:'송금한 거래가 남아 있다. 이후 연락을 확인하고 있다.',withdrawal:'출금 보류와 추가 비용 안내를 받은 상태다.','extra-paid':'추가 비용을 보냈지만 출금은 보류 상태다.'}[state.stage]??'진행 중인 연락이 남아 있다.');
+ const status=isResolved(state)?outcomeText(state):({arrival:'새 연락을 살펴보던 중이다.',request:'대신 결제해 달라는 부탁을 받은 상태다.',waiting:'요청을 남겨 두고 확인하고 있다.',group:'자료방의 대화를 읽고 있다.',offer:'별도 안내를 받은 상태다. 결정은 아직 내 몫이다.',paid:'송금한 거래가 남아 있다. 이후 연락을 확인하고 있다.',withdrawal:'정밀 분석 자료를 요청한 뒤 추가 비용 안내를 받은 상태다.','extra-paid':'추가 비용을 보냈지만 정밀 분석 자료는 도착하지 않았다.'}[state.stage]??'진행 중인 연락이 남아 있다.');
  const last=[...state.events].reverse().find(e=>['confirm','inspect','save','capture','resolve','talk','message'].includes(e.type));
  const lastLine=last?({confirm:'마지막으로 게임 안에서 송금했다.',inspect:'마지막으로 확인 자료를 열어 보았다.',save:'마지막으로 기록을 메모에 보관했다.',capture:'마지막으로 대화의 질문을 보관했다.',resolve:'마지막으로 연락에 대한 결정을 남겼다.',talk:'마지막으로 준비된 답장을 보냈다.',message:'마지막으로 메시지 장면을 진행했다.'}[last.type]):'아직 이 하루에 새 선택을 남기지 않았다.';
  return [place+' · '+status,lastLine];

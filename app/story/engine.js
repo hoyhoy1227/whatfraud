@@ -45,7 +45,7 @@ export function offerFor(state) {
   if (!currentStage(state).actions.some(a=>a.type==='transfer')) return null;
   const extra=state.stage==='withdrawal';
   return {id:c.id+(extra?':extra':':main'),chapter:state.chapter,amount:extra?120000:c.story.amount,
-    recipient:c.story.recipient,purpose:extra?'출금 확인 비용':c.story.purpose};
+    recipient:c.story.recipient,purpose:extra?'정밀 분석 자료 추가 이용료':c.story.purpose};
 }
 export function recoveryContext(state) {
   if (state.transactions.some(tx=>tx.chapter<2)) return '이전 연락에서 돈이 나간 뒤다. 돌려받을 수 있다는 말에 시선이 멈춘다.';
@@ -129,6 +129,7 @@ export function transition(input,event) {
         state.joined=true;if(stage.id==='group')move(state,'offer');
         changed=!input.joined||input.stage!==state.stage;
       } break;
+    // Retain legacy event/stage IDs so saved runs still replay; this now requests analysis materials.
     case 'withdraw':
       if(active&&state.chapter===1&&stage.id==='paid'){move(state,'withdrawal');changed=true;} break;
     case 'confirm': {

@@ -3,7 +3,7 @@ import {messageChapter, messageWindow, messageStyle,peerOpening,messageStatus,pe
 export const emptyMessageMemory=()=>({draft:'',sent:'',reply:'',attachment:'none',sentAttachment:'none',preparedSent:'',callStep:0});
 export function messageOpening(state,scene){
  if(scene==='peer')return peerOpening(state.chapter===1?state.stage:state.events.some(e=>e.chapter===1&&e.type==='withdraw')?'withdrawal':'group');
- if(state.calls.includes('0:junho'))return '아까 새 계정으로 확인했던 일이구나. 지금 말하고 싶은 만큼만 남겨 줘.';
+ if(state.calls.includes('0:junho'))return '아까 새 계정으로 확인했던 일이구나. 무슨 일이 있었는지 알려줘.';
  return '이제 잠깐 메시지 볼 수 있어. 아침에 무슨 일 있었어?';
 }
 export function peerRecordReady(state){

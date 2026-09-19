@@ -33,7 +33,7 @@ assert.ok(rewind.includes('사기방지위원회에서 진행한 사기 대응 �
 assert.ok(rewind.includes('실제 공공기관의 검사')&&rewind.includes('경찰청 · 사이버범죄 신고 절차'));
 assert.equal((rewind.match(/class="report-case"/g)||[]).length,3);
 const client=await readFile('app/story/story-client.tsx','utf8');
-for(const label of ['준호에게 메시지 보내기','출금 요청','보관한 자료로 접수','메모에 보관','보내기','일단 보류하기','이 계정 차단하기','최근 앱','일시정지','움직임 줄이기','글자 크게'])assert.ok(client.includes(label),label);
+for(const label of ['준호에게 메시지 보내기','정밀 분석 요청','보관한 자료로 접수','메모에 보관','보내기','일단 보류하기','이 계정 차단하기','최근 앱','일시정지','움직임 줄이기','글자 크게'])assert.ok(client.includes(label),label);
 assert.ok(client.includes('showModal()')&&client.includes('onCancel='));
 const messageClient=await readFile('app/story/story-message.tsx','utf8');
 assert.ok(messageClient.includes('signal:aborter.signal')&&client.includes('practiceOriginal'));
@@ -91,6 +91,9 @@ assert.ok(!client.slice(client.indexOf("dialog==='reply'?")).includes('<textarea
 
 let messageSource=messageClient.replace("from './engine'","from "+JSON.stringify(new URL('../app/story/engine.js',import.meta.url).href)).replace("from './presentation'","from "+JSON.stringify(new URL('../app/story/presentation.js',import.meta.url).href)).replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './one-shot'","from "+JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
 const bubbleJs=ts.transpileModule(await readFile('app/story/chat-bubbles.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime')));
+const pickerSource=(await readFile('app/story/attachment-picker.tsx','utf8')).replace("'./one-shot'",JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
+const pickerJs=ts.transpileModule(pickerSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime'))).replace("from 'react'","from "+JSON.stringify(import.meta.resolve('react')));
+messageSource=messageSource.replace("'./attachment-picker'",JSON.stringify('data:text/javascript;base64,'+Buffer.from(pickerJs).toString('base64')));
 messageSource=messageSource.replace("from './chat-bubbles'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(bubbleJs).toString('base64')));
 const compiled=ts.transpileModule(messageSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime'))).replace("from 'react'","from "+JSON.stringify(import.meta.resolve('react')));
 const Message=(await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'))).default;

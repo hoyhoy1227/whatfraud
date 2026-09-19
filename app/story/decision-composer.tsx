@@ -1,10 +1,11 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {decisionWindows,decisionAvailable,decisionAttempted,decisionReactions} from './decision-message';
-import {attachmentLabel,attachmentText,canAttach} from './one-shot';
+import {attachmentText,canAttach} from './one-shot';
 import {chosenIds,decisionChecks} from './narrative';
 import {sanitizePlayerText,validateAiReply} from '../ai-dialogue';
 import {ChatBubbles} from './chat-bubbles';
+import AttachmentPicker from './attachment-picker';
 type Run=ReturnType<typeof import('./engine').createRun>;
 export type DecisionMemory={draft:string;attachment:string;sent:string;reply:string;error:string;scripted:boolean};
 export const emptyDecisionMemory=():DecisionMemory=>({draft:'',attachment:'none',sent:'',reply:'',error:'',scripted:false});
@@ -45,7 +46,7 @@ export default function DecisionComposer({memory,onMemory,state,enabled,remainin
   {error&&<p className="message-error" role="status">{error}</p>}
   {attempted&&!busy&&!reply&&!error&&<p className="fine">이 확인 구간에서는 이미 AI를 사용했습니다. 원문은 저장하지 않으며 아래 선택으로 계속할 수 있습니다.</p>}
   {available&&!attempted&&<details className="prepared-message"><summary>직접 답장하기</summary>{enabled&&remaining>0?<form className="story-message-composer" onSubmit={send}>
-   <label>함께 보낼 게임 내 기록<select value={attachment} onChange={e=>setAttachment(e.target.value)}>{window.attachments.filter(id=>canAttach(state,id)).map(id=><option key={id} value={id}>{attachmentLabel[id as keyof typeof attachmentLabel]}</option>)}</select></label>
+   <AttachmentPicker value={attachment} onChange={setAttachment} options={window.attachments.filter(id=>canAttach(state,id))} disabled={blocked||busy}/>
    <label>자유답변(개인정보는 입력하지 마세요)<textarea value={draft} rows={3} maxLength={500} onChange={e=>setDraft(e.target.value)}/></label>
    <button className="primary" disabled={blocked||busy||!draft.trim()} type="submit">보내기</button><small>이 구간에서는 한 번만 답장을 받습니다. 송금·보류·차단은 직접 선택하세요.</small>
   </form>:<p className="fine">{!enabled?'AI 사용을 켠 경우에만 직접 답장할 수 있습니다.':'이번 회차의 AI 사용 한도를 모두 사용했습니다.'} 준비된 답장으로도 계속할 수 있습니다.</p>}</details>}

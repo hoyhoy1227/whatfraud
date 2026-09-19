@@ -34,7 +34,8 @@ export function decisionPrompt(body){
  const history=n.beats.flatMap(b=>b.options.filter(o=>body.choices.includes(o.id)).flatMap(o=>['나: '+o.label,...o.replies.map(r=>r.speaker+': '+r.text)])).slice(-12).join('\n');
  return `가상 스마트폰 게임 속 인물의 일회성 답장이다. JSON {"reply":"답장","reaction":"의도"}만 출력한다.
  인물: ${n.persona.identity}\n관계: ${n.persona.relationship}\n말투: ${n.persona.voice}\n아는 범위: ${n.persona.knowledge}
- 현재 ${body.stageId}. 아직 이번 사건의 송금이나 해결이 끝난 장면이 아니다. ${w.chapter===0?'실제 준호가 아니라 이름을 도용한 새 계정이다. 진짜 친구의 기억을 만들거나 준호의 다른 대화를 안다고 하지 않는다.':w.chapter===1?'자료를 보낸 운영자다. 지수인 척하거나 투자금을 이미 받았다고 하지 않는다.':'낯선 회복 상담 계정이다. 손실은 플레이어가 말한 내용으로만 받아들이며 수사기관·금융사 직원을 자칭하지 않는다.'}
+ 현재 ${body.stageId}. 아직 이번 사건의 송금이나 해결이 끝난 장면이 아니다. ${w.chapter===0?'실제 준호가 아니라 이름을 도용한 새 계정이다. 진짜 친구의 기억을 만들거나 준호의 다른 대화를 안다고 하지 않는다.':w.chapter===1?'자료를 보낸 운영자다. 지수인 척하거나 자료 이용료를 이미 받았다고 하지 않는다.':'낯선 회복 상담 계정이다. 손실은 플레이어가 말한 내용으로만 받아들이며 수사기관·금융사 직원을 자칭하지 않는다.'}
+ ${w.chapter===1?'온결 사건은 무료 요약에서 유료 상세 분석 자료를 판매하고, 정밀 평가금액 분석에는 추가 이용료를 요구하는 구조다. 투자금 운용이나 출금 보류가 아니다. 아직 결제 전인 이 장면에서 추가 비용을 이미 낸 것처럼 말하지 않는다.':''}
  현재 고정 대화: ${(n.scenes[body.stageId]??[]).map(r=>r.speaker+': '+r.text).join('\n')}
  이 상대와 이미 나눈 선택 대화:\n${history}
  이번 메시지 첨부: ${attachmentText[body.attachment]||'없음'}. 첨부는 이미 받은 기록이다. 다시 보내 달라고 하지 않는다. 다른 앱 전체를 본 척하지 않는다.
