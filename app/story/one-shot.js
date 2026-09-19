@@ -3,7 +3,7 @@ import cases from '../../content/generated/cases.json' with {type:'json'};
 import {sourceLabels} from './fraud-context.js';
 const extraAttachments=cases.slice(1).flatMap(c=>c.story.evidence.filter(e=>['profit-report','ledger','success-post','official-record','subscription','fee-note','case-record','recovery-intake','identity-request','recovery-ledger'].includes(e.id)).map(e=>({...e,caseId:c.id})));
 export const storyMessages = {
- peer: {name:'지수',initial:'지',title:'송금 전에 잠깐',opening:'온결 자료방에서 같은 안내를 받은 지수예요. 참여금을 보낼지 고민 중인데, 처음 참여 안내와 추가 비용 설명이 헷갈려요. 확인한 안내나 보관한 질문이 있으면 같이 볼 수 있을까요?',prepared:'저도 아직 확인 중이에요. 보내기 전에 처음 안내와 지금 안내를 따로 확인해 보세요.',reply:'알려주셔서 고마워요. 입금은 미루고 안내부터 다시 볼게요.',reaction:'check'},
+ peer: {name:'지수',initial:'지',title:'송금 전에 잠깐',opening:'온결 자료방에서 같은 안내를 받은 지수예요. 참여금을 보낼지 고민 중인데, 처음 참여 안내와 추가 비용 설명이 헷갈려요. 확인한 안내나 알아본 내용이 있으면 같이 볼 수 있을까요?',prepared:'저도 아직 확인 중이에요. 보내기 전에 처음 안내와 지금 안내를 따로 확인해 보세요.',reply:'알려주셔서 고마워요. 입금은 미루고 안내부터 다시 볼게요.',reaction:'check'},
  friend: {name:'준호',initial:'준',title:'오전 · 기존 연락처',opening:'이제 잠깐 메시지 볼 수 있어. 아침에 무슨 일 있었어?',prepared:'오늘 낯선 돈 얘기가 있어서 좀 복잡했어. 잠깐 같이 확인해 줄래?',reply:'말해 줘서 고마워. 혼자 정리하지 않아도 돼, 내가 같이 볼게.',reaction:'together'}
 };
 export const sceneIds=Object.keys(storyMessages);
@@ -142,7 +142,7 @@ export function validateStoryContext(body){
  return ['none','first-notice','deleted-question','terms-note'].includes(body.attachment)&&body.joined&&(body.resolved||['withdrawal','extra-paid'].includes(body.stageId))&&(body.attachment!=='first-notice'||['offer','paid','withdrawal','extra-paid'].includes(body.stageId));
 }
 export function peerOpening(stage='group'){
- return ['withdrawal','extra-paid'].includes(stage)?storyMessages.peer.opening:'온결 자료방에서 같은 안내를 받은 지수예요. 투자에 참여할지 고민 중인데, 처음 안내만으로는 조건을 잘 모르겠어요. 확인한 안내나 보관한 질문이 있으면 같이 볼 수 있을까요?';
+ return ['withdrawal','extra-paid'].includes(stage)?storyMessages.peer.opening:'온결 자료방에서 같은 안내를 받은 지수예요. 투자에 참여할지 고민 중인데, 처음 안내만으로는 조건을 잘 모르겠어요. 확인한 안내나 알아본 내용이 있으면 같이 볼 수 있을까요?';
 }
 export function storyPrompt(id,attachment='none',version=1,stage='group',storyContext=''){
  const peer=id==='peer';

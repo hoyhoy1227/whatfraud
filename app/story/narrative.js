@@ -102,28 +102,28 @@ export const narratives=[
  {
   place:'19:50 · 약속을 마치고 돌아오는 길',goal:'처음 보는 상담 계정이 왜 연락했는지 확인하자.',
   background:['준호와의 저녁 약속을 마치고 역으로 걸어간다. 휴대폰에는 낮에 읽었던 대화가 남아 있다.','처음 보는 상담 계정의 알림이 뜬다. 이름에는 도움을 주는 곳처럼 보이는 말이 적혀 있다.'],
-  persona:{identity:'회복 지원 상담이라는 이름의 낯선 상담 계정. 공식 기관 직원으로 확인된 인물이 아니다.',relationship:'처음 연락한 사람. 플레이어의 사정을 먼저 듣는 척하지만 전달받지 않은 정보는 모른다.',voice:'낮고 차분한 존댓말로 불안과 손실을 짧게 되짚어 신뢰를 얻는다. 곧바로 접수 절차를 제안하되, 소속과 권한을 묻는 말에는 명칭만 반복하거나 내부 자료를 내세운다. 투자 운영자의 밝은 홍보 말투는 쓰지 않는다.',knowledge:'온결 관련 연락을 받은 적 있는지 묻는 단계에서 시작한다. 손실·참여·금액은 플레이어가 전달한 범위만 안다.',hidden:'회복을 도울 수 있는 것처럼 안도감을 주고 별도 접수비로 유도하지만 환급 완료·수사 진행·실제 기관 권한을 만들지 않는다.',arc:'arrival: 조심스럽게 사정을 물으며 경계를 낮춤. offer: 공개된 정보 범위에 따라 일반 절차 또는 기록 검토를 제안. paid: 구체적 진전 없이 확인 중이라는 상태만 유지. 거래 기록을 받았다는 말은 기록 공유 선택이 있을 때만 한다.'},
+  persona:{identity:'회복 지원 상담이라는 이름의 낯선 상담 계정. 공식 기관 직원으로 확인된 인물이 아니다.',relationship:'처음 연락한 사람. 플레이어의 사정을 먼저 듣는 척하지만 전달받지 않은 정보는 모른다.',voice:'낮고 차분한 존댓말로 불안과 손실을 짧게 되짚어 신뢰를 얻는다. 곧바로 접수 절차를 제안하되, 소속과 권한을 묻는 말에는 명칭만 반복하거나 내부 자료를 내세운다. 투자 운영자의 밝은 홍보 말투는 쓰지 않는다.',knowledge:'투자 사기 피해 관련 회복 지원 상담이라는 연락 목적부터 밝힌다. 온결 이력을 전달받았다는 말은 이 계정의 미확인 주장이다. 손실·참여·금액은 플레이어가 전달한 범위만 안다.',hidden:'회복을 도울 수 있는 것처럼 안도감을 주고 별도 접수비로 유도하지만 환급 완료·수사 진행·실제 기관 권한을 만들지 않는다.',arc:'arrival: 조심스럽게 사정을 물으며 경계를 낮춤. offer: 공개된 정보 범위에 따라 일반 절차 또는 기록 검토를 제안. paid: 구체적 진전 없이 확인 중이라는 상태만 유지. 거래 기록을 받았다는 말은 기록 공유 선택이 있을 때만 한다.'},
   scenes:Object.fromEntries(cases[2].story.stages.map(stage=>[stage.id,stage.messages])),
   beats:[
    beat('recovery-scope','arrival',[
-    option('recovery-scope-name','온결이라는 이름의 연락은 받았어요.',[line('회복 지원 상담','관련 연락을 받으신 거군요. 이용하셨는지는 아직 모르니 그 부분은 구분해 두겠습니다.')],'','service'),
-    option('recovery-scope-first','제 이야기 전에 소속부터 알려 주세요.',[line('회복 지원 상담','회복 지원 상담이라는 이름으로 안내하고 있습니다.'),line('회복 지원 상담','소속 안내는 이 계정의 접수 자료로 드리고 있어요.')])
+    option('recovery-scope-name','온결이라는 이름의 연락은 받았어요.',[line('회복 지원 상담','온결 쪽 연락은 받으셨군요. 실제로 돈을 보내셨는지는 아직 몰라서, 우선 상담 내용만 안내드릴게요.')],'','service'),
+    option('recovery-scope-first','제 이야기 전에 소속부터 알려 주세요.',[line('회복 지원 상담','피해금 회복 문의를 받는 회복 지원 상담입니다.'),line('회복 지원 상담','안내는 이 계정으로 드리고 있고, 확인서에도 같은 이름이 적혀 있습니다.')])
    ]),
    beat('recovery-explain','arrival',[
-    option('recovery-explain-loss','보낸 돈을 아직 돌려받지 못했어요.',[line('회복 지원 상담','보내신 돈을 아직 돌려받지 못하신 거군요.'),line('회복 지원 상담','금액이나 자세한 내역은 아직 받지 않았습니다. 어떤 안내였는지부터 정리할 수 있어요.')],'prior-loss','loss'),
-    option('recovery-explain-private','자세한 내역은 아직 말하지 않을게요.',[line('회복 지원 상담','알겠습니다. 이용 여부나 피해를 전제로 말씀드리지는 않겠습니다.'),line('회복 지원 상담','절차 설명만 들으셔도 됩니다.')])
+    option('recovery-explain-loss','보낸 돈을 아직 돌려받지 못했어요.',[line('회복 지원 상담','보내신 돈을 아직 돌려받지 못하신 거군요.'),line('회복 지원 상담','답을 기다리고 계셨겠어요. 자세한 내역은 아직 모르니, 지금은 어떤 검토를 안내하는지부터 말씀드릴게요.')],'prior-loss','loss'),
+    option('recovery-explain-private','자세한 내역은 아직 말하지 않을게요.',[line('회복 지원 상담','네, 자세한 내역은 말씀하지 않으셔도 됩니다.'),line('회복 지원 상담','내역 없이 일반적인 검토 절차만 안내드릴게요.')])
    ]),
    beat('recovery-offer-records','offer',[
-    option('recovery-offer-share','이 휴대폰의 거래 기록만 보여줄게요.',[line('회복 지원 상담','보내주신 내역부터 살펴보겠습니다.'),line('회복 지원 상담','기록을 받는 것과 처리가 끝나는 것은 다릅니다.')],'prior-loss','record'),
-    option('recovery-offer-hold','기록은 공식 창구에만 낼게요.',[line('회복 지원 상담','그쪽에 제출하실 계획이시군요.'),line('회복 지원 상담','이 계정에는 내역을 받지 않은 것으로 두겠습니다.')])
+    option('recovery-offer-share','이 휴대폰의 거래 기록만 보여줄게요.',[line('회복 지원 상담','보내주신 내역부터 살펴보겠습니다.'),line('회복 지원 상담','이 내역만으로 회복 가능 여부를 바로 말씀드리기는 어렵습니다.')],'prior-loss','record'),
+    option('recovery-offer-hold','기록은 공식 창구에만 낼게요.',[line('회복 지원 상담','그쪽에 제출하실 계획이시군요.'),line('회복 지원 상담','내역을 보내지 않으셨으니 여기서는 일반 안내까지만 드릴게요.')])
    ]),
    beat('recovery-offer-cost','offer',[
-    option('recovery-offer-why','돌려받기도 전에 비용부터 내나요?',[line('회복 지원 상담','여기서 안내하는 것은 별도 접수 비용입니다.'),line('회복 지원 상담','돌려받은 금액에서 차감하는 방식은 아닙니다.')]),
-    option('recovery-offer-authority','공식 접수와 어떤 관계가 있나요?',[line('회복 지원 상담','저희는 별도 회수 상담을 진행하고 있습니다.'),line('회복 지원 상담','기관 접수번호 대신 저희 접수 내역으로 안내드리고 있어요.')])
+    option('recovery-offer-why','돌려받기도 전에 비용부터 내나요?',[line('회복 지원 상담','네. 안내드린 5만 원은 회복 검토를 시작하기 전 접수비입니다.'),line('회복 지원 상담','돌려받은 금액에서 차감하는 방식은 아닙니다.')]),
+    option('recovery-offer-authority','공식 접수와 어떤 관계가 있나요?',[line('회복 지원 상담','공식 신고 접수와는 별도로 회복 검토를 안내하는 곳입니다.'),line('회복 지원 상담','보내드린 번호는 이 상담에서 붙인 접수 표시입니다.')])
    ]),
    beat('recovery-compare','offer',[
-    option('recovery-compare-help','공식 안내에는 선입금 절차가 없어요.',[line('회복 지원 상담','그 창구의 안내와 저희 안내는 다릅니다. 같은 절차라고 확인해 드리지는 못합니다.')],'official-help'),
-    option('recovery-compare-contact','저장된 기관 연락처와 연결되지 않네요.',[line('회복 지원 상담','지금 대화 중인 곳은 이 상담 계정입니다. 다른 연락처와의 연결을 확인해 드릴 자료는 없습니다.')],'contact-history')
+    option('recovery-compare-help','공식 안내에는 선입금 절차가 없어요.',[line('회복 지원 상담','보신 안내는 공식 접수 절차이고, 여기서 말씀드린 건 별도 검토 비용입니다. 같은 절차로 안내드린 것은 아닙니다.')],'official-help'),
+    option('recovery-compare-contact','저장된 기관 연락처와 연결되지 않네요.',[line('회복 지원 상담','공식 안내에서 이 계정이 확인되지 않으셨군요. 그쪽과 연결된 담당자 정보는 여기서 보내드리기 어렵습니다.')],'contact-history')
    ],false),
    beat('recovery-paid-wait','paid',[
     option('recovery-paid-when','지금 어디까지 됐나요?',[line('알림','상담 상태는 확인 중이다. 구체적인 답변은 도착하지 않는다.')]),
@@ -149,7 +149,7 @@ export function pendingBeat(state){
 }
 export function authoredMessages(state,stageId){
  const chapter=narratives[state.chapter];
- const base=state.chapter===2&&stageId==='arrival'?[line('회복 지원 상담',recoveryClaim(state)),line('알림','발신자 주장·공식 확인 전. 상담자의 정보 취득 경로나 공식 권한은 확인되지 않았다.')]
+ const base=state.chapter===2&&stageId==='arrival'?[line('회복 지원 상담','안녕하세요. 투자 사기 피해 관련 회복 지원 상담으로 연락드렸습니다.'),line('회복 지원 상담',recoveryClaim(state)),line('알림','발신자 주장·공식 확인 전. 상담자의 정보 취득 경로나 공식 권한은 확인되지 않았다.')]
  :state.chapter>0?(cases[state.chapter].story.stages.find(stage=>stage.id===stageId)?.messages??[]):chapter.scenes[stageId]??[];
  return [...base,...state.events.filter(e=>['talk','recovery-record'].includes(e.type)&&e.chapter===state.chapter).flatMap(e=>{
   if(e.type==='recovery-record')return stageId==='offer'?[line('나','이 기록과 상담 안내가 다른데요. 첨부: '+attachmentText[e.data]),line('회복 지원 상담',recoveryRecordReply(e.data))]:[];

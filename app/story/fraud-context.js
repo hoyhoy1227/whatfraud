@@ -12,10 +12,10 @@ export function fraudContext(state){
 }
 export function recoveryClaim(state){
  const context=fraudContext(state);
- return context.withdrawalBlocked?'온결 출금 관련 문의 이력이 있다고 전달받았습니다. 회복 검토 안내를 드립니다.'
- :context.investmentTransferred?'온결 참여 관련 처리 대상이라고 전달받았습니다. 회복 검토 안내를 드립니다.'
- :context.investmentContacted?'온결 자료 안내를 받으신 분이라고 전달받았습니다. 상담 안내를 드립니다.'
- :'관련 상담 안내 대상이라고 전달받았습니다. 상담 안내를 드립니다.';
+ return context.withdrawalBlocked?'온결 출금 관련 문의 이력이 있다고 전달받았습니다. 피해금 회복 상담이 필요한지 확인하려고 연락드렸습니다.'
+ :context.investmentTransferred?'온결 참여 관련 처리 대상이라고 전달받았습니다. 피해금 회복 상담이 필요한지 확인하려고 연락드렸습니다.'
+ :context.investmentContacted?'온결 자료 안내를 받으신 분이라고 전달받았습니다. 피해가 있으신지는 아직 몰라 상담이 필요한지 여쭙고 있습니다.'
+ :'온결 관련 상담 안내 대상이라고 전달받았습니다. 실제 이용이나 피해 여부는 아직 확인하지 못했습니다.';
 }
 export const sourceLabels={
  'sender-attachment':'상대방이 보낸 자료',
