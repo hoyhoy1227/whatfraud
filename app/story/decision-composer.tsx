@@ -3,7 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {decisionWindows,decisionAvailable,decisionAttempted,decisionReactions} from './decision-message';
 import {attachmentText,canAttach} from './one-shot';
 import {chosenIds,decisionChecks} from './narrative';
-import {sanitizePlayerText,validateAiReply} from '../ai-dialogue';
+import {AI_REPLY_TIMEOUT_MS,aiReplyFailureMessage,sanitizePlayerText,validateAiReply} from '../ai-dialogue';
 import {ChatBubbles} from './chat-bubbles';
 import AttachmentPicker from './attachment-picker';
 type Run=ReturnType<typeof import('./engine').createRun>;
@@ -25,22 +25,23 @@ export default function DecisionComposer({memory,onMemory,state,enabled,remainin
   pending.current=true;
   if(!onEvent('decision-attempt',window.id+':attempt')){pending.current=false;return;}
   setBusy(true);setSent(text);setDraft('');setError('');
-  const aborter=new AbortController();controller.current=aborter;const timer=setTimeout(()=>aborter.abort(),12000);
+  const aborter=new AbortController();controller.current=aborter;let deadlineExpired=false;const timer=setTimeout(()=>{deadlineExpired=true;aborter.abort();},AI_REPLY_TIMEOUT_MS);
   try{
    const checks=decisionChecks(state);if(state.events.some(e=>e.type==='capture'&&e.data==='paper-question'))checks.push('paper-question');
    const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':getSession()},signal:aborter.signal,body:JSON.stringify({contractVersion:2,inputMode:'decision-message',caseId:window.caseId,sceneId:window.id,stageId:state.stage,resolved:false,joined:state.joined,attachment,choices:chosenIds(state),checks,messages:[{role:'user',content:text}],userTurnCount:1})});
-   const value=await response.json() as {provider?:unknown;reply?:unknown;reaction?:unknown;fallbackReason?:unknown};
+   const value=await response.json() as {code?:unknown;provider?:unknown;reply?:unknown;reaction?:unknown;fallbackReason?:unknown};
+   if(!response.ok){if(mounted.current)setError(aiReplyFailureMessage(value.code));return;}
    const fallback=value.provider==='scripted'&&value.fallbackReason==='reply_quality';
-   if(!response.ok||(value.provider!=='gemini'&&!fallback)||typeof value.reply!=='string'||typeof value.reaction!=='string'||!decisionReactions.includes(value.reaction)||!validateAiReply(value.reply,undefined,'normal','story')||/[?？]/.test(value.reply))throw Error('unavailable');
+   if((value.provider!=='gemini'&&!fallback)||typeof value.reply!=='string'||typeof value.reaction!=='string'||!decisionReactions.includes(value.reaction)||!validateAiReply(value.reply,undefined,'normal','story')||/[?？]/.test(value.reply))throw Error('unavailable');
    if(!mounted.current||aborter.signal.aborted)return;
    if(onEvent('decision-result',window.id+':'+value.reaction+':'+attachment)){setReply(value.reply);setScripted(fallback);onIncoming?.();}
-  }catch{if(mounted.current)setError('AI 답장을 받지 못했습니다. 다시 요청하지 않고 준비된 답장으로 계속할 수 있습니다.');}
-  finally{clearTimeout(timer);pending.current=false;if(mounted.current){setBusy(false);if(aborter.signal.aborted)setError('전송이 중단됐습니다. 재요청 없이 준비된 답장으로 계속할 수 있습니다.');}}
+  }catch{if(mounted.current)setError(aiReplyFailureMessage(undefined,deadlineExpired));}
+  finally{clearTimeout(timer);pending.current=false;if(mounted.current){setBusy(false);if(aborter.signal.aborted&&!deadlineExpired)setError('전송이 중단됐습니다. 재요청 없이 준비된 답장으로 계속할 수 있습니다.');}}
  }
  if(!window||(!available&&!sent&&!reply))return null;
  return <section className="decision-message">
   {sent&&<ChatBubbles speaker="나" text={sent}>{attachment!=='none'&&<small>첨부 · {attachmentText[attachment as keyof typeof attachmentText]}</small>}</ChatBubbles>}
-  {busy&&<p className="typing" role="status">{['준호 · 새 계정','온결 리서치','회복 지원 상담'][state.chapter]} 입력 중 …</p>}
+  {busy&&<><p className="typing" role="status">{['준호 · 새 계정','온결 리서치','회복 지원 상담'][state.chapter]} 입력 중 …</p><small className="fine">답변을 확인하고 있습니다. 잠시 기다려 주세요.</small></>}
   {reply&&<ChatBubbles speaker={['준호','온결 리서치','회복 지원 상담'][state.chapter]} text={reply}/>}
   {scripted&&<small className="fine">답변 품질 기준에 따라 준비된 대사로 이어졌습니다. 추가 AI 호출은 없습니다.</small>}
   {error&&<p className="message-error" role="status">{error}</p>}

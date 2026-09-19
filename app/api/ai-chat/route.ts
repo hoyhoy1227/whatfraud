@@ -6,7 +6,7 @@ import { cases } from '../../game-data';
 
 const GEMINI_MODEL = 'gemini-3.5-flash-lite';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const PROVIDER_TIMEOUT_MS = 8_000;
+const PROVIDER_TIMEOUT_MS = 20_000;
 const SESSION_MINUTE_LIMIT = 5;
 const SESSION_DAY_LIMIT = 30;
 const IP_MINUTE_LIMIT = 10;
@@ -291,6 +291,7 @@ async function handleChat(request: Request, body: ChatBody) {
       return json({ code: response.status === 400 || response.status === 403 ? 'provider_configuration' : 'provider_error' }, 502, { 'Retry-After': response.status === 400 || response.status === 403 ? '300' : '30' });
     }
     const payload = await response.json() as { candidates?: Array<{ finishReason?: string }> };
+    if (payload.candidates?.[0]?.finishReason === 'MAX_TOKENS') return json({ code: 'provider_token_limit' }, 502);
     if (payload.candidates?.[0]?.finishReason !== 'STOP') return json({ code: 'incomplete_response' }, 502);
     const result = isDecision?parseDecisionReply(extractGeminiText(payload)):parseStoryReply(extractGeminiText(payload),sceneId,contractVersion,body.attachment as string);
     if (!result) return json({ code: 'unsafe_response', validation: 'story_contract' }, 502);

@@ -6,6 +6,14 @@ export { aiMoment, decisionReadyFor } from './story/narrative.js';
 export type AiChatMessage = { role: 'user' | 'assistant'; content: string };
 export type DialogueEmotion = 'friendly' | 'evasive' | 'deflecting' | 'pressuring' | 'disappointed' | 'closed';
 export type DialogueReplyMode = 'short' | 'normal';
+export const AI_REPLY_TIMEOUT_MS=25_000;
+
+export function aiReplyFailureMessage(code:unknown,clientTimedOut=false){
+  if(code==='provider_quota')return '현재 Gemini의 일시적인 사용량 한도에 도달해 답장을 생성할 수 없습니다. 추가 호출 없이 준비된 답장으로 계속해 주세요.';
+  if(code==='provider_token_limit')return 'Gemini 답변이 출력 토큰 한도 안에 완료되지 않아 사용할 수 없습니다. 추가 호출 없이 준비된 답장으로 계속해 주세요.';
+  if(code==='provider_timeout'||clientTimedOut)return 'Gemini 답변을 기다렸지만 제한 시간 안에 완료되지 않았습니다. 다시 요청하지 않고 준비된 답장으로 계속할 수 있습니다.';
+  return 'AI 답장을 받지 못했습니다. 다시 요청하지 않고 준비된 답장으로 계속할 수 있습니다.';
+}
 
 const emotionDirections: Record<DialogueEmotion, string> = {
   friendly: '친근하고 여유 있게 답하며 선택권이 있는 것처럼 말한다.',

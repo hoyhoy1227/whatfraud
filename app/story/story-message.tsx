@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {ChatBubbles} from './chat-bubbles';
 import AttachmentPicker from './attachment-picker';
-import {sanitizePlayerText,validateAiReply} from '../ai-dialogue';
+import {AI_REPLY_TIMEOUT_MS,aiReplyFailureMessage,sanitizePlayerText,validateAiReply} from '../ai-dialogue';
 import {storyMessages,messageStatus,messageWindow,canAttach,attachmentText,reactions,preparedMessages,peerFollowupText,friendFollowupLines,validBranch,messageStyle,canCloseMessage,attachmentReply,messageAttachment} from './one-shot';
 import {currentCase} from './engine';
 import {emptyMessageMemory,messageOpening,peerRecordReady,minimumReplyDelay} from './presentation';
@@ -48,20 +48,21 @@ export default function StoryMessage({embedded=false,memory=emptyMessageMemory()
   onMemory?.({sentAttachment:attachment});setSent(text);setDraft('');setError('');setBusy(true);
   const aborter=new AbortController();controller.current=aborter;
   const dispatched=performance.now();
-  const timer=setTimeout(()=>aborter.abort(),10000);
+  let deadlineExpired=false;const timer=setTimeout(()=>{deadlineExpired=true;aborter.abort();},AI_REPLY_TIMEOUT_MS);
   try{
    const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':getSession()},signal:aborter.signal,body:JSON.stringify({contractVersion:2,caseId:currentCase(state).id,stageId:state.stage,sceneId:scene,resolved:state.results.some(r=>r.chapter===state.chapter),joined:state.joined,attachment,inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1})});
-   const value=await response.json() as {reply?:unknown;provider?:unknown;reaction?:unknown;supportMode?:unknown;focus?:unknown;fallbackReason?:unknown};
+   const value=await response.json() as {code?:unknown;reply?:unknown;provider?:unknown;reaction?:unknown;supportMode?:unknown;focus?:unknown;fallbackReason?:unknown};
+   if(!response.ok){if(mounted.current)setError(aiReplyFailureMessage(value.code));return;}
    const preparedFallback=value.provider==='scripted'&&value.fallbackReason==='reply_quality';
-   if(!response.ok||(value.provider!=='gemini'&&!preparedFallback)||typeof value.reply!=='string'||!validateAiReply(value.reply,undefined,'normal','story')||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply)||!validBranch(scene,value.reaction,value.supportMode,value.focus))throw Error('unavailable');
+   if((value.provider!=='gemini'&&!preparedFallback)||typeof value.reply!=='string'||!validateAiReply(value.reply,undefined,'normal','story')||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply)||!validBranch(scene,value.reaction,value.supportMode,value.focus))throw Error('unavailable');
    if(!reduced)await new Promise<void>(resolve=>{const wait=setTimeout(resolve,minimumReplyDelay(performance.now()-dispatched,reduced));aborter.signal.addEventListener('abort',()=>{clearTimeout(wait);resolve();},{once:true});});
    if(!mounted.current||aborter.signal.aborted)return;
    if(onEvent('message',scene+':'+value.reaction)){onEvent('message-style',scene+':'+value.supportMode+':'+value.focus);setReply(value.reply);onIncoming?.();}
   }catch{
-   if(mounted.current)setError('AI 답장을 받지 못했습니다. 다시 요청하지 않습니다. 준비된 메시지를 보내거나 이 대화를 건너뛸 수 있습니다.');
+   if(mounted.current)setError(aiReplyFailureMessage(undefined,deadlineExpired));
   }finally{
    clearTimeout(timer);pending.current=false;
-   if(mounted.current){setBusy(false);if(aborter.signal.aborted)setError('전송이 중단되었습니다. 재요청 없이 준비된 메시지로 이어갈 수 있습니다.');}
+   if(mounted.current){setBusy(false);if(aborter.signal.aborted&&!deadlineExpired)setError('전송이 중단되었습니다. 재요청 없이 준비된 메시지로 이어갈 수 있습니다.');}
   }
  }
  const supportCall=friendFollowupLines(state);
@@ -74,7 +75,7 @@ export default function StoryMessage({embedded=false,memory=emptyMessageMemory()
   <ChatBubbles speaker={person.name} text={messageOpening(state,scene)}/>
   {sent&&<ChatBubbles speaker="나" text={sent}>{sentAttachment!=='none'&&<small>첨부 · {attachmentText[sentAttachment as keyof typeof attachmentText]}</small>}</ChatBubbles>}
   {preparedSent&&<ChatBubbles speaker="나" text={preparedSent}/>}
-  {busy&&<p className="typing" role="status">{person.name} 입력 중 …</p>}
+  {busy&&<><p className="typing" role="status">{person.name} 입력 중 …</p><small className="fine">답변을 확인하고 있습니다. 잠시 기다려 주세요.</small></>}
   {reply&&<ChatBubbles speaker={person.name} text={reply}/>}
   {done&&!reply&&status!=='skip'&&<p className="system-message">이 대화는 마쳤습니다. 개인정보 보호를 위해 입력과 AI 답장 원문은 저장하지 않습니다.</p>}
   {(error||recovered)&&<p className="message-error" role="status">{error||'이 장면의 요청 기록이 있습니다. 다시 호출하지 않고 이어갑니다.'}</p>}

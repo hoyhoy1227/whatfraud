@@ -70,7 +70,7 @@ try{
   clock+=12000;assert.equal((await (await route.POST(request('재시도'))).json()).code,'moment_used');assert.equal(calls,1);
  }
  route=await freshRoute();calls=0;globalThis.fetch=async()=>{calls++;return Response.json({candidates:[{finishReason:'MAX_TOKENS',content:{parts:[{text:'{}'}]}}]});};
- assert.equal((await (await route.POST(request())).json()).code,'incomplete_response');assert.equal(calls,1);
+ assert.equal((await (await route.POST(request())).json()).code,'provider_token_limit');assert.equal(calls,1);
  route=await freshRoute();calls=0;globalThis.fetch=async()=>{calls++;return new Response(null,{status:429});};
  assert.equal((await (await route.POST(request())).json()).code,'provider_quota');
  assert.equal((await (await route.POST(request('다른 메시지'))).json()).code,'provider_cooldown');assert.equal(calls,1);
@@ -86,6 +86,11 @@ try{
  assert.ok(captured.systemInstruction.parts[0].text.includes('자료를 읽는 것과 별도 참여는 구분됩니다'));
  assert.equal(captured.generationConfig.responseMimeType,'application/json');
  assert.equal(captured.contents.length,1);
+ assert.equal(dialogue.AI_REPLY_TIMEOUT_MS,25000);
+ assert.ok(dialogue.aiReplyFailureMessage('provider_quota').includes('Gemini의 일시적인 사용량 한도'));
+ assert.ok(dialogue.aiReplyFailureMessage('provider_token_limit').includes('출력 토큰 한도'));
+ assert.ok(!dialogue.aiReplyFailureMessage('provider_error').includes('토큰'));
+ assert.ok(routeSource.includes('PROVIDER_TIMEOUT_MS = 20_000'));
 
  // Offline reproductions, not claims about the discarded live response.
  const stopping='응, 지금 송금하지 말고 기록부터 같이 보자.';
