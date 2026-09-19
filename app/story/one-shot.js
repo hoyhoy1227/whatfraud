@@ -7,6 +7,7 @@ export const storyMessages = {
  friend: {name:'준호',initial:'준',title:'오전 · 기존 연락처',opening:'이제 잠깐 메시지 볼 수 있어. 아침에 무슨 일 있었어?',prepared:'오늘 낯선 돈 얘기가 있어서 좀 복잡했어. 잠깐 같이 확인해 줄래?',reply:'말해 줘서 고마워. 혼자 정리하지 않아도 돼, 내가 같이 볼게.',reaction:'together'}
 };
 export const sceneIds=Object.keys(storyMessages);
+export const storyAttachments={friend:['none','account-profile','recipient-note','old-chat-note','contact-check'],peer:['none','first-notice','deleted-question','terms-note','profit-report','ledger','success-post','official-record','subscription']};
 export const reactions={peer:['check','acknowledge','boundary'],friend:['together','space']};
 export const attachmentText={
  ...Object.fromEntries(extraAttachments.map(e=>[e.id,e.title+'\n'+sourceLabels[e.sourceType]+' · '+e.provenance+'\n'+e.text])),
@@ -137,9 +138,9 @@ export function messageConsequences(state){
 }
 export function validateStoryContext(body){
  if(!sceneIds.includes(body.sceneId)||typeof body.resolved!=='boolean'||typeof body.joined!=='boolean'||!Object.hasOwn(attachmentText,body.attachment)||!validStoryProgress(body))return false;
- if(body.sceneId==='friend')return body.caseId==='familiar-request'&&['arrival','request','waiting','paid'].includes(body.stageId)&&body.resolved&&['none','account-profile','recipient-note','old-chat-note','contact-check'].includes(body.attachment);
+ if(body.sceneId==='friend')return body.caseId==='familiar-request'&&['arrival','request','waiting','paid'].includes(body.stageId)&&body.resolved&&storyAttachments.friend.includes(body.attachment);
  if(body.caseId!=='paper-profit'||!['arrival','group','offer','paid','withdrawal','extra-paid'].includes(body.stageId))return false;
- return ['none','first-notice','deleted-question','terms-note'].includes(body.attachment)&&body.joined&&(body.resolved||['withdrawal','extra-paid'].includes(body.stageId))&&(body.attachment!=='first-notice'||['offer','paid','withdrawal','extra-paid'].includes(body.stageId));
+ return storyAttachments.peer.includes(body.attachment)&&body.joined&&(body.resolved||['withdrawal','extra-paid'].includes(body.stageId))&&(body.attachment!=='first-notice'||['offer','paid','withdrawal','extra-paid'].includes(body.stageId));
 }
 export function peerOpening(stage='group'){
  return ['withdrawal','extra-paid'].includes(stage)?storyMessages.peer.opening:'온결 자료방에서 같은 안내를 받은 지수예요. 투자에 참여할지 고민 중인데, 처음 안내만으로는 조건을 잘 모르겠어요. 확인한 안내나 알아본 내용이 있으면 같이 볼 수 있을까요?';
@@ -166,6 +167,7 @@ ${peer?'확인이나 보류를 제안하면 check, 단순 정보 공유나 무�
 reply는 예시 문장이나 고정 답안에서 고르지 말고, 현재까지의 스토리 진행과 플레이어의 방금 메시지를 함께 읽어 이 인물이 지금 실제로 보낼 법한 문장으로 새로 작성한다. 같은 reaction이어도 플레이어가 말한 구체적인 내용에 맞춰 어휘와 반응을 달리한다. reaction 이후의 기록 보관·연락 요약 확인은 게임의 별도 버튼이 실행한다. 이 게임에는 실제 음성 통화가 없다. 전화 걸기·음성 통화를 제안하지 말고 메시지로 반응한다. 이미 전화·신고·환급이 끝났다고 말하지 않는다.
 reaction은 ${reactions[id].join(', ')} 중 하나. 다른 사람을 구했다거나 피해를 확정하지 않는다.
 플레이어가 이번 메시지에 첨부한 기록: ${attachmentText[attachment]||'없음'}
+${peer?`이번 첨부의 ID는 ${attachment}다. 첨부를 함께 확인하는 compare이면 focus는 정확히 ${attachment}이며, compare가 아니면 none이다. 첨부가 none이면 compare를 사용하지 않는다. success-post는 반복된 후기, ledger는 입금 내역, profit-report는 수익 화면, official-record는 회사와 수취인 관계, subscription은 구독 신청 기록이다. 자료의 출처와 플레이어의 실제 송금 여부를 혼동하지 않는다.`:''}
 ${version===2?`추가 분류: supportMode와 focus를 함께 반환한다.
 지수: 첨부를 근거로 확인 제안이면 compare와 첨부 ID, 근거 없는 걱정은 cautious/none, 송금 권유를 받아도 따르지 않는 경우 safeguard/none, 강요를 거절하거나 연락 종료는 distance/none, 모호하거나 무관하면 neutral/none. compare/cautious/safeguard는 check, distance는 boundary, neutral은 acknowledge.
 준호: 기록 확인 요청은 records/records, 새로운 연락 확인 요청은 verify/contact, 조언 없이 들어 달라는 요청은 listen/none, 대화 거절은 space/none, 모호하거나 무관하면 neutral/none. space만 reaction space이며 나머지는 together.
@@ -184,10 +186,10 @@ export function parseStoryReply(text,id,version=1,attachment='none'){
 }
 
 export const branchModes={peer:['compare','cautious','distance','safeguard','neutral'],friend:['records','verify','listen','space','neutral']};
-export const branchFocus=['none','first-notice','deleted-question','terms-note','records','contact'];
+export const branchFocus=[...storyAttachments.peer,'records','contact'];
 export function validBranch(scene,reaction,mode,focus){
  if(!branchModes[scene]?.includes(mode)||!branchFocus.includes(focus))return false;
- if(scene==='peer')return mode==='compare'?reaction==='check'&&['first-notice','deleted-question','terms-note'].includes(focus)
+ if(scene==='peer')return mode==='compare'?reaction==='check'&&focus!=='none'&&storyAttachments.peer.includes(focus)
   :focus==='none'&&(mode==='distance'?reaction==='boundary':mode==='neutral'?reaction==='acknowledge':reaction==='check');
  return mode==='space'?reaction==='space'&&focus==='none':reaction==='together'&&(mode==='records'?focus==='records':mode==='verify'?focus==='contact':focus==='none');
 }
@@ -206,6 +208,7 @@ export function styleEventAllowed(state,data){
 }
 export function peerFollowupText(state){
  const {mode,focus}=messageStyle(state,'peer');
+ if(mode==='compare'&&peerEvidenceReplies[focus])return peerEvidenceReplies[focus].followup;
  if(mode==='compare'&&focus==='terms-note')return '비용이 언제부터 붙었는지 제 안내에서도 찾아볼게요. 그 부분에 답을 받기 전까지는 결정하지 않으려고요.';
  if(mode==='compare')return focus==='deleted-question'?'남겨 주신 질문은 따로 보관할게요. 답이 오면 처음 안내와 나란히 놓고 확인해 보려고요.':'구독 신청할 때 받은 안내부터 따로 남겨 둘게요. 참여 조건이 적힌 부분도 찾아보려고요.';
  if(mode==='safeguard')return '다른 분이 괜찮다고 하셔도 제 경우까지 같은지는 모르겠어요. 저는 안내부터 확인할게요.';
@@ -268,9 +271,17 @@ export const attachmentLabel={
 export function messageAttachment(state,scene){return state.events.find(e=>e.type==='message-attachment'&&e.chapter===messageChapter(scene)&&e.data.startsWith(scene+':'))?.data.split(':')[1]??'none';}
 export function attachmentEventAllowed(state,data){
  const [scene,id,...extra]=data.split(':');
- return !extra.length&&sceneIds.includes(scene)&&id!=='none'&&messageWindow(state,scene)&&['ready','attempt'].includes(messageStatus(state,scene))&&canAttach(state,id)&&!state.events.some(e=>e.type==='message-attachment'&&e.chapter===state.chapter&&e.data.startsWith(scene+':'));
+ return !extra.length&&sceneIds.includes(scene)&&storyAttachments[scene].includes(id)&&id!=='none'&&messageWindow(state,scene)&&['ready','attempt'].includes(messageStatus(state,scene))&&canAttach(state,id)&&!state.events.some(e=>e.type==='message-attachment'&&e.chapter===state.chapter&&e.data.startsWith(scene+':'));
 }
+const peerEvidenceReplies={
+ 'success-post':{reply:'이름은 다른데 문장과 거래번호가 같네요. 저는 후기만 보고 판단하지 않고 실제 입금 근거가 있는지 확인할게요.',followup:'반복된 후기 화면을 따로 남겨 둘게요. 실제 거래를 확인할 자료가 있는지 제 안내에서도 찾아보려고요.'},
+ 'ledger':{reply:'이 내역에는 수익금이 들어온 기록이 없네요. 화면의 숫자와 실제 입금은 따로 봐야겠어요.',followup:'수익 화면만으로는 입금을 확인할 수 없다는 점을 메모해 뒀어요. 안내받은 조건과 함께 확인할게요.'},
+ 'profit-report':{reply:'수익률은 적혀 있는데 어떤 거래인지는 안 보이네요. 계산 근거를 보기 전까지는 결정하지 않을게요.',followup:'보고서에서 거래 종목과 기간이 빠진 부분을 남겨 둘게요. 숫자만 보고 결정하지 않으려고요.'},
+ 'official-record':{reply:'안내한 곳과 돈을 받는 이름이 다르네요. 둘이 어떤 관계인지 저도 확인하고 결정할게요.',followup:'온결 리서치와 수취인의 관계를 확인할 자료가 있는지 찾아보려고요. 이름이 비슷하다는 것만으로는 모르겠어요.'},
+ 'subscription':{reply:'신청한 건 시장 노트 구독이었네요. 저도 구독과 투자 참여 조건을 따로 확인해 볼게요.',followup:'구독 신청 내역을 먼저 남겨 둘게요. 투자 참여에 따로 동의해야 하는 조건도 확인해 보려고요.'}
+};
 export function attachmentReply(scene,id){
+ if(scene==='peer'&&peerEvidenceReplies[id])return peerEvidenceReplies[id].reply;
  if(scene==='friend')return ({
   'account-profile':'내 이름이지만 그 새 계정은 내가 쓰는 게 아니야. 나한테 먼저 보여 줘서 다행이야.',
   'recipient-note':'한별 서비스는 내가 결제해 달라고 한 곳이 아니야. 그 새 계정도 내가 쓰는 게 아니야.',
@@ -288,6 +299,7 @@ export function friendIdentityFallback(result,attachment='none',text=''){
  return attachment==='none'?'그 새 계정은 내가 아니야. 내 이름으로 온 연락이라니 나도 당황스럽네.':attachmentReply('friend',attachment);
 }
 export function attachmentOutcome(scene,id){
+ if(scene==='peer'&&peerEvidenceReplies[id])return attachmentLabel[id]+'을 근거로 지수와 확인할 부분을 나눴다.';
  return scene==='friend'?(id==='contact-check'?'이미 확인한 사칭 연락을 함께 정리했다.':id==='old-chat-note'?'원래 연락처로 확인하기로 한 약속을 대조했다.':'새 계정의 주장과 실제 준호의 설명을 구분했다.')
  :id==='terms-note'?'추가 비용이 뒤늦게 등장한 지점을 짚었다.':id==='deleted-question'?'답을 받지 못한 질문을 남겼다.':'처음 안내의 조건을 기준으로 비교했다.';
 }

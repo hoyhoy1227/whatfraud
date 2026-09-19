@@ -3,7 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {ChatBubbles} from './chat-bubbles';
 import AttachmentPicker from './attachment-picker';
 import {AI_REPLY_TIMEOUT_MS,aiReplyFailureMessage,sanitizePlayerText,validateAiReply} from '../ai-dialogue';
-import {storyMessages,messageStatus,messageWindow,canAttach,attachmentText,reactions,preparedMessages,peerFollowupText,friendFollowupLines,validBranch,messageStyle,canCloseMessage,attachmentReply,messageAttachment,storyContextFor} from './one-shot';
+import {storyAttachments,storyMessages,messageStatus,messageWindow,canAttach,attachmentText,reactions,preparedMessages,peerFollowupText,friendFollowupLines,validBranch,messageStyle,canCloseMessage,attachmentReply,messageAttachment,storyContextFor} from './one-shot';
 import {currentCase} from './engine';
 import {emptyMessageMemory,messageOpening,peerRecordReady,minimumReplyDelay} from './presentation';
 export type MessageMemory=ReturnType<typeof emptyMessageMemory>;
@@ -40,7 +40,7 @@ export default function StoryMessage({embedded=false,memory=emptyMessageMemory()
   if(!canGenerate||pending.current)return;
   const text=sanitizePlayerText(draft);
   if(!text){setError('메시지를 입력해 주세요.');return;}
-  if(!canAttach(state,attachment)){setError('첨부할 수 있는 기록을 다시 선택해 주세요.');return;}
+  if(!storyAttachments[scene].includes(attachment)||!canAttach(state,attachment)){setError('첨부할 수 있는 기록을 다시 선택해 주세요.');return;}
   pending.current=true;
   // Persist attempt before dispatch: reload, abort and double submit cannot retry.
   if(!onEvent('message',scene+':attempt')){pending.current=false;return;}
@@ -82,12 +82,12 @@ export default function StoryMessage({embedded=false,memory=emptyMessageMemory()
   {!available&&!done&&<p className="system-message">이 대화는 해당 사건의 마지막에 열립니다.</p>}
   {available&&!done&&!busy&&<>
    {canGenerate?<form className="story-message-composer" onSubmit={send}>
-    <AttachmentPicker value={attachment} onChange={setAttachment} options={Object.keys(attachmentText).filter(id=>canAttach(state,id)&&!['profit-report','recovery-intake','identity-request','recovery-ledger'].includes(id))}/>
+    <AttachmentPicker value={attachment} onChange={setAttachment} options={storyAttachments[scene].filter(id=>canAttach(state,id))}/>
     <label htmlFor="story-message-draft">자유답변(개인정보는 입력하지 마세요)</label>
     <textarea id="story-message-draft" rows={3} maxLength={500} value={draft} onChange={e=>setDraft(e.target.value)} placeholder={scene==='peer'?'지수에게 전하고 싶은 말':'준호에게 지금 하고 싶은 말'}/>
     <button className="primary" disabled={!draft.trim()} type="submit">보내기</button><small>보내면 한 번의 답장으로 이 장면이 이어집니다.</small>
    </form>:<p className="fine">{practice?'되감기에서는 준비된 메시지를 사용합니다.':!aiAllowed?'AI를 사용하지 않는 플레이입니다.':'이 장면에서 AI를 추가로 요청하지 않습니다.'}</p>}
-   <details className="prepared-message"><summary>준비된 메시지로 보내기</summary>{!canGenerate&&<AttachmentPicker value={attachment} onChange={setAttachment} options={Object.keys(attachmentText).filter(id=>canAttach(state,id)&&!['profit-report','recovery-intake','identity-request','recovery-ledger'].includes(id))} disabled={status==='attempt'}/>}{preparedMessages[scene].filter(choice=>choice.mode!=='compare'||attachment!=='none').map(choice=><button key={choice.mode} onClick={()=>prepared(choice)}>{choice.text}</button>)}</details>
+   <details className="prepared-message"><summary>준비된 메시지로 보내기</summary>{!canGenerate&&<AttachmentPicker value={attachment} onChange={setAttachment} options={storyAttachments[scene].filter(id=>canAttach(state,id))} disabled={status==='attempt'}/>}{preparedMessages[scene].filter(choice=>choice.mode!=='compare'||attachment!=='none').map(choice=><button key={choice.mode} onClick={()=>prepared(choice)}>{choice.text}</button>)}</details>
    <button className="text-button" onClick={()=>{if(onEvent('message',scene+':skip')){onEvent('message-close',scene);onContinue();}}}>지금은 말하지 않기</button>
   </>}
   {done&&<>
