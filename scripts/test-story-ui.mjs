@@ -85,7 +85,10 @@ for(const known of [false,true]){
 const statusHtml=renderToStaticMarkup(createElement(ui.PhoneStatus,{time:'09:10'}));
 assert.ok(statusHtml.includes('wifi-icon')&&statusHtml.includes('battery-icon'));
 assert.ok(!statusHtml.includes('가상 체험')&&!statusHtml.includes('▂▄▆'));
-for(let step=0;step<4;step++)assert.ok(renderToStaticMarkup(createElement(ui.Closing,{state,step,onNext:noop,onSkip:noop})).includes(['마지막 대화','생활 계좌','준호','휴대폰을 잠갔다'][step]));
+for(let step=0;step<4;step++)assert.ok(renderToStaticMarkup(createElement(ui.Closing,{state,step,onNext:noop,onSkip:noop})).includes(['마지막 대화','생활 계좌','지금까지의 정리','휴대폰을 잠갔다'][step]));
+assert.ok(!renderToStaticMarkup(createElement(ui.Closing,{state,step:2,onNext:noop,onSkip:noop})).includes('준호'));
+assert.ok(client.includes('지금까지 내용 정리하고 종료하기'));
+assert.ok(!client.includes('준호에게 오늘 일을 말하기'));
 assert.ok(client.includes('StoryMessage')&&client.includes('visualViewport')&&client.includes('openProfile'));
 assert.ok(!client.slice(client.indexOf("dialog==='reply'?")).includes('<textarea'));
 
@@ -119,7 +122,7 @@ console.log('Deferred call and in-memory transcript SSR passed.');
 // including at later stages; a reload intentionally receives empty memory.
 let decisionSource=await readFile('app/story/decision-composer.tsx','utf8');
 for(const name of ['decision-message','one-shot','narrative'])decisionSource=decisionSource.replace("from './"+name+"'","from "+JSON.stringify(new URL('../app/story/'+name+'.js',import.meta.url).href));
-decisionSource=decisionSource.replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './chat-bubbles'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(bubbleJs).toString('base64')));
+decisionSource=decisionSource.replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './chat-bubbles'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(bubbleJs).toString('base64'))).replace("from './attachment-picker'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(pickerJs).toString('base64')));
 const decisionJs=ts.transpileModule(decisionSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime'))).replace("from 'react'","from "+JSON.stringify(import.meta.resolve('react')));
 const decisionUi=await import('data:text/javascript;base64,'+Buffer.from(decisionJs).toString('base64'));
 const memory={...decisionUi.emptyDecisionMemory(),sent:'받는 이름을 확인할게.',reply:'받는 이름이 달라서 확인하려는 거구나.'};

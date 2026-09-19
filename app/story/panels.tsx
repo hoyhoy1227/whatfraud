@@ -36,7 +36,7 @@ export function Rewind({state,onReplay,onRestart}:{state:Run;onReplay:(index:num
   const played=chapters.map((chapter,index)=>({chapter,index,events:pivots.filter(p=>p.chapter===index)})).filter(p=>p.events.length);
   return <div className="rewind"><ResponseReport state={state}/><h2>{ending.title}</h2><p>{ending.line}</p>
     <div className="balance loss-balance"><span>돌아오지 않은 금액</span><strong>{money(totalSpent(state))}</strong><small>가상 거래 · 접수와 차단은 환급이 아닙니다.</small></div>
-    <p className="ending-personal">{state.events.some(e=>e.type==='reflect'&&e.data==='tell'||e.type==='message'&&e.data==='friend:together')?'준호에게 이야기한 일이 남아 있다. 이 하루를 혼자 설명할 필요는 없다.':'누구에게 말할지는 아직 정하지 않았다. 지금 남긴 기록은 다음 이야기를 시작할 때 꺼낼 수 있다.'}</p>
+    <p className="ending-personal">{state.saved.length||state.events.some(e=>e.type==='capture')?'확인하고 보관한 기록이 남아 있다. 필요한 경우 공식 경로에서 사실관계를 설명하는 데 활용할 수 있다.':'은행과 사건별 선택 기록이 남아 있다. 필요한 자료는 사라지기 전에 별도로 보관하는 편이 안전하다.'}</p>
     <h2>다시 고른다면</h2><p className="muted">선택 직전으로. 원래 기록은 그대로.</p>
     {played.map(({chapter,index,events})=>{
       const p=events.find(e=>e.type==='confirm')??events.find(e=>e.type==='resolve')??events[0];
@@ -69,10 +69,10 @@ export function PhoneStatus({time}:{time:string}){
  return <div className="statusbar"><b>{time}</b><span className="camera-island" aria-hidden="true"/><span className="phone-indicators"><svg className="wifi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M3 8a15 15 0 0 1 18 0M6 12a10 10 0 0 1 12 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/></svg><span className="battery-icon" aria-hidden="true"/></span></div>;
 }
 export function Closing({state,step,onNext,onSkip}:{state:Run;step:number;onNext:()=>void;onSkip:()=>void}){
- const told=state.events.some(e=>e.type==='reflect'&&e.data==='tell'),last=state.results.find(r=>r.chapter===2);
+ const last=state.results.find(r=>r.chapter===2);
  return <div className={'closing closing-'+step}>
- {step===0?<><small>마지막 대화</small><h2>회복 지원 상담</h2><p className="system-message">{last?.kind==='loss'?'접수 내용 확인 중':last?.kind==='reported'?'자료 접수 기록이 남아 있다.':'이 연락은 여기서 멈췄다.'}</p></>:step===1?<><small>생활 계좌</small><Ledger state={state}/><p>돌아오지 않은 금액 {money(totalSpent(state))}</p></>:step===2?<><small>준호 · 기존 연락처</small><div className="bubble"><p>{told?'오늘 얘기해 줘서 고마워. 내일도 연락할게. 혼자 급하게 해결하려고 하진 말자.':'집에 도착했어? 오늘 만나서 좋았어. 내일 연락할게.'}</p></div><p>{state.saved.length||state.events.some(e=>e.type==='capture')?'메모에 보관한 기록이 남아 있다.':'은행에는 오늘의 거래 내역이 남아 있다.'}</p></>:<><div className="lock-clock">22:10</div><p>휴대폰을 잠갔다.</p><small>하루가 끝나도 다음 선택은 남아 있다.</small></>}
- <button className="primary" onClick={onNext}>{['은행 내역 보기','준호의 연락 보기','화면 잠그기','결과 보기'][step]}</button>{step<3&&<button className="text-button" onClick={onSkip}>오늘의 기록으로 바로 가기</button>}
+ {step===0?<><small>마지막 대화</small><h2>회복 지원 상담</h2><p className="system-message">{last?.kind==='loss'?'요청한 처리는 완료되지 않았다.':last?.kind==='reported'?'게임 안에 자료 접수 기록이 남아 있다.':'이 연락은 여기서 멈췄다.'}</p></>:step===1?<><small>생활 계좌</small><Ledger state={state}/><p>돌아오지 않은 금액 {money(totalSpent(state))}</p></>:step===2?<><small>지금까지의 정리</small><h2>연락과 거래 기록</h2><p>{state.saved.length||state.events.some(e=>e.type==='capture')?'메모에 보관한 기록과 은행 거래 내역이 남아 있다.':'은행 거래 내역과 사건별 선택 기록이 남아 있다.'}</p><p className="system-message">회복 지원 상담 이후 새로운 개인 연락은 없습니다.</p></>:<><div className="lock-clock">22:10</div><p>휴대폰을 잠갔다.</p><small>하루가 끝나도 다음 선택은 남아 있다.</small></>}
+ <button className="primary" onClick={onNext}>{['은행 내역 보기','지금까지 내용 정리하기','화면 잠그기','결과 보기'][step]}</button>{step<3&&<button className="text-button" onClick={onSkip}>오늘의 기록으로 바로 가기</button>}
  </div>;
 }
 type Profile={name:string;initial:string;status:string;relationship:string;kind:string};
