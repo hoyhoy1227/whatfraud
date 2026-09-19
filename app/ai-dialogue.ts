@@ -130,6 +130,10 @@ export function validateAiReply(text: string, emotion?: DialogueEmotion, replyMo
     : trimmed;
   if (/(?:지금|바로).{0,12}(?:충전|입금|송금|결제|가입)|(?:충전|입금|송금|결제|가입).{0,12}(?:지금|바로)/.test(urgencyText)) return false;
   if (/죽|해코지|찾아가|가족.{0,8}(?:위험|해치|알고)|신상.{0,8}(?:공개|유포)|해킹|보복|가만두지|두고\s*보자|병신|멍청/.test(trimmed)) return false;
+  // Story branches are validated from categorical model fields. Keep reply
+  // validation limited to safety and impossible completed actions, rather than
+  // inferring a branch again from a handful of Korean keywords.
+  if (scope === 'story' && /환급.*완료|신고.*완료|돈.*돌려받았|이미.*(?:전화|통화)/.test(trimmed)) return false;
   if (emotion === 'closed') {
     if (!/(?:연락|안내|대화).{0,10}(?:않|그만|종료|마치)|여기서.{0,8}(?:마치|끝)/.test(trimmed)) return false;
     if (/나중|언제든|궁금|찾아|다시|필요하시면|생각이\s*바뀌/.test(trimmed)) return false;

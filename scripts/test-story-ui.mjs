@@ -220,6 +220,8 @@ const oneShot=await import('../app/story/one-shot.js');
 assert.ok(!oneShot.peerOpening('offer').includes('추가 비용 설명'));
 assert.ok(oneShot.peerOpening('withdrawal').includes('추가 비용 설명'));
 assert.ok(oneShot.storyPrompt('peer','none',2,'offer').includes(oneShot.peerOpening('offer')));
+assert.deepEqual(oneShot.storyContextFor(investment,'peer'),['peer-joined-room','peer-offer-seen','peer-main-transfer','peer-withdrawal-requested','peer-extra-transfer']);
+assert.ok(oneShot.storyPrompt('peer','none',2,'extra-paid',oneShot.storyContextText(oneShot.storyContextFor(investment,'peer'))).includes('상세 투자 분석 자료 이용료 300,000원을 가상 송금했다'));
 const draftMemory={...presentation.emptyMessageMemory(),draft:'작성 중'};
 assert.equal(presentation.threadReceipt(engine.createRun('demo'),'peer',draftMemory),presentation.threadReceipt(engine.createRun('demo'),'peer'));
 assert.equal(presentation.threadPreview(engine.createRun('demo'),'peer',draftMemory),presentation.messageOpening(engine.createRun('demo'),'peer'));

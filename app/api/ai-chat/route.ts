@@ -1,5 +1,5 @@
 import {validateDecisionContext,decisionPrompt,parseDecisionReply,decisionReplyIssue,decisionFallback,decisionReactions,AI_CASE_LIMITS,AI_RUN_LIMIT} from '../../story/decision-message.js';
-import { validateStoryContext, storyPrompt, parseStoryReply, branchModes, branchFocus, friendIdentityFallback } from '../../story/one-shot.js';
+import { validateStoryContext, storyPrompt, storyContextText, parseStoryReply, branchModes, branchFocus, friendIdentityFallback } from '../../story/one-shot.js';
 import { reserveSharedBudget } from '../ai-budget';
 import { sanitizePlayerText, validateAiReply, getScriptedReply, type AiChatMessage } from '../../ai-dialogue';
 import { cases } from '../../game-data';
@@ -161,7 +161,7 @@ export async function GET() {
   });
 }
 
-type ChatBody = { caseId?: unknown; messages?: unknown; userTurnCount?: unknown; stageId?: unknown; inputMode?: unknown; choices?: unknown; checks?: unknown; sceneId?: unknown; resolved?: unknown; joined?: unknown; attachment?: unknown; contractVersion?: unknown };
+type ChatBody = { caseId?: unknown; messages?: unknown; userTurnCount?: unknown; stageId?: unknown; inputMode?: unknown; choices?: unknown; checks?: unknown; sceneId?: unknown; resolved?: unknown; joined?: unknown; attachment?: unknown; storyContext?: unknown; contractVersion?: unknown };
 type PendingReply = { response: Promise<Response>; expires: number };
 const pendingReplies = new Map<string, PendingReply>();
 
@@ -173,7 +173,7 @@ export async function POST(request: Request) {
   let body: ChatBody;
   try {
     body = await readBoundedBody(request) as ChatBody;
-    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !['caseId', 'messages', 'userTurnCount', 'stageId', 'inputMode', 'choices', 'checks', 'sceneId', 'resolved', 'joined', 'attachment', 'contractVersion'].includes(key))) return json({ code: 'invalid_request' }, 400);
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !['caseId', 'messages', 'userTurnCount', 'stageId', 'inputMode', 'choices', 'checks', 'sceneId', 'resolved', 'joined', 'attachment', 'storyContext', 'contractVersion'].includes(key))) return json({ code: 'invalid_request' }, 400);
   } catch (error) {
     return json({ code: error instanceof Error && error.message === 'body_timeout' ? 'body_timeout' : 'invalid_request' }, error instanceof Error && error.message === 'body_timeout' ? 408 : 400);
   }
@@ -268,7 +268,7 @@ async function handleChat(request: Request, body: ChatBody) {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: isDecision?decisionPrompt(body):storyPrompt(sceneId,body.attachment as string,contractVersion,body.stageId as string) }] },
+        systemInstruction: { parts: [{ text: isDecision?decisionPrompt(body):storyPrompt(sceneId,body.attachment as string,contractVersion,body.stageId as string,storyContextText(body.storyContext)) }] },
         contents: conversation.map((message) => ({
           role: message.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: message.content }],

@@ -3,7 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {ChatBubbles} from './chat-bubbles';
 import AttachmentPicker from './attachment-picker';
 import {AI_REPLY_TIMEOUT_MS,aiReplyFailureMessage,sanitizePlayerText,validateAiReply} from '../ai-dialogue';
-import {storyMessages,messageStatus,messageWindow,canAttach,attachmentText,reactions,preparedMessages,peerFollowupText,friendFollowupLines,validBranch,messageStyle,canCloseMessage,attachmentReply,messageAttachment} from './one-shot';
+import {storyMessages,messageStatus,messageWindow,canAttach,attachmentText,reactions,preparedMessages,peerFollowupText,friendFollowupLines,validBranch,messageStyle,canCloseMessage,attachmentReply,messageAttachment,storyContextFor} from './one-shot';
 import {currentCase} from './engine';
 import {emptyMessageMemory,messageOpening,peerRecordReady,minimumReplyDelay} from './presentation';
 export type MessageMemory=ReturnType<typeof emptyMessageMemory>;
@@ -50,7 +50,7 @@ export default function StoryMessage({embedded=false,memory=emptyMessageMemory()
   const dispatched=performance.now();
   let deadlineExpired=false;const timer=setTimeout(()=>{deadlineExpired=true;aborter.abort();},AI_REPLY_TIMEOUT_MS);
   try{
-   const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':getSession()},signal:aborter.signal,body:JSON.stringify({contractVersion:2,caseId:currentCase(state).id,stageId:state.stage,sceneId:scene,resolved:state.results.some(r=>r.chapter===state.chapter),joined:state.joined,attachment,inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1})});
+   const response=await fetch('/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':getSession()},signal:aborter.signal,body:JSON.stringify({contractVersion:2,caseId:currentCase(state).id,stageId:state.stage,sceneId:scene,resolved:state.results.some(r=>r.chapter===state.chapter),joined:state.joined,attachment,storyContext:storyContextFor(state,scene),inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1})});
    const value=await response.json() as {code?:unknown;reply?:unknown;provider?:unknown;reaction?:unknown;supportMode?:unknown;focus?:unknown;fallbackReason?:unknown};
    if(!response.ok){if(mounted.current)setError(aiReplyFailureMessage(value.code));return;}
    const preparedFallback=value.provider==='scripted'&&value.fallbackReason==='reply_quality';

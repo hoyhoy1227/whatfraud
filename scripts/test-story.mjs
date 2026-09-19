@@ -235,11 +235,12 @@ migrated=step(migrated,'next');assert.equal(migrated.chapter,2);
 assert.deepEqual(e.restoreRun(e.serializeRun(migrated)),migrated);
 for(const pivot of e.timeline(migrated))assert.ok(e.replayBefore(migrated,pivot.index));
 for(const scene of ['friend','peer']){
- const request={sceneId:scene,caseId:scene==='friend'?'familiar-request':'paper-profit',stageId:scene==='friend'?'arrival':'withdrawal',resolved:true,joined:scene==='peer',attachment:'none'};
+ const request={sceneId:scene,caseId:scene==='friend'?'familiar-request':'paper-profit',stageId:scene==='friend'?'arrival':'withdrawal',resolved:true,joined:scene==='peer',attachment:'none',storyContext:scene==='friend'?['friend-resolved-paused']:['peer-joined-room','peer-offer-seen','peer-main-transfer','peer-withdrawal-requested','peer-resolved-paused']};
  assert.equal(shot.validateStoryContext(request),true);
  assert.equal(shot.validateStoryContext({...request,caseId:scene==='friend'?'paper-profit':'familiar-request'}),false);
 }
 assert.ok(!shot.storyPrompt('friend').includes('퇴근 후'));
+assert.ok(shot.parseStoryReply(JSON.stringify({reply:'알겠어, 네가 편할 때까지 기다릴게.',reaction:'space'}),'friend'),'reply wording is free once the categorical reaction is valid');
 assert.equal(shot.validBranch('peer','check','compare','none'),false);
 assert.equal(shot.validBranch('friend','space','records','records'),false);
 const attachedReply=reply=>JSON.stringify({reply,reaction:'check',supportMode:'compare',focus:'deleted-question'});
