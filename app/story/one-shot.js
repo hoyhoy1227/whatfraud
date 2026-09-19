@@ -1,7 +1,7 @@
 // Two authored story windows. Only categorical events are saved; never message text.
 import cases from '../../content/generated/cases.json' with {type:'json'};
 import {sourceLabels} from './fraud-context.js';
-const extraAttachments=cases.slice(1).flatMap(c=>c.story.evidence.filter(e=>['profit-report','recovery-intake','identity-request','recovery-ledger'].includes(e.id)));
+const extraAttachments=cases.slice(1).flatMap(c=>c.story.evidence.filter(e=>['profit-report','ledger','success-post','official-record','subscription','fee-note','case-record','recovery-intake','identity-request','recovery-ledger'].includes(e.id)).map(e=>({...e,caseId:c.id})));
 export const storyMessages = {
  peer: {name:'지수',initial:'지',title:'송금 전에 잠깐',opening:'온결 자료방에서 같은 안내를 받은 지수예요. 참여금을 보낼지 고민 중인데, 처음 참여 안내와 추가 비용 설명이 헷갈려요. 확인한 안내나 보관한 질문이 있으면 같이 볼 수 있을까요?',prepared:'저도 아직 확인 중이에요. 보내기 전에 처음 안내와 지금 안내를 따로 확인해 보세요.',reply:'알려주셔서 고마워요. 입금은 미루고 안내부터 다시 볼게요.',reaction:'check'},
  friend: {name:'준호',initial:'준',title:'오전 · 기존 연락처',opening:'이제 잠깐 메시지 볼 수 있어. 아침에 무슨 일 있었어?',prepared:'오늘 낯선 돈 얘기가 있어서 좀 복잡했어. 잠깐 같이 확인해 줄래?',reply:'말해 줘서 고마워. 혼자 정리하지 않아도 돼, 내가 같이 볼게.',reaction:'together'}
@@ -9,16 +9,16 @@ export const storyMessages = {
 export const sceneIds=Object.keys(storyMessages);
 export const reactions={peer:['check','acknowledge','boundary'],friend:['together','space']};
 export const attachmentText={
- ...Object.fromEntries(extraAttachments.map(e=>[e.id,'출처 · '+sourceLabels[e.sourceType]+' / '+e.text])),
+ ...Object.fromEntries(extraAttachments.map(e=>[e.id,e.title+'\n'+sourceLabels[e.sourceType]+' · '+e.provenance+'\n'+e.text])),
  none:'',
  'account-profile':'새 연락의 계정 정보: 준호라는 이름이지만 친구로 등록되지 않은 계정이다.',
  'recipient-note':'송금 요청의 수취인 이름은 한별 서비스이며, 저장된 준호의 이름과 다르다. 실제 송금 여부는 이 자료에 없다.',
  'old-chat-note':'어제 준호가 남긴 약속: 저녁 일곱 시 역 앞, 늦으면 원래 번호로 연락하기.',
  'contact-check':'저장된 연락처의 준호가 결제를 부탁한 적 없으며 새 계정도 자기 것이 아니라고 답했다.',
  'terms-note':'처음 참여 안내에는 없던 보안 확인 비용이 출금 요청 뒤 등장했다.',
- 'official-recovery':'직접 연 공식 안내에는 이 상담 계정으로 접수비를 먼저 보내라는 절차가 없다.',
- 'contact-recovery':'상담 계정이 안내한 소속과 기존에 저장된 공식 연락처의 연결을 확인하지 못했다.',
- 'first-notice':'온결의 참여 안내: 자료를 읽는 것과 별도 참여는 구분됩니다.',
+ 'official-recovery':'피해 상담 안내에서 준비할 자료를 확인했다. 거래 내역과 상대방의 메시지가 필요하다고 적혀 있고, 낯선 상담 계정에 접수비나 계좌 비밀번호·OTP를 보내라는 내용은 없다.',
+ 'contact-recovery':'공식 안내의 연락처 목록에서 ‘회복 지원 상담’ 계정은 찾지 못했다. 이 계정의 소속을 확인할 자료가 없다.',
+ 'first-notice':'온결에서 처음 받은 안내: 시장 노트는 구독 자료이며, 투자에 참여하려면 별도로 신청해야 한다.',
  'deleted-question':'지수가 남겼던 질문: 추가 비용은 없나요? 안내에서 못 찾겠어요.'
 };
 const storyContextLabels={
@@ -99,7 +99,7 @@ export function messageWindow(state,id){
 export function canAttach(state,id){
  if(id==='none')return true;
  const extra=extraAttachments.find(e=>e.id===id);
- if(extra)return state.chapter===(id==='profit-report'?1:2)&&state.inspected.includes(cases[state.chapter].id+':'+id);
+ if(extra)return cases[state.chapter]?.id===extra.caseId&&state.inspected.includes(extra.caseId+':'+id);
  const keys={'account-profile':'familiar-request:profile','recipient-note':'familiar-request:recipient','old-chat-note':'familiar-request:old-chat','contact-check':'familiar-request:saved-contact','official-recovery':'recovery-team:official-help','contact-recovery':'recovery-team:contact-history'};
  if(keys[id])return state.chapter===(id.endsWith('recovery')?2:0)&&state.inspected.includes(keys[id]);
  if(id==='terms-note')return state.chapter===1&&state.events.some(e=>e.chapter===1&&e.type==='observe'&&e.data==='terms-comparison');
@@ -263,7 +263,7 @@ export const attachmentLabel={
  ...Object.fromEntries(extraAttachments.map(e=>[e.id,e.title])),
  none:'첨부 안 함','account-profile':'새 계정의 프로필','recipient-note':'수취인 이름 메모','old-chat-note':'어제 약속 대화','contact-check':'원래 연락처의 확인 답장',
  'first-notice':'처음 참여 안내','deleted-question':'보관한 지수의 질문','terms-note':'처음 안내와 추가 비용 비교',
- 'official-recovery':'공식 접수 안내','contact-recovery':'상담 연락처 대조 기록'
+ 'official-recovery':'피해 상담에 필요한 기록','contact-recovery':'상담 계정의 소속 확인'
 };
 export function messageAttachment(state,scene){return state.events.find(e=>e.type==='message-attachment'&&e.chapter===messageChapter(scene)&&e.data.startsWith(scene+':'))?.data.split(':')[1]??'none';}
 export function attachmentEventAllowed(state,data){

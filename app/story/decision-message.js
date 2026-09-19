@@ -7,8 +7,8 @@ export const AI_CASE_LIMITS=[2,2,1];
 export const decisionReactions=['verify','pause','refuse','clarify','share'];
 export const decisionWindows=[
  {id:'familiar-check',caseId:'familiar-request',chapter:0,stages:['request','waiting'],attachments:['none','account-profile','recipient-note','old-chat-note','contact-check']},
- {id:'paper-entry',caseId:'paper-profit',chapter:1,stages:['offer'],attachments:['none','first-notice','deleted-question','profit-report']},
- {id:'recovery-check',caseId:'recovery-team',chapter:2,stages:['offer'],attachments:['none','official-recovery','contact-recovery','recovery-intake','identity-request','recovery-ledger']}
+ {id:'paper-entry',caseId:'paper-profit',chapter:1,stages:['offer'],attachments:['none','first-notice','deleted-question','profit-report','ledger','success-post','official-record','subscription']},
+ {id:'recovery-check',caseId:'recovery-team',chapter:2,stages:['offer'],attachments:['none','official-recovery','contact-recovery','recovery-intake','identity-request','recovery-ledger','fee-note','case-record']}
 ];
 export function decisionWindow(state){return decisionWindows.find(w=>w.chapter===state.chapter&&w.stages.includes(state.stage))??null;}
 export function decisionAvailable(state){const w=decisionWindow(state);return !!w&&!state.completed&&!state.results.some(r=>r.chapter===state.chapter)&&decisionReadyFor(w.caseId,state.stage,chosenIds(state),decisionChecks(state));}
@@ -25,7 +25,7 @@ export function validateDecisionContext(body){
  const beats=narratives[w.chapter].beats,stages=Object.keys(narratives[w.chapter].scenes);
  if(new Set(body.choices).size!==body.choices.length||new Set(body.checks).size!==body.checks.length||body.choices.some(id=>!beats.some(b=>stages.indexOf(b.stage)<=stages.indexOf(body.stageId)&&b.options.some(o=>o.id===id)))||beats.some(b=>b.options.filter(o=>body.choices.includes(o.id)).length>1))return false;
  if(body.checks.some(id=>!['profile','recipient','old-chat','saved-contact','success-post','official-record','terms-comparison','official-help','contact-history','paper-question','platform-view','bank-view','ledger','subscription','fee-note','case-record','profit-report','withdrawal-notice','recovery-intake','identity-request','recovery-ledger'].includes(id)))return false;
- if(['profit-report','recovery-intake','identity-request','recovery-ledger'].includes(body.attachment)&&!body.checks.includes(body.attachment))return false;
+ if(['profit-report','ledger','success-post','official-record','subscription','fee-note','case-record','recovery-intake','identity-request','recovery-ledger'].includes(body.attachment)&&!body.checks.includes(body.attachment))return false;
  const keys={'account-profile':'profile','recipient-note':'recipient','old-chat-note':'old-chat','contact-check':'saved-contact','official-recovery':'official-help','contact-recovery':'contact-history'};
  if(keys[body.attachment]&&!body.checks.includes(keys[body.attachment]))return false;
  if(body.attachment==='deleted-question'&&!body.checks.includes('paper-question'))return false;
@@ -71,7 +71,17 @@ export function decisionFallback(body,reaction){
   'first-notice':'자료 구독과 별도 참여 안내가 혼동되셨군요.',
   'deleted-question':'추가 비용에 관해 남긴 질문을 함께 보내주셨네요.',
   'official-recovery':'공식 안내와 여기서 안내한 접수비가 다르다는 말씀이시군요.',
-  'contact-recovery':'이 계정의 소속과 기존 연락처의 연결을 확인하고 계시군요.'
+  'contact-recovery':'이 계정의 소속과 기존 연락처의 연결을 확인하고 계시군요.',
+  'profit-report':'보고서에는 수익률만 있고 어떤 거래인지 보이지 않는다는 말씀이군요.',
+  'ledger':'보내주신 기록에는 온결에서 들어온 수익금이 없네요.',
+  'success-post':'후기에서 같은 문장과 거래번호가 반복되는 부분을 말씀하시는군요.',
+  'official-record':'온결 리서치와 수취인 이름이 다른 점을 확인하고 계시군요.',
+  'subscription':'신청하신 것은 시장 노트 구독이라는 말씀이군요.',
+  'fee-note':'환급금에서 빼지 않고 접수비를 먼저 내는 조건을 말씀하시는군요.',
+  'case-record':'이력을 어디서 전달받았는지 확인하고 싶으시군요.',
+  'recovery-intake':'확인서만으로는 발급 기관을 알 수 없다는 말씀이군요.',
+  'identity-request':'본인 확인에 계좌 인증 정보까지 필요한 이유를 말씀하시는군요.',
+  'recovery-ledger':'보내주신 기록에는 수익금이나 환급금이 들어온 내역이 없네요.'
  }[body.attachment]??(friend?'남긴 말은 읽었어.':'남겨주신 내용은 읽었습니다.');
  const end=friend?{verify:'다른 연락처로 확인하겠다는 뜻은 알겠어.',pause:'지금 결정하지 않겠다는 뜻으로 알게.',clarify:'여기서 말한 부탁 외에 덧붙일 설명은 없어.',share:'내가 받은 내용은 여기 남긴 말뿐이야.'}:{verify:'별도 경로로 확인하시겠다는 뜻으로 알겠습니다.',pause:'지금은 진행을 결정하지 않으신 것으로 알겠습니다.',clarify:body.caseId==='paper-profit'?'무료 자료 구독과 별도 참여는 다른 안내입니다.':'여기서 설명드린 것은 별도로 먼저 내는 검토 접수비입니다.',share:'이 대화에 남겨주신 내용만 읽고 있습니다.'};
  return first+' '+end[reaction];
