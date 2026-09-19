@@ -59,7 +59,7 @@ export function buildSystemPrompt(gameCase: CaseData, messages: AiChatMessage[],
   const lengthDirection = replyMode === 'short'
     ? '8~35자의 자연스러운 한 문장. 인사말·칭찬·질문 반복 없이 바로 반응한다.'
     : '35~100자의 1~2문장. 첫 문장에서 질문에 답하고 필요한 경우에만 두 번째 문장으로 회유한다.';
-  return `당신은 가상 스마트폰 스릴러 "수익률 24시" 속 가상 NPC다.
+  return `당신은 가상 스마트폰 스릴러 "사기방지위원회" 속 가상 NPC다.
 역할: ${gameCase.role}
 목표: ${gameCase.npcGoal}
 인물 고정 설정:

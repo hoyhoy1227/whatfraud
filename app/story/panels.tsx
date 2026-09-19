@@ -1,4 +1,5 @@
 import {chapterPages,chapterAction,resumeContext} from './context';
+import ResponseReport from './analysis-report';
 import {messageConsequences} from './one-shot';
 import {decisionConsequence} from './decision-message';
 import { chapters, INITIAL_BALANCE, money, totalSpent, endingFor, timeline } from './engine';
@@ -35,7 +36,7 @@ export function Rewind({state,onReplay,onRestart}:{state:Run;onReplay:(index:num
   const pivots=timeline(state);
   // One card per played act; keep every alternate pivot inside its details.
   const played=chapters.map((chapter,index)=>({chapter,index,events:pivots.filter(p=>p.chapter===index)})).filter(p=>p.events.length);
-  return <div className="rewind"><span className="eyebrow">오늘의 기록</span><h1>{ending.title}</h1><p>{ending.line}</p>
+  return <div className="rewind"><ResponseReport state={state}/><h2>{ending.title}</h2><p>{ending.line}</p>
     <div className="balance loss-balance"><span>돌아오지 않은 금액</span><strong>{money(totalSpent(state))}</strong><small>가상 거래 · 접수와 차단은 환급이 아닙니다.</small></div>
     <p className="ending-personal">{state.events.some(e=>e.type==='reflect'&&e.data==='tell'||e.type==='message'&&e.data==='friend:together')?'준호에게 이야기한 일이 남아 있다. 이 하루를 혼자 설명할 필요는 없다.':'누구에게 말할지는 아직 정하지 않았다. 지금 남긴 기록은 다음 이야기를 시작할 때 꺼낼 수 있다.'}</p>
     {[...messageConsequences(state),...decisionConsequence(state)].length>0&&<section className="ending-messages"><h2>오늘 남긴 연락</h2>{[...messageConsequences(state),...decisionConsequence(state)].map(text=><p key={text}>{text}</p>)}</section>}
