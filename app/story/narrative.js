@@ -176,16 +176,15 @@ export function aiMoment(caseId,stageId){
  if(caseId==='recovery-team'&&stageId==='offer')return 'recovery-check';
  return null;
 }
-/** Merge transient chat at its authored-message position; never persist player text. */
+/**
+ * Append newly delivered player/AI chat after messages that were already shown.
+ * Old anchor values are ignored so a late response cannot appear in past dialogue.
+ * Player text is never persisted.
+ */
 export function conversationTimeline(lines,chat,visible=lines.length){
- const result=[];
- for(let index=0;index<=Math.min(visible,lines.length);index++){
-  for(const message of chat.filter(m=>Math.min(m.anchor??lines.length,lines.length)===index)){
-   result.push({speaker:message.role==='user'?'나':message.speaker,text:message.content});
-  }
-  if(index<Math.min(visible,lines.length))result.push(lines[index]);
- }
- return result;
+ const delivered=lines.slice(0,Math.min(visible,lines.length));
+ const appended=chat.map(message=>({speaker:message.role==='user'?'나':message.speaker,text:message.content}));
+ return [...delivered,...appended];
 }
 /** Only the real friend's conversation can see earlier voluntary disclosures. */
 export function friendFollowup(state){

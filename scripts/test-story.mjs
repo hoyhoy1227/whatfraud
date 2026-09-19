@@ -129,7 +129,7 @@ assert.equal(n.aiMoment('familiar-request','request'),n.aiMoment('familiar-reque
 assert.equal(n.aiMoment('recovery-team','paid'),null);
 const baseLines=[{speaker:'운영자',text:'처음 안내'},{speaker:'나',text:'선택 질문'},{speaker:'운영자',text:'선택 답장'}];
 const transient=[{role:'user',content:'자유 질문',anchor:1,speaker:'운영자'},{role:'assistant',content:'자유 답장',anchor:1,speaker:'운영자'}];
-assert.deepEqual(n.conversationTimeline(baseLines,transient).map(m=>m.text),['처음 안내','자유 질문','자유 답장','선택 질문','선택 답장']);
+assert.deepEqual(n.conversationTimeline(baseLines,transient).map(m=>m.text),['처음 안내','선택 질문','선택 답장','자유 질문','자유 답장']);
 assert.deepEqual(n.conversationTimeline(baseLines,transient,1).map(m=>m.text),['처음 안내','자유 질문','자유 답장']);
 const restoredBudget=restoreBudget({session:'test-session-0000001',counts:[0,1,0],last:12,cooldown:0,moments:['paper-entry','paper-entry','invented']},'replacement');
 assert.deepEqual(restoredBudget.moments,['paper-entry']);

@@ -190,7 +190,12 @@ const embedded=renderToStaticMarkup(createElement(Message,{embedded:true,state:i
 assert.ok(!embedded.includes('chat-back')&&!embedded.includes('chat-profile'),'parent owns the single chat header');
 assert.ok(client.includes("openApp(a,a==='messages'?'list':'current')"),'app icon opens inbox');
 assert.ok(client.includes("if(app==='messages'&&thread!=='list')openApp('messages','list')"),'all chat threads return to inbox');
-assert.ok(client.includes("if(next==='messages'&&conversation!=='list')act('read',conversation)"),'opening inbox does not read a chat');
+assert.ok(client.includes("if(next==='messages'&&conversation!=='list')act('read',receiptFor(conversation))"),'opening a thread records its exact receipt');
+const messageScrollerAt=client.indexOf("<div className={'screen-scroll app-'");
+assert.ok(client.indexOf("thread!=='list'&&thread!=='jisu'&&peerInvitationUnread")<messageScrollerAt,'other-thread notification is rendered above the scrollable conversation');
+assert.ok(client.indexOf('new-message-pill message-alert-top')<messageScrollerAt,'same-thread new-message control is rendered above the scrollable conversation');
+assert.ok(client.includes("!state.read.includes(state.chapter+':'+peerReceipt)"),'opened peer notification stays dismissed through its exact read receipt');
+assert.ok(!client.includes('notification peer-invitation'),'other-thread notification is not injected at the bottom of the active conversation');
 assert.equal((client.match(/onClick={phoneBack}/g)||[]).length,2,'header and system back agree');
 assert.ok(!client.includes("onClick={()=>setThread("),'navigation preserves per-thread scroll through openApp');
 assert.ok(client.includes('이전 약속 대화 보기'),'unified friend row retains older history');

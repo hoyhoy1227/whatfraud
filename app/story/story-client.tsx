@@ -10,7 +10,7 @@ import DecisionComposer, {emptyDecisionMemory,type DecisionMemory} from './decis
 import {AI_RUN_LIMIT,decisionConsequence} from './decision-message';
 import StoryMessage, {type MessageMemory} from './story-message';
 import {emptyMessageMemory,peerRecordReady,supportReady,messageThreadVisible,resetMessageMemory,threadPreview,threadReceipt} from './presentation';
-import {closureScene,closureComplete,messageClosed,messageWindow,messageStatus,messageConsequences,messageStyle,branchUseAllowed,peerFollowupText,attachmentText,attachmentLabel,canAttach} from './one-shot';
+import {closureScene,closureComplete,messageClosed,messageWindow,messageStatus,messageConsequences,messageStyle,branchUseAllowed,peerFollowupText,attachmentText,canAttach} from './one-shot';
 import { chapters, createRun, currentCase, currentStage, transition, SAVE_KEY, serializeRun, restoreRun, replayBefore, evidenceFor, verified, offerFor, money, gameTime, isResolved, outcomeText, chapterSpent } from './engine';
 import { budgetKey, restoreBudget } from './session-budget';
 import { ReplyGate } from './reply-gate';
@@ -19,7 +19,7 @@ import { scheduleMessage } from './message-pacing';
 import { Ledger, Rewind, RecordComparison, Closing, PhoneStatus, ContactProfile, ChapterScene, ConversationRow, InvestmentScreen, PlayGuide } from './panels';
 type Run = ReturnType<typeof createRun>;
 type App = 'home'|'messages'|'calls'|'bank'|'browser'|'notes'|'settings';
-type Chat = AiChatMessage & {stage:string;anchor:number;speaker:string};
+type Chat = AiChatMessage & {stage:string;speaker:string};
 const names:Record<App,string>={home:'홈',messages:'메시지',calls:'연락처',bank:'은행',browser:'브라우저',notes:'메모',settings:'설정'};
 const appList:App[]=['messages','calls','bank','browser','notes'];
 
@@ -83,6 +83,8 @@ export default function StoryClient(){
   const peerReceipt=threadReceipt(state,'peer',peerMemory),friendReceipt=threadReceipt(state,'friend',friendMemory);
   const knownReceipt='junho:'+state.stage+':'+(state.calls.includes('0:junho')?'verified':state.cues.includes('junho-unanswered')?'waiting':'hello');
   const activeReceipt=thread==='current'?currentReceipt:thread==='jisu'?peerReceipt:thread==='support'?friendReceipt:knownReceipt;
+  const receiptFor=(conversation:string)=>conversation==='current'?currentReceipt:conversation==='jisu'?peerReceipt:conversation==='support'?friendReceipt:knownReceipt;
+  const peerInvitationUnread=messageWindow(state,'peer')&&messageStatus(state,'peer')==='ready'&&!messageClosed(state,'peer')&&!state.read.includes(state.chapter+':'+peerReceipt);
   const deliveredSignature=thread==='current'?state.stage+':'+(resolved?sceneLines.length:visibleCount):activeReceipt;
   const previousDelivery=useRef({key:scrollKey,signature:deliveredSignature});
   useEffect(()=>{
@@ -114,7 +116,7 @@ export default function StoryClient(){
     if(scroll.current)positions.current[scrollKey]=scroll.current.scrollTop;
     cancelReply();setApp(next);setThread(conversation);setShowRecent(false);
     setRecent(previous=>[next,...previous.filter(a=>a!==next)].filter(a=>a!=='home').slice(0,4));
-    if(next==='messages'&&conversation!=='list')act('read',conversation);
+    if(next==='messages'&&conversation!=='list')act('read',receiptFor(conversation));
     if(next==='bank'){act('message-followup','peer:checked-bank');act('read','bank');act('observe','bank-view');}
   }
   useEffect(()=>{
@@ -286,7 +288,7 @@ thread==='list'?<><div className="conversation-list">
         </section>)}
       {state.calls.includes(state.chapter+':current')&&<p className="system-message">확인 요청을 보냈습니다. 아직 답장이 없습니다.</p>}
       {(sending||sceneTyping)&&<p className="typing" role="status">{sending?c.sender+' 입력 중':sceneLines[visibleCount]?.speaker==='알림'?'대화 업데이트 중':sceneLines[visibleCount]?.speaker==='나'?'보내는 중':sceneLines[visibleCount]?.speaker+' 입력 중'}<span aria-hidden="true"> …</span></p>}
-      <DecisionComposer key={renderEpoch+':'+decisionMemoryKey} memory={decisionMemory[decisionMemoryKey]??emptyDecisionMemory()} onMemory={patch=>{if(interactionEpoch.current===renderEpoch&&stateRef.current.chapter===state.chapter)setDecisionMemory(old=>({...old,[decisionMemoryKey]:{...(old[decisionMemoryKey]??emptyDecisionMemory()),...patch}}));}} state={state} enabled={aiAllowed&&!practiceOriginal} remaining={remaining} blocked={sceneTyping||paused||!!dialog||!pageVisible||resolved} getSession={()=>budget.current.session} onEvent={messageAct}/> {branchActions}{messageWindow(state,'peer')&&messageStatus(state,'peer')==='ready'&&!messageClosed(state,'peer')&&!sceneTyping&&<button className="notification peer-invitation" onClick={()=>openApp('messages','jisu')}><strong>지수 · 개인 메시지</strong><p>{messageStatus(state,'peer')==='ready'?'입금하기 전에 먼저 확인할 게 있을까요?':'지수와의 연락 보기'}</p></button>}{resolved&&<div className="resolution-line"><p>{outcomeText(state)}</p><p>{chapterSpent(state)>0?narrative.aftermath.loss:narrative.aftermath.safe}</p>{state.chapter<2?<p>{closureComplete(state)?'이 사건의 연락을 마쳤습니다. 아래 버튼으로 다음 장면을 여세요.':'요청은 정리했습니다. 아래 버튼으로 이 사건의 남은 연락을 확인하세요.'}</p>:<p>회복 지원 상담과의 연락을 마쳤습니다. 지금까지 확인한 내용과 거래 기록을 정리하고 종료할 수 있습니다.</p>}</div>}</>;
+      <DecisionComposer key={renderEpoch+':'+decisionMemoryKey} memory={decisionMemory[decisionMemoryKey]??emptyDecisionMemory()} onMemory={patch=>{if(interactionEpoch.current===renderEpoch&&stateRef.current.chapter===state.chapter)setDecisionMemory(old=>({...old,[decisionMemoryKey]:{...(old[decisionMemoryKey]??emptyDecisionMemory()),...patch}}));}} state={state} enabled={aiAllowed&&!practiceOriginal} remaining={remaining} blocked={sceneTyping||paused||!!dialog||!pageVisible||resolved} getSession={()=>budget.current.session} onEvent={messageAct}/> {branchActions}{resolved&&<div className="resolution-line"><p>{outcomeText(state)}</p><p>{chapterSpent(state)>0?narrative.aftermath.loss:narrative.aftermath.safe}</p>{state.chapter<2?<p>{closureComplete(state)?'이 사건의 연락을 마쳤습니다. 아래 버튼으로 다음 장면을 여세요.':'요청은 정리했습니다. 아래 버튼으로 이 사건의 남은 연락을 확인하세요.'}</p>:<p>회복 지원 상담과의 연락을 마쳤습니다. 지금까지 확인한 내용과 거래 기록을 정리하고 종료할 수 있습니다.</p>}</div>}</>;
   const messageDock=<div className="message-dock" aria-label="대화 행동">
     {resolved?<><p className="next-scene-hint">{state.chapter===2?'회복 지원 상담과의 연락을 마쳤습니다. 지금까지의 내용을 정리하고 종료하세요.':'아래 버튼으로 남은 연락을 마친 뒤 다음 장면으로 진행하세요. 송금하지 않아도 진행할 수 있습니다.'}</p><button className="primary" onClick={next}>{practiceOriginal?'바뀐 선택 확인':state.chapter===2?'지금까지 내용 정리하고 종료하기':!closureComplete(state)?(state.chapter===0?'준호와 이 연락 정리하기':'지수와 이 연락 정리하기'):state.chapter===0?'점심시간으로':'저녁 약속으로'}</button></>:<>
       {sceneTyping&&<button className="skip-messages" onClick={()=>setRevealed(old=>({...old,[sceneKey]:sceneLines.length}))}>대화 바로 보기</button>}
@@ -319,11 +321,12 @@ thread==='list'?<><div className="conversation-list">
     {!started?<div className="screen-scroll">{intro}</div>:state.completed&&!practiceOriginal&&closingStep<4?<div className="screen-scroll closing-screen"><Closing state={state} step={closingStep} onNext={()=>setClosingStep(step=>step+1)} onSkip={()=>setClosingStep(4)}/></div>:state.completed&&!practiceOriginal?<div className="screen-scroll"><Rewind state={state} onReplay={rewind} onRestart={()=>{setHasSave(Boolean(mainSaved.current));setStarted(false);}}/></div>:<>
       <header className="app-header"><button onClick={phoneBack} aria-label={app==='messages'&&thread!=='list'?'대화 목록으로':'홈으로'}>‹</button>{app==='messages'&&thread!=='list'?<button className="header-contact" onClick={()=>openProfile(thread!=='current'&&thread!=='jisu')}><span className="avatar" data-person={thread==='jisu'?'지수':thread==='current'?c.sender:'준호'} aria-hidden="true">{thread==='jisu'?'지':thread==='current'?contactProfile(state.chapter).initial:'준'}</span><span><b>{thread==='jisu'?'지수':thread==='current'&&inMarketRoom?'온결 시장 노트 자료방':thread==='current'?c.sender:'준호'}</b><small>{thread==='jisu'?'온결 자료방 참여자':thread==='current'&&inMarketRoom?'참여자 5명 · 나 포함':thread==='current'?contactProfile(state.chapter).relationship:'저장된 연락처'}</small></span></button>:<strong>{app==='messages'?'대화':names[app]}</strong>}<button onClick={()=>{cancelReply();setPaused(true);}} aria-label="일시정지">Ⅱ</button><button onClick={()=>openApp('settings')} aria-label="설정">⚙</button></header>
       {practiceOriginal&&<div className="practice-bar"><span>되감기 · 원본 기록 보존</span><button onClick={exitPractice}>원래 기록으로</button></div>}
-      {unread&&app!=='home'&&app!=='messages'&&<button className="notification compact" onClick={()=>openApp('messages')}>메시지 · {c.sender}의 새 연락</button>}
+      {unread&&app!=='home'&&app!=='messages'&&<button className="notification compact message-alert-top" onClick={()=>openApp('messages','current')}>메시지 · {c.sender}의 새 연락</button>}
       {peerRecordReady(state)&&!state.events.some(e=>e.type==='message-followup'&&e.data==='peer:record')&&<button className="notification compact" onClick={()=>{if(messageAct('message-followup','peer:record'))openApp('messages','jisu');}}>지수 · 확인해 본 기록을 남겼어요</button>}
+      {app==='messages'&&thread!=='list'&&thread!=='jisu'&&peerInvitationUnread&&!sceneTyping&&<button className="notification compact message-alert-top" onClick={()=>openApp('messages','jisu')}><strong>지수 · 새 메시지</strong><span>입금하기 전에 먼저 확인할 게 있을까요?</span></button>}
+      {app==='messages'&&newMessages&&<button className="new-message-pill message-alert-top" onClick={()=>{if(scroll.current)scroll.current.scrollTop=scroll.current.scrollHeight;followTail.current=true;setAtTail(true);setNewMessages(false);}}>현재 대화의 새 메시지 · 아래에서 확인</button>}
       {tutorial}
       <div className={'screen-scroll app-'+app} ref={scroll} onScroll={e=>{const node=e.currentTarget;positions.current[scrollKey]=node.scrollTop;followTail.current=node.scrollHeight-node.scrollTop-node.clientHeight<80;setAtTail(followTail.current);if(followTail.current)setNewMessages(false);}}>{content}</div>
-      {app==='messages'&&newMessages&&<button className="new-message-pill" onClick={()=>{if(scroll.current)scroll.current.scrollTop=scroll.current.scrollHeight;followTail.current=true;setAtTail(true);setNewMessages(false);}}>새 메시지 ↓</button>}
       {app==='messages'&&thread==='current'&&messageDock}
       <nav className="system-nav" aria-label="휴대폰 탐색"><button onClick={phoneBack} aria-label="뒤로">‹</button><button className="home-indicator" onClick={()=>openApp('home')} aria-label="홈"><span/></button><button onClick={()=>{cancelReply();setShowRecent(!showRecent);}}>최근 앱</button></nav>
 
