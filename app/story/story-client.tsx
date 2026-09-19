@@ -76,6 +76,8 @@ export default function StoryClient(){
   const sceneKey=c.id+':'+state.stage;
   const visibleCount=revealed[sceneKey]??0;
   const sceneTyping=!resolved&&visibleCount<sceneLines.length;
+  const remainingReplyChoices=narrative.beats.filter(b=>b.stage===state.stage&&(b===beat||!b.required&&!momentUsed)&&!b.options.some(o=>selectedChoices.includes(o.id))).flatMap(b=>b.options.filter(o=>choiceAllowed(state,o)));
+  const conversationEnded=!resolved&&!sceneTyping&&!sending&&!beat&&!remainingReplyChoices.length&&stage.actions.some(action=>action.type==='finish');
   const progressLocked=paused||state.completed||resolved||sceneTyping;
   const visibleStages=state.visited.map(id=>({id,lines:id===state.stage?sceneLines.slice(0,resolved?undefined:visibleCount):messageParts(conversationTimeline(displayedMessages(state,id),chat.filter(m=>m.stage===id)))}));
   const visibleMessages=visibleStages.flatMap(section=>section.lines);
@@ -306,6 +308,7 @@ thread==='list'?<><div className="conversation-list">
         </section>)}
       {state.calls.includes(state.chapter+':current')&&<p className="system-message">확인 요청을 보냈습니다. 아직 답장이 없습니다.</p>}
       {(sending||sceneTyping)&&<p className="typing" role="status">{sending?c.sender+' 입력 중':sceneLines[visibleCount]?.speaker==='알림'?'대화 업데이트 중':sceneLines[visibleCount]?.speaker==='나'?'보내는 중':sceneLines[visibleCount]?.speaker+' 입력 중'}<span aria-hidden="true"> …</span></p>}
+      {conversationEnded&&<p className="system-message conversation-ended" role="status">상대방에게서 더 도착할 답장은 없습니다. 이 대화는 여기서 끝났습니다.</p>}
       <DecisionComposer key={renderEpoch+':'+decisionMemoryKey} memory={decisionMemory[decisionMemoryKey]??emptyDecisionMemory()} onMemory={patch=>{if(interactionEpoch.current===renderEpoch&&stateRef.current.chapter===state.chapter)setDecisionMemory(old=>({...old,[decisionMemoryKey]:{...(old[decisionMemoryKey]??emptyDecisionMemory()),...patch}}));}} state={state} enabled={aiAllowed&&!practiceOriginal} remaining={remaining} blocked={sceneTyping||paused||!!dialog||!pageVisible||resolved} getSession={()=>budget.current.session} onEvent={messageAct} onIncoming={()=>playEffect('message')}/> {branchActions}{resolved&&<div className="resolution-line"><p>{outcomeText(state)}</p><p>{chapterSpent(state)>0?narrative.aftermath.loss:narrative.aftermath.safe}</p>{state.chapter<2?<p>{closureComplete(state)?'이 사건의 연락을 마쳤습니다. 아래 버튼으로 다음 장면을 여세요.':'요청은 정리했습니다. 아래 버튼으로 이 사건의 남은 연락을 확인하세요.'}</p>:<p>회복 지원 상담과의 연락을 마쳤습니다. 지금까지 확인한 내용과 거래 기록을 정리하고 종료할 수 있습니다.</p>}</div>}</>;
   const messageDock=<div className="message-dock" aria-label="대화 행동">
     {resolved?<><p className="next-scene-hint">{state.chapter===2?'회복 지원 상담과의 연락을 마쳤습니다. 지금까지의 내용을 정리하고 종료하세요.':'아래 버튼으로 남은 연락을 마친 뒤 다음 장면으로 진행하세요. 송금하지 않아도 진행할 수 있습니다.'}</p><button className="primary" onClick={next}>{practiceOriginal?'바뀐 선택 확인':state.chapter===2?'지금까지 내용 정리하고 종료하기':!closureComplete(state)?(state.chapter===0?'준호와 이 연락 정리하기':'지수와 이 연락 정리하기'):state.chapter===0?'점심시간으로':'저녁 약속으로'}</button></>:<>
