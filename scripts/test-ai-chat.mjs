@@ -124,7 +124,7 @@ try{
  assert.equal(captured.generationConfig.responseMimeType,'application/json');
  assert.equal(captured.contents.length,1);
  assert.equal(dialogue.AI_REPLY_TIMEOUT_MS,55000);
- assert.equal(captured.generationConfig.maxOutputTokens,1024);
+ assert.equal(captured.generationConfig.maxOutputTokens,500);
  assert.equal(dialogue.validateAiReply('가'.repeat(360),undefined,'normal','story'),true);
  assert.equal(dialogue.validateAiReply('가'.repeat(361),undefined,'normal','story'),false);
  assert.equal(dialogue.validateAiReply('그랬어? 나는 부탁한 적 없어. 기록은 읽었어. 같이 살펴보자.',undefined,'normal','story'),true);

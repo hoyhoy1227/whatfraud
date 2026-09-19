@@ -278,7 +278,7 @@ async function handleChat(request: Request, body: ChatBody) {
           parts: [{ text: message.content }],
         })).concat(correction?[{role:'user',parts:[{text:correction}]}]:[]),
         generationConfig: {
-          maxOutputTokens: 1024,
+          maxOutputTokens: 500,
           responseMimeType: 'application/json',
           responseSchema: isDecision?{type:'OBJECT',properties:{reply:{type:'STRING'},reaction:{type:'STRING',enum:decisionReactions}},required:['reply','reaction']}:{type:'OBJECT',properties:{reply:{type:'STRING'},reaction:{type:'STRING',enum:sceneId==='peer'?['check','acknowledge','boundary']:['together','space']}},required:['reply','reaction'],...(contractVersion===2?{properties:{reply:{type:'STRING'},reaction:{type:'STRING',enum:sceneId==='peer'?['check','acknowledge','boundary']:['together','space']},supportMode:{type:'STRING',enum:branchModes[sceneId]},focus:{type:'STRING',enum:branchFocus}},required:['reply','reaction','supportMode','focus']}: {})},
           thinkingConfig: { thinkingLevel: 'minimal' },
