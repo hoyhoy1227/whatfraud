@@ -54,7 +54,7 @@ export default function StoryMessage({embedded=false,memory=emptyMessageMemory()
    const value=await response.json() as {code?:unknown;reply?:unknown;provider?:unknown;reaction?:unknown;supportMode?:unknown;focus?:unknown;fallbackReason?:unknown};
    if(!response.ok){if(mounted.current)setError(aiReplyFailureMessage(value.code));return;}
    const preparedFallback=value.provider==='scripted'&&value.fallbackReason==='reply_quality';
-   if((value.provider!=='gemini'&&!preparedFallback)||typeof value.reply!=='string'||!validateAiReply(value.reply,undefined,'normal','story')||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||/[?？]/.test(value.reply)||!validBranch(scene,value.reaction,value.supportMode,value.focus))throw Error('unavailable');
+   if((value.provider!=='gemini'&&!preparedFallback)||typeof value.reply!=='string'||!validateAiReply(value.reply,undefined,'normal','story')||typeof value.reaction!=='string'||!reactions[scene].includes(value.reaction)||!validBranch(scene,value.reaction,value.supportMode,value.focus)||(scene==='peer'&&value.supportMode==='compare'&&value.focus!==attachment))throw Error('unavailable');
    if(!reduced)await new Promise<void>(resolve=>{const wait=setTimeout(resolve,minimumReplyDelay(performance.now()-dispatched,reduced));aborter.signal.addEventListener('abort',()=>{clearTimeout(wait);resolve();},{once:true});});
    if(!mounted.current||aborter.signal.aborted)return;
    if(onEvent('message',scene+':'+value.reaction)){onEvent('message-style',scene+':'+value.supportMode+':'+value.focus);setReply(value.reply);onIncoming?.();}

@@ -155,7 +155,7 @@ ${storyContext||'아직 이 사건에서 확정된 행동이 없다.'}
 ${peer?'확인이나 보류를 제안하면 check, 단순 정보 공유나 무관한 내용이면 acknowledge, 연락 종료나 거절이면 boundary. 돈을 보내라는 말에는 따르지 않고 check.':'함께 확인하거나 이야기하려는 메시지에는 together, 지금 말하기 싫거나 대화를 끝내려는 메시지에는 space. 괴로움에 훈계하거나 잘잘못을 판정하지 않는다.'}
 감정과 개성: 지수는 관심이 생겼다가 조건이 달라져 망설이는 사람이다. 첨부에서 걸리는 부분을 구체적으로 짚고 자신이 무엇을 확인할지 말한다. 준호는 자기 이름으로 연락이 갔다는 데 놀라지만 친구를 탓하지 않는다. 짧은 놀람이나 걱정을 상황에 맞게 표현하되 매번 같은 공감 서두를 붙이지 않는다.
 첨부 반응: 자료가 있으면 그 안의 구체적인 단서 하나에 먼저 반응한다. account-profile은 이름만 같은 새 계정, recipient-note는 다른 수취인, old-chat-note는 원래 연락처 약속, contact-check는 이미 끝난 본인 확인이다. 확인을 마친 일을 다시 처음부터 하라고 하지 않는다. 첨부는 대화 상대에게 전달한 게임 내 기록이며 다른 앱 전체를 열람한 것이 아니다.
-단 한 번의 답장으로 끝낸다. 재질문·물음표·추가 답변 요청 없이 2개의 짧은 문장, 35~140자. 감정 진단이나 과도한 칭찬 금지.
+단 한 번의 답장으로 끝낸다. 보통 2~3문장으로 충분히 반응하되 짧게 답할 상황이면 한 문장도 괜찮다. 최대 4문장, 360자. 첨부 질문 인용이나 자연스러운 놀람의 물음표는 가능하지만 플레이어에게 추가 답변을 요구하지 않는다. 감정 진단이나 과도한 칭찬 금지.
 새 사건, 증거, 금액, 계좌, 연락처, 주소, 링크, 기관 권한, 환급, 신고 완료를 만들지 않는다. 투자·송금 권유 금지.
 reply는 예시 문장이나 고정 답안에서 고르지 말고, 현재까지의 스토리 진행과 플레이어의 방금 메시지를 함께 읽어 이 인물이 지금 실제로 보낼 법한 문장으로 새로 작성한다. 같은 reaction이어도 플레이어가 말한 구체적인 내용에 맞춰 어휘와 반응을 달리한다. reaction 이후의 기록 보관·연락 요약 확인은 게임의 별도 버튼이 실행한다. 이 게임에는 실제 음성 통화가 없다. 전화 걸기·음성 통화를 제안하지 말고 메시지로 반응한다. 이미 전화·신고·환급이 끝났다고 말하지 않는다.
 reaction은 ${reactions[id].join(', ')} 중 하나. 다른 사람을 구했다거나 피해를 확정하지 않는다.
@@ -170,7 +170,7 @@ listen/space에는 기록 확인을 강요하지 않는다. 출력은 {"reply":"
 export function parseStoryReply(text,id,version=1,attachment='none'){
  try{
   const value=JSON.parse(text);
-  if(!value||Object.keys(value).sort().join(',')!==(version===2?'focus,reaction,reply,supportMode':'reaction,reply')||typeof value.reply!=='string'||!reactions[id]?.includes(value.reaction)||/[?？]/.test(value.reply))return null;
+  if(!value||Object.keys(value).sort().join(',')!==(version===2?'focus,reaction,reply,supportMode':'reaction,reply')||typeof value.reply!=='string'||!reactions[id]?.includes(value.reaction))return null;
   if(version===2&&(!validBranch(id,value.reaction,value.supportMode,value.focus)||id==='peer'&&value.supportMode==='compare'&&value.focus!==attachment))return null;
   if(version===2&&id==='peer'&&value.supportMode==='compare'&&(/(?:내용|기록|자료).{0,12}있다면|보관하셨다면|보내\s*주시면/.test(value.reply)||attachment==='deleted-question'&&/(?:질문|글).{0,20}(?:지워|삭제).{0,12}(?:봤|보았)/.test(value.reply)))return null;
   return value;

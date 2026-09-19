@@ -70,7 +70,7 @@ try{
  assert.equal((await (await route.POST(request())).json()).code,'ai_unconfigured');assert.equal(calls,0);
  process.env.GEMINI_API_KEY='mock-only-not-a-real-key';
  for(const [value,code] of [
-  [{reply:'괜찮아요?',reaction:'check'},'unsafe_response'],
+  [{reply:'환급 완료했습니다.',reaction:'check'},'unsafe_response'],
   [{reply:'알려줘서 고마워요.',reaction:'refund'},'unsafe_response'],
   [{reply:'알려줘서 고마워요.',reaction:'check',amount:999},'unsafe_response'],
   [{reply:'https://example.invalid로 연락하세요',reaction:'check'},'unsafe_response']
@@ -123,11 +123,15 @@ try{
  assert.ok(captured.systemInstruction.parts[0].text.includes('예시 문장이나 고정 답안에서 고르지 말고'));
  assert.equal(captured.generationConfig.responseMimeType,'application/json');
  assert.equal(captured.contents.length,1);
- assert.equal(dialogue.AI_REPLY_TIMEOUT_MS,25000);
+ assert.equal(dialogue.AI_REPLY_TIMEOUT_MS,55000);
+ assert.equal(captured.generationConfig.maxOutputTokens,1024);
+ assert.equal(dialogue.validateAiReply('가'.repeat(360),undefined,'normal','story'),true);
+ assert.equal(dialogue.validateAiReply('가'.repeat(361),undefined,'normal','story'),false);
+ assert.equal(dialogue.validateAiReply('그랬어? 나는 부탁한 적 없어. 기록은 읽었어. 같이 살펴보자.',undefined,'normal','story'),true);
  assert.ok(dialogue.aiReplyFailureMessage('provider_quota').includes('Gemini의 일시적인 사용량 한도'));
  assert.ok(dialogue.aiReplyFailureMessage('provider_token_limit').includes('출력 토큰 한도'));
  assert.ok(!dialogue.aiReplyFailureMessage('provider_error').includes('토큰'));
- assert.ok(routeSource.includes('PROVIDER_TIMEOUT_MS = 20_000'));
+ assert.ok(routeSource.includes('PROVIDER_TIMEOUT_MS = 45_000'));
 
  // Offline reproductions, not claims about the discarded live response.
  const stopping='응, 지금 송금하지 말고 기록부터 같이 보자.';

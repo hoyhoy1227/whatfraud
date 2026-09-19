@@ -32,7 +32,7 @@ export default function DecisionComposer({memory,onMemory,state,enabled,remainin
    const value=await response.json() as {code?:unknown;provider?:unknown;reply?:unknown;reaction?:unknown;fallbackReason?:unknown};
    if(!response.ok){if(mounted.current)setError(aiReplyFailureMessage(value.code));return;}
    const fallback=value.provider==='scripted'&&value.fallbackReason==='reply_quality';
-   if((value.provider!=='gemini'&&!fallback)||typeof value.reply!=='string'||typeof value.reaction!=='string'||!decisionReactions.includes(value.reaction)||!validateAiReply(value.reply,undefined,'normal','story')||/[?？]/.test(value.reply))throw Error('unavailable');
+   if((value.provider!=='gemini'&&!fallback)||typeof value.reply!=='string'||typeof value.reaction!=='string'||!decisionReactions.includes(value.reaction)||!validateAiReply(value.reply,undefined,'normal','story'))throw Error('unavailable');
    if(!mounted.current||aborter.signal.aborted)return;
    if(onEvent('decision-result',window.id+':'+value.reaction+':'+attachment)){setReply(value.reply);setScripted(fallback);onIncoming?.();}
   }catch{if(mounted.current)setError(aiReplyFailureMessage(undefined,deadlineExpired));}

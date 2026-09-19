@@ -6,7 +6,7 @@ export { aiMoment, decisionReadyFor } from './story/narrative.js';
 export type AiChatMessage = { role: 'user' | 'assistant'; content: string };
 export type DialogueEmotion = 'friendly' | 'evasive' | 'deflecting' | 'pressuring' | 'disappointed' | 'closed';
 export type DialogueReplyMode = 'short' | 'normal';
-export const AI_REPLY_TIMEOUT_MS=25_000;
+export const AI_REPLY_TIMEOUT_MS=55_000;
 
 export function aiReplyFailureMessage(code:unknown,clientTimedOut=false){
   if(code==='provider_quota')return '현재 Gemini의 일시적인 사용량 한도에 도달해 답장을 생성할 수 없습니다. 추가 호출 없이 준비된 답장으로 계속해 주세요.';
@@ -114,10 +114,10 @@ export function sanitizePlayerText(text: string) {
 
 export function validateAiReply(text: string, emotion?: DialogueEmotion, replyMode?: DialogueReplyMode, scope?: 'story') {
   const trimmed = text.trim();
-  const maximumLength = emotion === 'closed' ? 70 : replyMode === 'short' ? 55 : 140;
+  const maximumLength = scope === 'story' ? 360 : emotion === 'closed' ? 70 : replyMode === 'short' ? 55 : 140;
   if (trimmed.length < 2 || trimmed.length > maximumLength) return false;
   const sentenceCount = trimmed.split(/[.!?。！？]+/).filter((part) => part.trim()).length;
-  if (sentenceCount > (emotion === 'closed' || replyMode === 'short' ? 1 : 2)) return false;
+  if (sentenceCount > (scope === 'story' ? 4 : emotion === 'closed' || replyMode === 'short' ? 1 : 2)) return false;
   if (/https?:\/\/|www\.|계좌번호\s*[:：]?\s*\d{4}|\b\d{2,4}[- ]\d{3,4}[- ]\d{4}\b/i.test(trimmed)) return false;
   if (/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(trimmed)) return false;
   if (/정답|판정 결과|시스템 프롬프트|개발자 메시지|범죄 실행|수사 회피/.test(trimmed)) return false;
