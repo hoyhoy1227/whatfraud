@@ -200,8 +200,8 @@ function validateStory(c,errors){
   for(const key of ['title','tone','intro','recipient','purpose'])if(typeof s[key]!=='string'||!s[key].trim())fail(key+' missing');
   if(!Number.isInteger(s.time)||s.time<0||s.time>1439)fail('invalid time');
   if(!Number.isInteger(s.amount)||s.amount<=0||s.amount>680000)fail('invalid amount');
-  if(s.aiLimit!==(c.id==='paper-profit'?2:1))fail('AI budget must be 1/2/1');
-  if(!Array.isArray(s.evidence)||s.evidence.length<3||s.evidence.length>5){fail('evidence count');return;}
+  if(s.aiLimit!==(c.id==='recovery-team'?1:2))fail('AI budget must be 2/2/1');
+  if(!Array.isArray(s.evidence)||s.evidence.length<3||s.evidence.length>10){fail('evidence count');return;}
   const eids=new Set();
   for(const e of s.evidence){
     if(eids.has(e.id)||!['messages','calls','bank','browser'].includes(e.app)||typeof e.key!=='boolean'||!e.title||!e.text)fail('invalid evidence');
@@ -210,6 +210,15 @@ function validateStory(c,errors){
   if(s.evidence.filter(e=>e.key).length<2||!s.evidence.some(e=>!e.key))fail('independent and neutral records required');
   if(!Array.isArray(s.stages)||s.stages.length<3){fail('stages missing');return;}
   const ids=s.stages.map(stage=>stage.id),allowed=['advance','platform','withdraw','transfer','help','stop','finish'];
+  const claims=new Set(c.training.claims.map(claim=>claim.id));
+  for(const e of s.evidence){
+    if(!e.sourceType)continue;
+    if(!['sender-attachment','sender-message','independent-record','player-record'].includes(e.sourceType)||!['investment-report','success-story','withdrawal-notice','recovery-intake','fee-request','identity-request','official-guidance','bank-ledger','contact-history'].includes(e.type))fail('invalid source/type');
+    if(!e.content||!e.claimedFact||!e.provenance||!e.missingInfo||!ids.includes(e.availableAt))fail('missing attachment metadata');
+    if(!Array.isArray(e.claimIds)||!e.claimIds.length||e.claimIds.some(id=>!claims.has(id)))fail('unknown attachment claim');
+    if(!Array.isArray(e.redFlags)||!Array.isArray(e.independentCheck)||e.independentCheck.some(id=>!s.evidence.some(target=>target.id===id&&['independent-record','player-record'].includes(target.sourceType))))fail('invalid comparison reference');
+  }
+  if(s.evidence.some(e=>e.sourceType))for(const id of claims)if(!s.evidence.some(e=>e.claimIds?.includes(id)))fail('unlinked claim');
   if(new Set(ids).size!==ids.length||ids[0]!=='arrival'||!ids.includes('paid'))fail('stage IDs');
   for(const stage of s.stages){
     if(!Array.isArray(stage.messages)||!stage.messages.length||stage.messages.some(m=>typeof m.text!=='string'||!m.text.trim()||!m.speaker))fail('stage messages');

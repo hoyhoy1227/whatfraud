@@ -67,7 +67,7 @@ export type TrainingProfile = {
 
 export type StoryProfile = {
   title:string; time:number; tone:string; intro:string; amount:number; recipient:string; purpose:string; aiLimit:number;
-  evidence:{id:string;app:string;title:string;text:string;key:boolean}[];
+  evidence:{id:string;app:string;title:string;text:string;key:boolean;type?:string;content?:string;claimedFact?:string;provenance?:string;sourceType?:'sender-attachment'|'sender-message'|'independent-record'|'player-record';claimIds?:string[];redFlags?:string[];independentCheck?:string[];availableAt?:string;missingInfo?:string}[];
   stages:{id:string;messages:{speaker:string;text:string}[];actions:{type:string;label:string}[];next?:string}[];
 };
 

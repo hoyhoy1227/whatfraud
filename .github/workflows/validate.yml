@@ -31,7 +31,10 @@ jobs:
       - run: node scripts/test-ai-chat.mjs
       - run: node scripts/test-budget.mjs
       - run: node scripts/test-story.mjs
+      - run: node scripts/test-attachment-branches.mjs
+      - run: node scripts/test-decision-messages.mjs
       - run: node scripts/test-story-ui.mjs
+      - run: node scripts/test-response-report.mjs
       - run: pnpm lint
       - if: ${{ !cancelled() }}
         run: pnpm exec tsc --noEmit

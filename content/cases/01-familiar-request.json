@@ -203,7 +203,7 @@
     "amount": 80000,
     "recipient": "한별 서비스",
     "purpose": "대리 결제",
-    "aiLimit": 1,
+    "aiLimit": 2,
     "evidence": [
       {
         "id": "saved-contact",
@@ -288,7 +288,7 @@
         "messages": [
           {
             "speaker": "준호",
-            "text": "메시지는 볼 수 있어. 궁금한 게 있으면 여기로 물어봐."
+            "text": "메시지는 되니까, 물어볼 게 있으면 물어봐."
           },
           {
             "speaker": "준호",

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
+import { attachmentReply, parseStoryReply } from '../app/story/one-shot.js';
 
 const cases = JSON.parse(await readFile(new URL('../content/generated/cases.json', import.meta.url), 'utf8'));
 const dialogueSource = await readFile(new URL('../app/ai-dialogue.ts', import.meta.url), 'utf8');
@@ -15,10 +16,21 @@ async function freshRoute() {
     .replace("import { reserveSharedBudget } from '../ai-budget';", "const reserveSharedBudget = async () => globalThis.__budgetOutcome ?? 'allowed';")
     .replace("'../../ai-dialogue'", JSON.stringify(dialogueUrl))
     .replace("'../../story/one-shot.js'",JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href))
+    .replace("'../../story/decision-message.js'",JSON.stringify(new URL('../app/story/decision-message.js',import.meta.url).href))
     .replace("import { cases } from '../../game-data';", 'const cases = ' + JSON.stringify(cases) + ';');
   return import(moduleUrl(source) + '#' + serial++);
 }
-const request=(text='안내부터 확인해 보세요',session='test-session-000001',overrides={})=>new Request('https://example.invalid/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':session,'cf-connecting-ip':'192.0.2.1'},body:JSON.stringify({caseId:'paper-profit',stageId:'withdrawal',sceneId:'peer',resolved:false,joined:true,attachment:'none',inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1,...overrides})});
+const request=(text='안내부터 확인해 보세요',session='test-session-000001',overrides={})=>{
+ const body={caseId:'paper-profit',stageId:'withdrawal',sceneId:'peer',resolved:false,joined:true,attachment:'none',inputMode:'story-message',messages:[{role:'user',content:text}],userTurnCount:1,...(overrides.sceneId==='friend'?{caseId:'familiar-request',stageId:'waiting',joined:false}:{}),...overrides};
+ if(!Object.hasOwn(body,'storyContext')){
+  if(body.sceneId==='friend')body.storyContext=[...(body.stageId==='paid'?['friend-transfer']:[]),...(body.resolved?['friend-resolved-paused']:[])];
+  else{
+   const order=['arrival','group','offer','paid','withdrawal','extra-paid'],stage=order.indexOf(body.stageId);
+   body.storyContext=[...(body.joined?['peer-joined-room']:[]),...(stage>=2?['peer-offer-seen']:[]),...(stage>=3?['peer-main-transfer']:[]),...(stage>=4?['peer-withdrawal-requested']:[]),...(stage>=5?['peer-extra-transfer']:[]),...(body.resolved?['peer-resolved-paused']:[])];
+  }
+ }
+ return new Request('https://example.invalid/api/ai-chat',{method:'POST',headers:{'Content-Type':'application/json','x-whatfraud-session':session,'cf-connecting-ip':'192.0.2.1'},body:JSON.stringify(body)});
+};
 let calls=0;
 const originalFetch=globalThis.fetch,originalKey=process.env.GEMINI_API_KEY,originalEnabled=process.env.GEMINI_ENABLED,originalNow=Date.now;
 let clock=1_800_000_000_000;
@@ -46,7 +58,7 @@ try{
  assert.equal(calls,3,'no cross-player response reuse');
 
  route=await freshRoute();calls=0;
- for(const overrides of [{sceneId:'invented'},{caseId:'familiar-request'},{sceneId:'friend',resolved:false},{stageId:'arrival',resolved:false},{joined:false},{attachment:'invented'},{choices:[]},{checks:[]},{userTurnCount:2},{messages:[{role:'assistant',content:'hi'},{role:'user',content:'hi'}]}]){
+ for(const overrides of [{sceneId:'invented'},{caseId:'familiar-request'},{sceneId:'friend',resolved:false},{stageId:'arrival',resolved:false},{joined:false},{attachment:'invented'},{storyContext:['peer-joined-room','invented']},{storyContext:['peer-main-transfer','peer-joined-room']},{choices:[]},{checks:[]},{userTurnCount:2},{messages:[{role:'assistant',content:'hi'},{role:'user',content:'hi'}]}]){
   assert.equal((await route.POST(request('확인',undefined,overrides))).status,400,JSON.stringify(overrides));
  }
  assert.equal((await (await route.POST(request('질문',undefined,{inputMode:'free'}))).json()).code,'story_message_required');
@@ -58,17 +70,35 @@ try{
  assert.equal((await (await route.POST(request())).json()).code,'ai_unconfigured');assert.equal(calls,0);
  process.env.GEMINI_API_KEY='mock-only-not-a-real-key';
  for(const [value,code] of [
-  [{reply:'괜찮아요?',reaction:'check'},'unsafe_response'],
+  [{reply:'환급 완료했습니다.',reaction:'check'},'unsafe_response'],
   [{reply:'알려줘서 고마워요.',reaction:'refund'},'unsafe_response'],
   [{reply:'알려줘서 고마워요.',reaction:'check',amount:999},'unsafe_response'],
   [{reply:'https://example.invalid로 연락하세요',reaction:'check'},'unsafe_response']
  ]){
   route=await freshRoute();calls=0;globalThis.fetch=async()=>{calls++;return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(value)}]}}]});};
-  assert.equal((await (await route.POST(request())).json()).code,code);assert.equal(calls,1);
-  clock+=12000;assert.equal((await (await route.POST(request('재시도'))).json()).code,'moment_used');assert.equal(calls,1);
+  assert.equal((await (await route.POST(request())).json()).code,code);assert.equal(calls,2);
+  clock+=12000;assert.equal((await (await route.POST(request('재시도'))).json()).code,'moment_used');assert.equal(calls,2);
  }
+ // A failed contract is repaired once with the original message and attachment.
+ route=await freshRoute();calls=0;let repairBody;
+ globalThis.fetch=async(_url,options)=>{
+  calls++;repairBody=JSON.parse(options.body);
+  return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(calls===1
+   ?{reply:'어떻게 할까요?',reaction:'check',supportMode:'compare',focus:'none'}
+   :{reply:'추가 비용을 물었던 제 질문이네요. 저도 돈을 보내지 않고 조건부터 확인할게요.',reaction:'check',supportMode:'compare',focus:'deleted-question'})}]}}]});
+ };
+ const repaired=await route.POST(request('여기 수상하네요 돈 보내지 맙시다',undefined,{attachment:'deleted-question',contractVersion:2}));
+ assert.equal(repaired.status,200);assert.equal((await repaired.json()).provider,'gemini');assert.equal(calls,2);
+ assert.equal(repairBody.contents[0].parts[0].text,'여기 수상하네요 돈 보내지 맙시다');
+ assert.ok(repairBody.contents[1].parts[0].text.includes('검사를 통과하지 못했다'));
+ assert.ok(repairBody.systemInstruction.parts[0].text.includes('추가 비용'));
+ // A repair is a real provider call and must reserve shared budget again.
+ route=await freshRoute();calls=0;
+ globalThis.fetch=async()=>{calls++;globalThis.__budgetOutcome='exhausted';return successful('refund');};
+ assert.equal((await (await route.POST(request())).json()).code,'budget_exhausted');assert.equal(calls,1);
+ delete globalThis.__budgetOutcome;
  route=await freshRoute();calls=0;globalThis.fetch=async()=>{calls++;return Response.json({candidates:[{finishReason:'MAX_TOKENS',content:{parts:[{text:'{}'}]}}]});};
- assert.equal((await (await route.POST(request())).json()).code,'incomplete_response');assert.equal(calls,1);
+ assert.equal((await (await route.POST(request())).json()).code,'provider_token_limit');assert.equal(calls,1);
  route=await freshRoute();calls=0;globalThis.fetch=async()=>{calls++;return new Response(null,{status:429});};
  assert.equal((await (await route.POST(request())).json()).code,'provider_quota');
  assert.equal((await (await route.POST(request('다른 메시지'))).json()).code,'provider_cooldown');assert.equal(calls,1);
@@ -77,13 +107,31 @@ try{
   assert.equal((await (await route.POST(request())).json()).code,outcome==='exhausted'?'budget_exhausted':'budget_unavailable');assert.equal(calls,0);
  }
  delete globalThis.__budgetOutcome;
+ route=await freshRoute();calls=0;
+ globalThis.fetch=async()=>{calls++;throw new DOMException('mock timeout','AbortError');};
+ assert.equal((await (await route.POST(request())).json()).code,'provider_timeout');assert.equal(calls,1);
+ route=await freshRoute();calls=0;
+ globalThis.fetch=async()=>{calls++;return successful();};
+ assert.equal((await route.POST(request('이전 화면에서 보낸 질문',undefined,{storyContext:undefined}))).status,200);
+ assert.equal(calls,1,'cached clients without optional progress stay compatible');
  await testClientCancellation();await testSecurity();
  route=await freshRoute();let captured;
  globalThis.fetch=async(_url,options)=>{captured=JSON.parse(options.body);return successful();};
  assert.equal((await route.POST(request('예전 안내를 봐주세요','prompt-session-0001',{attachment:'first-notice'}))).status,200);
  assert.ok(captured.systemInstruction.parts[0].text.includes('자료를 읽는 것과 별도 참여는 구분됩니다'));
+ assert.ok(captured.systemInstruction.parts[0].text.includes('상세 투자 분석 자료 이용료 300,000원을 가상 송금했다'));
+ assert.ok(captured.systemInstruction.parts[0].text.includes('예시 문장이나 고정 답안에서 고르지 말고'));
  assert.equal(captured.generationConfig.responseMimeType,'application/json');
  assert.equal(captured.contents.length,1);
+ assert.equal(dialogue.AI_REPLY_TIMEOUT_MS,55000);
+ assert.equal(captured.generationConfig.maxOutputTokens,500);
+ assert.equal(dialogue.validateAiReply('가'.repeat(360),undefined,'normal','story'),true);
+ assert.equal(dialogue.validateAiReply('가'.repeat(361),undefined,'normal','story'),false);
+ assert.equal(dialogue.validateAiReply('그랬어? 나는 부탁한 적 없어. 기록은 읽었어. 같이 살펴보자.',undefined,'normal','story'),true);
+ assert.ok(dialogue.aiReplyFailureMessage('provider_quota').includes('Gemini의 일시적인 사용량 한도'));
+ assert.ok(dialogue.aiReplyFailureMessage('provider_token_limit').includes('출력 토큰 한도'));
+ assert.ok(!dialogue.aiReplyFailureMessage('provider_error').includes('토큰'));
+ assert.ok(routeSource.includes('PROVIDER_TIMEOUT_MS = 45_000'));
 
  // Offline reproductions, not claims about the discarded live response.
  const stopping='응, 지금 송금하지 말고 기록부터 같이 보자.';
@@ -107,8 +155,8 @@ try{
  }
  route=await freshRoute();globalThis.fetch=async()=>successful('together','지금 송금해.');
  assert.equal((await (await route.POST(request('합성 입력',undefined,{sceneId:'friend',resolved:true}))).json()).validation,'reply_policy');
- route=await freshRoute();globalThis.fetch=async()=>successful('space','내가 전화할게.');
- assert.equal((await (await route.POST(request('합성 입력',undefined,{sceneId:'friend',resolved:true}))).json()).validation,'story_contract');
+ route=await freshRoute();globalThis.fetch=async()=>successful('space','알겠어, 네가 편할 때까지 기다릴게.');
+ assert.equal((await route.POST(request('합성 입력',undefined,{sceneId:'friend',resolved:true}))).status,200,'free reply wording is not reclassified by keywords');
 
 
  for(const [scene,reaction,supportMode,focus,attachment,reply] of [
@@ -125,8 +173,29 @@ try{
  route=await freshRoute();globalThis.fetch=async()=>Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({reply:'기록을 다시 볼게요.',reaction:'check',supportMode:'compare',focus:'deleted-question'})}]}}]});
  assert.equal((await (await route.POST(request('첨부 없음',undefined,{contractVersion:2}))).json()).validation,'story_contract');
  route=await freshRoute();globalThis.fetch=async()=>Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({reply:'기록부터 같이 보자.',reaction:'together',supportMode:'listen',focus:'none'})}]}}]});
- assert.equal((await (await route.POST(request('그냥 들어 줘',undefined,{sceneId:'friend',resolved:true,contractVersion:2}))).json()).validation,'story_contract');
- console.log('One-shot AI tests passed: two windows, legacy disabled, exact coalescing, no retry, schema, provider and shared-budget failures.');
+ assert.equal((await route.POST(request('그냥 들어 줘',undefined,{sceneId:'friend',resolved:true,contractVersion:2}))).status,200,'valid categorical fields are not reclassified from reply keywords');
+ // Reproduce an otherwise valid model response that omits Junho's known identity.
+ // Canonical replacements must satisfy BOTH server policy and the client contract.
+ for(const attachment of ['none','account-profile','recipient-note','old-chat-note','contact-check']){
+  route=await freshRoute();calls=0;
+  const generated={reply:'내 이름으로 온 연락이라니 당황스럽네. 기록부터 같이 보자.',reaction:'together',supportMode:'records',focus:'records'};
+  globalThis.fetch=async()=>{calls++;return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(generated)}]}}]});};
+  const overrides={sceneId:'friend',resolved:true,attachment,contractVersion:2};
+  const input='네 이름으로 새 계정에서 연락이 왔어. 이 기록 같이 확인해 줘.';
+  const response=await route.POST(request(input,undefined,overrides));
+  assert.equal(response.status,200,attachment+': canonical fallback must not cause 502');
+  const result=await response.json();
+  assert.equal(result.provider,'scripted');
+  assert.equal(result.fallbackReason,'reply_quality');
+  assert.equal(result.model,null);
+  if(attachment!=='none')assert.equal(result.reply,attachmentReply('friend',attachment));
+  assert.equal(dialogue.validateAiReply(result.reply,undefined,'normal','story'),true,attachment);
+  assert.ok(parseStoryReply(JSON.stringify({...generated,reply:result.reply}),'friend',2,attachment),attachment+': client must accept fallback');
+  assert.equal(calls,2,'quality failure permits only one Gemini repair');
+  assert.equal((await route.POST(request(input,undefined,overrides))).status,200);
+  assert.equal(calls,2,'duplicate must reuse fallback');
+ }
+ console.log('One-shot AI tests passed, including bounded validation repair and identity fallbacks.');
 }finally{
  if(originalEnabled===undefined)delete process.env.GEMINI_ENABLED;else process.env.GEMINI_ENABLED=originalEnabled;
  if(originalKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=originalKey;

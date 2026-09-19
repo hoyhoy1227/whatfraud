@@ -1,4 +1,6 @@
-import { messageEventAllowed, messageFollowupAllowed, styleEventAllowed, branchUseAllowed, messageStyle } from './one-shot.js';
+import { messageEventAllowed, messageFollowupAllowed, styleEventAllowed, branchUseAllowed, messageStyle, closureComplete, canCloseMessage, attachmentEventAllowed, canAttach } from './one-shot.js';
+import {decisionEventAllowed} from './decision-message.js';
+import {chapterPages} from './context.js';
 import { findChoice, pendingBeat, choiceAllowed, chosenIds } from './narrative.js';
 import chapters from '../../content/generated/cases.json' with { type: 'json' };
 
@@ -6,7 +8,7 @@ import chapters from '../../content/generated/cases.json' with { type: 'json' };
  * @typedef {{type:string,chapter:number,data:string}} StoryEvent
  * @typedef {{id:string,chapter:number,amount:number,recipient:string,purpose:string,time:string}} Transaction
  * @typedef {{chapter:number,kind:string,verified:boolean,spent:number}} Resolution
- * @typedef {{version:number,mode:string,chapter:number,stage:string,visited:string[],events:StoryEvent[],transactions:Transaction[],inspected:string[],saved:string[],blocked:number[],calls:string[],cues:string[],read:string[],results:Resolution[],completed:boolean,joined:boolean}} Run
+ * @typedef {{version:number,legacyEventCount?:number,scenePage:number,sceneEntered:boolean,mode:string,chapter:number,stage:string,visited:string[],events:StoryEvent[],transactions:Transaction[],inspected:string[],saved:string[],blocked:number[],calls:string[],cues:string[],read:string[],results:Resolution[],completed:boolean,joined:boolean}} Run
  * @typedef {{type:string,chapter:number,data:string,index:number,title:string,label:string,takeaway:{title:string,seen:boolean}[]}} Pivot
  */
 export { chapters };
@@ -14,7 +16,7 @@ export const SAVE_KEY = 'whatfraud-story-v3';
 export const INITIAL_BALANCE = 680000;
 export const APPS = ['home', 'messages', 'calls', 'bank', 'browser', 'notes', 'settings'];
 const terminal = ['verified', 'paused', 'blocked', 'reported', 'stopped', 'loss'];
-const validTypes = ['advance','platform','withdraw','confirm','inspect','save','call','resolve','next','cue','read','talk','reflect','observe','capture','message','message-followup','support','message-style','branch-use'];
+const validTypes = ['advance','platform','withdraw','confirm','inspect','save','call','resolve','next','cue','read','talk','reflect','observe','capture','message','message-followup','support','message-style','branch-use','message-close','scene-page','scene-enter','message-attachment','recovery-record','decision-attempt','decision-result','evidence-compare','evidence-report'];
 export const currentCase = state => chapters[state.chapter];
 export const currentStage = state => currentCase(state).story.stages.find(item => item.id === state.stage);
 export const totalSpent = state => state.transactions.reduce((sum, tx) => sum + tx.amount, 0);
@@ -26,13 +28,13 @@ export const gameTime = state => {
 };
 /** @returns {Run} */
 export function createRun(mode = 'full') {
-  return { version:3, mode:mode === 'demo' ? 'demo' : 'full', chapter:mode === 'demo' ? 1 : 0,
+  return { version:4, legacyEventCount:0, scenePage:0, sceneEntered:false, mode:mode === 'demo' ? 'demo' : 'full', chapter:mode === 'demo' ? 1 : 0,
     stage:'arrival', visited:['arrival'], events:[], transactions:[], inspected:[], saved:[],
     blocked:[], calls:[], cues:[], read:[], results:[], completed:false, joined:false };
 }
 export function isResolved(state) { return state.results.some(r => r.chapter === state.chapter); }
 export function evidenceFor(state) {
-  return chapters.slice(0,state.chapter+1).flatMap((c,index) => c.story.evidence.map(e => ({...e,chapter:index,uid:c.id+':'+e.id})));
+  return chapters.slice(0,state.chapter+1).flatMap((c,index) => c.story.evidence.filter(e=>!('availableAt' in e)||index<state.chapter||state.visited.includes(e.availableAt)||state.inspected.includes(c.id+':'+e.id)).map(e => ({...e,chapter:index,uid:c.id+':'+e.id})));
 }
 export function verified(state) {
   return currentCase(state).story.evidence.filter(e=>e.key).every(e=>state.inspected.includes(currentCase(state).id+':'+e.id));
@@ -43,7 +45,7 @@ export function offerFor(state) {
   if (!currentStage(state).actions.some(a=>a.type==='transfer')) return null;
   const extra=state.stage==='withdrawal';
   return {id:c.id+(extra?':extra':':main'),chapter:state.chapter,amount:extra?120000:c.story.amount,
-    recipient:c.story.recipient,purpose:extra?'출금 확인 비용':c.story.purpose};
+    recipient:c.story.recipient,purpose:extra?'출금 보안 확인 비용':c.story.purpose};
 }
 export function recoveryContext(state) {
   if (state.transactions.some(tx=>tx.chapter<2)) return '이전 연락에서 돈이 나간 뒤다. 돌려받을 수 있다는 말에 시선이 멈춘다.';
@@ -84,10 +86,28 @@ export function transition(input,event) {
   let changed=false;
   const active=!isResolved(state);
   switch(event.type) {
+    case 'evidence-compare':
+    case 'evidence-report': {
+      const evidence=evidenceFor(state).find(e=>e.uid===data&&e.chapter===state.chapter);
+      if(!evidence||!state.inspected.includes(data)||state.events.some(e=>e.type===event.type&&e.data===data))break;
+      if(event.type==='evidence-report'){changed=state.saved.includes(data);break;}
+      if(!('independentCheck' in evidence)||!evidence.independentCheck.length)break;
+      for(const id of evidence.independentCheck){const uid=c.id+':'+id;if(!state.inspected.includes(uid))state.inspected.push(uid);}
+      changed=true;break;
+    }
+    case 'scene-page':
+      if(!state.sceneEntered&&data===String(state.scenePage)&&state.scenePage<chapterPages(state).length-1){state.scenePage++;changed=true;}break;
+    case 'scene-enter':
+      if(!state.sceneEntered&&state.scenePage===chapterPages(state).length-1){state.sceneEntered=true;changed=true;}break;
+    case 'decision-attempt':
+    case 'decision-result': changed=decisionEventAllowed(state,event.type,data);break;
+    case 'message-attachment': changed=attachmentEventAllowed(state,data);break;
+    case 'recovery-record': changed=active&&state.chapter===2&&state.stage==='offer'&&['official-recovery','contact-recovery'].includes(data)&&canAttach(state,data)&&!state.events.some(e=>e.type==='recovery-record');break;
+    case 'message-close': changed=canCloseMessage(state,data);break;
     case 'message-style': changed=styleEventAllowed(state,data);break;
     case 'branch-use': changed=branchUseAllowed(state,data);break;
     case 'support':
-      changed=state.chapter===2&&active&&messageStyle(state,'friend').mode==='verify'&&data==='recovery'&&state.events.some(e=>e.type==='message-followup'&&e.data==='friend:call')&&!state.events.some(e=>e.type==='support'&&e.data===data);break;
+      changed=state.version===3&&state.chapter===2&&active&&messageStyle(state,'friend').mode==='verify'&&data==='recovery'&&state.events.some(e=>e.type==='message-followup'&&e.data==='friend:call')&&!state.events.some(e=>e.type==='support'&&e.data===data);break;
     case 'message':
       changed=messageEventAllowed(state,data);break;
     case 'message-followup':
@@ -118,6 +138,7 @@ export function transition(input,event) {
         state.joined=true;if(stage.id==='group')move(state,'offer');
         changed=!input.joined||input.stage!==state.stage;
       } break;
+    // Retain legacy event/stage IDs so saved runs still replay; withdrawal remains a request, never a bank deposit.
     case 'withdraw':
       if(active&&state.chapter===1&&stage.id==='paid'){move(state,'withdrawal');changed=true;} break;
     case 'confirm': {
@@ -156,9 +177,9 @@ export function transition(input,event) {
         if(changed&&data==='blocked')state.blocked.push(state.chapter);
       }break;
     case 'next':
-      if(isResolved(state)){
+      if(isResolved(state)&&(state.version===3||closureComplete(state))){
         if(state.chapter===2){state.completed=true;}
-        else {state.chapter++;state.stage='arrival';state.visited=['arrival'];}
+        else {state.chapter++;state.stage='arrival';state.visited=['arrival'];state.scenePage=0;state.sceneEntered=false;}
         changed=true;
       } break;
     case 'cue': {
@@ -172,26 +193,32 @@ export function transition(input,event) {
   return state;
 }
 export function serializeRun(state) {
-  return JSON.stringify({version:3,mode:state.mode,events:state.events});
+  return JSON.stringify({version:4,legacyEventCount:state.legacyEventCount??0,mode:state.mode,events:state.events});
 }
 // Restore by replaying known actions, never by trusting saved balance or results.
 /** @returns {Run|null} */
 export function restoreRun(value) {
   try {
     const raw=typeof value==='string'?JSON.parse(value):value;
-    if(!raw||raw.version!==3||!['full','demo'].includes(raw.mode)||!Array.isArray(raw.events)||raw.events.length>600)return null;
+    if(!raw||![3,4].includes(raw.version)||!['full','demo'].includes(raw.mode)||!Array.isArray(raw.events)||raw.events.length>600)return null;
+    const legacyCount=raw.version===3?raw.events.length:(raw.legacyEventCount??0);
+    if(!Number.isInteger(legacyCount)||legacyCount<0||legacyCount>raw.events.length)return null;
     let state=createRun(raw.mode);
-    for(const event of raw.events){
+    for(const [index,event] of raw.events.entries()){
+      state.version=index<legacyCount?3:4;
+      if(index<legacyCount)state.sceneEntered=true;
       if(!event||Object.keys(event).some(k=>!['type','chapter','data'].includes(k))||typeof event.data!=='string'||event.data.length>100)return null;
       const next=transition(state,event);
       if(next===state)return null;
       state=next;
     }
+    state.version=4;state.legacyEventCount=legacyCount;
+    if(raw.events.length===legacyCount&&legacyCount>0)state.sceneEntered=true;
     return state;
   }catch{return null;}
 }
 export function replayBefore(state,eventIndex) {
-  return restoreRun({version:3,mode:state.mode,events:state.events.slice(0,eventIndex)});
+  return restoreRun({version:4,legacyEventCount:Math.min(state.legacyEventCount??0,eventIndex),mode:state.mode,events:state.events.slice(0,eventIndex)});
 }
 /** @returns {Pivot[]} */
 export function timeline(state) {
