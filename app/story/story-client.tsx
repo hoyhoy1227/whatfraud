@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AppIcon from '../app-icon';
 import {ChatBubbles} from './chat-bubbles';
-import type { AiChatMessage } from '../ai-dialogue';
 import {arrivalContext,chapterPages,resumeContext} from './context';
 import StoryMessage, {type MessageMemory} from './story-message';
 import {currentThreadReceipt,emptyMessageMemory,peerRecordReady,supportReady,messageThreadVisible,resetMessageMemory,threadPreview,threadReceipt} from './presentation';
@@ -11,12 +10,11 @@ import {messageWindow,messageStatus,messageConsequences,messageStyle,branchUseAl
 import { chapters, createRun, currentCase, currentStage, transition, SAVE_KEY, serializeRun, restoreRun, replayBefore, evidenceFor, verified, offerFor, money, gameTime, isResolved, outcomeText, conversationEndText, chapterSpent } from './engine';
 import { budgetKey, restoreBudget } from './session-budget';
 import { ReplyGate } from './reply-gate';
-import { narratives, displayedMessages, pendingBeat, chosenIds, choiceAllowed, conversationTimeline, conversationTranscript, friendFollowup, retainedQuestion, contactProfile, messageParts, messagePreview } from './narrative';
+import { narratives, displayedMessages, pendingBeat, chosenIds, choiceAllowed, conversationTranscript, friendFollowup, retainedQuestion, contactProfile, messageParts, messagePreview } from './narrative';
 import { scheduleMessage } from './message-pacing';
 import { Ledger, Rewind, RecordComparison, Closing, PhoneStatus, ContactProfile, ChapterScene, ConversationRow, InvestmentScreen, PlayGuide } from './panels';
 type Run = ReturnType<typeof createRun>;
 type App = 'home'|'messages'|'calls'|'bank'|'browser'|'notes'|'settings';
-type Chat = AiChatMessage & {stage:string;anchor:number;speaker:string};
 const names:Record<App,string>={home:'홈',messages:'메시지',calls:'연락처',bank:'은행',browser:'브라우저',notes:'메모',settings:'설정'};
 const appList:App[]=['messages','calls','bank','browser','notes'];
 
@@ -29,7 +27,6 @@ export default function StoryClient(){
   const followTail=useRef(true);
   const [atTail,setAtTail]=useState(true);
   const [newMessages,setNewMessages]=useState(false);
-  const [chats,setChats]=useState<Record<string,Chat[]>>({});
   const [sending,setSending]=useState(false),[paused,setPaused]=useState(false),[note,setNote]=useState('');
   const [aiUsed,setAiUsed]=useState(0);
   const [closingStep,setClosingStep]=useState(0);
@@ -51,15 +48,15 @@ export default function StoryClient(){
   useEffect(()=>{stateRef.current=state;},[state]);
   const dialogRef=useRef<HTMLDialogElement>(null);
   const c=currentCase(state),stage=currentStage(state)!,resolved=isResolved(state);
-  const chat=chats[c.id]??[];
-
   const ownEvidence=evidenceFor(state).filter(e=>e.chapter===state.chapter);
   // A newly entered story stage appends a new block to the current thread.
   // Give that block its own scroll-restoration key so returning from the AI
   // side conversation cannot restore the old (now middle-of-thread) offset.
   const threadStage=app==='messages'&&thread==='current'?':'+state.stage:'';
   const scrollKey=(practiceOriginal?'practice:':'')+state.mode+':'+state.chapter+':'+app+':'+thread+threadStage+':'+browserPage;
-  const narrative=narratives[state.chapter],sceneLines=useMemo(()=>messageParts(conversationTimeline(displayedMessages(state,state.stage),(chats[c.id]??[]).filter(m=>m.stage===state.stage))),[state,chats,c.id]);
+  // The scenario room is an authored timeline. Free-form AI messages belong
+  // only to the separate Jisu/Junho threads and must never be inserted here.
+  const narrative=narratives[state.chapter],sceneLines=useMemo(()=>messageParts(displayedMessages(state,state.stage)),[state]);
   const beat=pendingBeat(state);
   const selectedChoices=chosenIds(state);
   const momentUsed=false; // authored replies remain available; AI moved to separate story threads.
@@ -74,7 +71,7 @@ export default function StoryClient(){
   const progressLocked=paused||state.completed||resolved||sceneTyping;
   // Rebuild the whole thread in visited-stage order. In particular, an
   // evidence-card question remains before the paid scene after a transfer.
-  const visibleMessages=conversationTranscript(state,chat,resolved?Infinity:visibleCount);
+  const visibleMessages=conversationTranscript(state,[],resolved?Infinity:visibleCount);
   const currentReceipt=currentThreadReceipt(state.stage,visibleCount,resolved,sceneLines.length);
   const unread=!state.read.includes(state.chapter+':'+currentReceipt);
   const peerMemory=messageMemory[(practiceOriginal?'practice:':'')+state.mode+':peer']??emptyMessageMemory();
@@ -178,7 +175,7 @@ export default function StoryClient(){
   function start(mode:'full'|'demo',resume=false){
     cancelReply();setNote('');setClosingStep(0);setPracticeOriginal(null);setPracticeDone(false);setTutorialStep(null);
     if(resume&&mainSaved.current){setState(mainSaved.current);try{budget.current=restoreBudget(localStorage.getItem(budgetKey('full')),crypto.randomUUID(),'full');setAiUsed(budget.current.counts.reduce((a,b)=>a+b,0));}catch{setAiAllowed(false);}}
-    if(!resume){setMessageMemory(old=>resetMessageMemory(old,mode));setRevealed({});setState(createRun(mode));setChats({});positions.current=resetMessageMemory(positions.current,mode);budget.current=restoreBudget(null,crypto.randomUUID(),mode);persistBudget();}
+    if(!resume){setMessageMemory(old=>resetMessageMemory(old,mode));setRevealed({});setState(createRun(mode));positions.current=resetMessageMemory(positions.current,mode);budget.current=restoreBudget(null,crypto.randomUUID(),mode);persistBudget();}
     setChapterPage(0);setChapterResume(resume);setDialog(resume&&mainSaved.current?.completed?null:'chapter');setStarted(true);setApp(!resume&&mode==='full'?'messages':'home');setThread(!resume&&mode==='full'?'junho':'current');setBrowserPage('start');setPaused(false);
   }
   function persistBudget(){setAiUsed(budget.current.counts.reduce((a,b)=>a+b,0));try{localStorage.setItem(budgetKey(budget.current.mode),JSON.stringify(budget.current));}catch{/* no chat or identity beyond random quota token */}}
@@ -234,7 +231,7 @@ export default function StoryClient(){
   }
   function rewind(index:number){
     const original=practiceOriginal??state,value=replayBefore(original,index);if(!value)return;
-    cancelReply();setMessageMemory(old=>Object.fromEntries(Object.entries(old).filter(([key])=>!key.startsWith('practice:'))));setRevealed({});setPracticeOriginal(original);setPracticeDone(false);setState(value);setChats({});setApp('messages');setThread('current');setBrowserPage('start');setPaused(false);
+    cancelReply();setMessageMemory(old=>Object.fromEntries(Object.entries(old).filter(([key])=>!key.startsWith('practice:'))));setRevealed({});setPracticeOriginal(original);setPracticeDone(false);setState(value);setApp('messages');setThread('current');setBrowserPage('start');setPaused(false);
   }
   function exitPractice(){if(practiceOriginal){cancelReply();setState(practiceOriginal);setPracticeOriginal(null);setPracticeDone(false);setApp('home');}}
   const intro=<div className="intro lock-intro"><div className="lock-clock">09:10</div><p className="lock-date">오늘 · 출근길</p><h1>수익률 24시</h1><p className="intro-lead">월급날까지 나흘.<br/>오늘 저녁에는 준호와 약속이 있다.</p><div className="intro-card"><AppIcon name="messages" size="mini"/><span>메시지 · 준호</span><p>어제<br/><b>내일 저녁 일곱 시, 역 앞에서 보자.</b></p></div>
