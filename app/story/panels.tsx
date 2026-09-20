@@ -34,7 +34,8 @@ export function Rewind({state,onReplay,onRestart}:{state:Run;onReplay:(index:num
   const pivots=timeline(state);
   // One card per played act; keep every alternate pivot inside its details.
   const played=chapters.map((chapter,index)=>({chapter,index,events:pivots.filter(p=>p.chapter===index)})).filter(p=>p.events.length);
-  return <div className="rewind"><span className="eyebrow">오늘의 기록</span><h1>{ending.title}</h1><p>{ending.line}</p>
+  return <div className="rewind"><div className="game-complete" role="status"><span aria-hidden="true">✓</span><div><strong>게임이 종료되었습니다</strong><small>3개의 사기 상황을 모두 완료했습니다.</small></div></div><span className="eyebrow">오늘의 기록</span><h1>{ending.title}</h1><p>{ending.line}</p>
+    <PlayerReview state={state}/>
     <div className="balance loss-balance"><span>돌아오지 않은 금액</span><strong>{money(totalSpent(state))}</strong><small>가상 거래 · 접수와 차단은 환급이 아닙니다.</small></div>
     <p className="ending-personal">{state.events.some(e=>e.type==='reflect'&&e.data==='tell'||e.type==='message'&&e.data==='friend:together')?'준호에게 이야기한 일이 남아 있다. 이 하루를 혼자 설명할 필요는 없다.':'누구에게 말할지는 아직 정하지 않았다. 지금 남긴 기록은 다음 이야기를 시작할 때 꺼낼 수 있다.'}</p>
     {messageConsequences(state).length>0&&<section className="ending-messages"><h2>오늘 남긴 연락</h2>{messageConsequences(state).map(text=><p key={text}>{text}</p>)}</section>}
@@ -54,6 +55,36 @@ export function Rewind({state,onReplay,onRestart}:{state:Run;onReplay:(index:num
     })}
     <details className="ending-notes"><summary>오늘 남길 세 문장</summary><ul><li>익숙한 이름보다, 내가 저장한 연락처를 확인한다.</li><li>수익 화면보다, 실제 입출금 기록을 확인한다.</li><li>돌려받기 위해 먼저 돈을 보내라는 요청에서 멈춘다.</li></ul><p className="fine">실제 피해는 금융사와 수사기관의 공식 경로로 도움을 요청하세요.</p></details>
     <button className="primary" onClick={onRestart}>처음 화면으로</button></div>;
+}
+
+export function buildPlayerReview(state:Run){
+ const checkedIdentity=state.calls.some(call=>call.endsWith(':junho')||call.endsWith(':contact'));
+ const comparedRecords=state.events.some(event=>event.type==='observe'&&event.data==='bank-view')&&state.events.some(event=>event.type==='observe'&&event.data==='platform-view');
+ const keptEvidence=state.saved.length>0||state.events.some(event=>event.type==='capture');
+ const stoppedRequests=state.results.filter(result=>['verified','paused','blocked','reported','stopped'].includes(result.kind)).length;
+ const strengths:string[]=[];
+ if(checkedIdentity)strengths.push('상대가 알려 준 연락처가 아니라, 원래 저장된 연락처와 기록으로 신원을 확인했어요.');
+ if(comparedRecords)strengths.push('수익 화면의 숫자를 믿기 전에 실제 은행 입출금 내역과 대조했어요.');
+ if(keptEvidence)strengths.push('대화와 단서를 보관해 신고·상담에 쓸 수 있는 기록을 남겼어요.');
+ if(stoppedRequests>=2)strengths.push(`3개 상황 중 ${stoppedRequests}개에서 송금을 보류하거나 추가 피해를 멈췄어요.`);
+ if(!strengths.length)strengths.push('끝까지 상황을 살펴본 경험이 다음 의심스러운 연락을 알아채는 단서가 됩니다.');
+ const risks=[];
+ if(!checkedIdentity)risks.push({title:'지인 사칭',text:'익숙한 이름과 말투만 믿게 한 뒤 새 계정이나 낯선 결제 경로로 유도해요.',action:'기존에 저장한 번호로 직접 확인하기'});
+ if(state.transactions.some(tx=>tx.chapter===1))risks.push({title:'가짜 투자 수익',text:'화면 속 수익을 보여 주고, 출금하려면 세금·인증비 같은 추가 송금을 요구해요.',action:'수익 화면 대신 내 은행의 실제 입금 내역 확인하기'});
+ if(state.transactions.length>0||state.results.some(result=>result.chapter===2&&result.kind==='loss'))risks.push({title:'피해 회복 사기',text:'이미 잃은 돈을 돌려주겠다며 선입금이나 개인정보를 다시 요구해요.',action:'상대가 준 링크가 아닌 공식 기관 경로로 접수하기'});
+ if(!risks.length)risks.push({title:'긴급 송금 유도',text:'친밀감, 한정 기회, 처리 마감으로 확인할 시간을 빼앗는 방식에 특히 주의하세요.',action:'송금 전 대화를 멈추고 다른 경로로 교차 확인하기'});
+ return {strengths:strengths.slice(0,3),risks:risks.slice(0,3)};
+}
+
+export function PlayerReview({state}:{state:Run}){
+ const review=buildPlayerReview(state);
+ return <section className="ai-review" aria-labelledby="ai-review-title">
+   <header><span className="ai-review-mark" aria-hidden="true">AI</span><div><small>플레이 기록 분석 완료</small><h2 id="ai-review-title">나의 사기 대응 리포트</h2></div></header>
+   <p className="ai-review-privacy">대화 내용이 아닌, 게임에서 고른 행동과 확인한 기록만 분석했어요.</p>
+   <section className="review-strengths"><h3>잘한 점</h3><ul>{review.strengths.map(item=><li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul></section>
+   <section className="review-risks"><h3>다음에 조심할 사기 수법</h3>{review.risks.map(risk=><article key={risk.title}><strong>{risk.title}</strong><p>{risk.text}</p><small>대응 습관 · {risk.action}</small></article>)}</section>
+   <p className="review-note">이 분석은 학습을 위한 안내이며 실제 사기 여부를 판정하지 않습니다.</p>
+ </section>;
 }
 
 
