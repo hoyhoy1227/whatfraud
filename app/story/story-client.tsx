@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import AppIcon from '../app-icon';
 import {ChatBubbles} from './chat-bubbles';
 import {arrivalContext,chapterPages,resumeContext} from './context';
@@ -139,15 +139,25 @@ export default function StoryClient(){
     try{localStorage.setItem(state.mode==='demo'?SAVE_KEY+'-demo':SAVE_KEY,serializeRun(state));if(state.mode==='full')mainSaved.current=state;}
     catch{queueMicrotask(()=>setNote('진행 저장에 실패했습니다. 이 화면을 닫으면 기록이 사라질 수 있습니다.'));}
   },[state,ready,started,practiceOriginal]);
-  useEffect(()=>{
-    queueMicrotask(()=>setNewMessages(false));
-    if(scroll.current){scroll.current.scrollTop=positions.current[scrollKey]??(app==='messages'&&thread==='current'?scroll.current.scrollHeight:0);followTail.current=scroll.current.scrollHeight-scroll.current.scrollTop-scroll.current.clientHeight<80;const tail=followTail.current;queueMicrotask(()=>setAtTail(tail));}
-  },[scrollKey,app,thread]);
-  useEffect(()=>{
+  // Restore or follow a conversation before the browser paints. Using a normal
+  // effect here briefly painted a newly entered stage at the previous thread's
+  // offset; after the optional Jisu AI exchange, the post-transfer reply could
+  // therefore look as if it had appeared in the middle of the room.
+  useLayoutEffect(()=>{
     const previous=previousDelivery.current;
     previousDelivery.current={key:scrollKey,signature:deliveredSignature};
-    if(previous.key!==scrollKey||previous.signature===deliveredSignature||app!=='messages'||thread==='list')return;
-    if(scroll.current){if(followTail.current)scroll.current.scrollTop=scroll.current.scrollHeight;else queueMicrotask(()=>setNewMessages(true));}
+    const node=scroll.current;
+    if(!node)return;
+    if(previous.key!==scrollKey){
+      node.scrollTop=positions.current[scrollKey]??(app==='messages'&&thread==='current'?node.scrollHeight:0);
+      followTail.current=node.scrollHeight-node.scrollTop-node.clientHeight<80;
+      const tail=followTail.current;
+      queueMicrotask(()=>{setAtTail(tail);setNewMessages(false);});
+      return;
+    }
+    if(previous.signature===deliveredSignature||app!=='messages'||thread==='list')return;
+    if(followTail.current){node.scrollTop=node.scrollHeight;queueMicrotask(()=>setAtTail(true));}
+    else queueMicrotask(()=>setNewMessages(true));
   },[scrollKey,deliveredSignature,app,thread]);
   useEffect(()=>{
     if(dialog||paused||showRecent||practiceDone){if(!dialogRef.current?.open)dialogRef.current?.showModal();}
