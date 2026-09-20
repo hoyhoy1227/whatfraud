@@ -63,6 +63,8 @@ advance('confirm','paper-profit:extra');
 comparison=renderToStaticMarkup(createElement(ui.RecordComparison,{state:investment}));
 assert.ok(comparison.includes('420,000원'));
 assert.ok(client.includes('messageWindow')&&client.includes('conversationTimeline'));
+assert.ok(client.includes('continuousMessages=visibleStages.flatMap'),'all visited stages render as one continuous chat');
+assert.ok(!client.includes('visibleStages.map(({id,lines})=><section className="chat-stage"'),'stage changes do not create a new chat section');
 assert.ok(!client.includes('activeCase.dialogue?.quickQuestions.map'),'reply choices are scene-bound');
 
 const n=await import('../app/story/narrative.js');
