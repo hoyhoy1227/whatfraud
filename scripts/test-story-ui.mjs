@@ -47,7 +47,8 @@ console.log('Story UI SSR tests passed: ledger, endings, pivot labels and contro
 assert.ok(messageClient.includes('자유답변(개인정보는 입력하지 마세요)'));
 assert.ok(client.includes("dialog==='ai-choice'")&&client.includes('준비된 답장으로 시작'));
 assert.ok(client.includes('scheduleMessage')&&client.includes('visibleCount')&&client.includes('대화 바로 보기'));
-assert.ok(client.includes('conversationTranscript(state,chat,resolved?Infinity:visibleCount)'),'all stages form one continuous messenger transcript');
+assert.ok(client.includes('conversationTranscript(state,[],resolved?Infinity:visibleCount)'),'all authored stages form one continuous messenger transcript');
+assert.ok(!client.includes('setChats')&&!client.includes('AiChatMessage'),'the scenario room cannot retain or insert free-form AI chat');
 assert.ok(client.includes("showSender={i===0||visibleMessages[i-1].speaker!==m.speaker}"),'sender grouping continues across stage boundaries');
 assert.equal((client.match(/<section className="chat-stage">/g)||[]).length,1,'stage changes do not create a new chat section');
 assert.ok(messageClient.includes("inputMode:'story-message'")&&messageClient.includes('준비된 메시지'),'free failures are explicit');
@@ -79,7 +80,7 @@ assert.ok(!comparison.includes('이용 화면에서 출금 요청을 하는 방�
 advance('confirm','paper-profit:extra');
 comparison=renderToStaticMarkup(createElement(ui.RecordComparison,{state:investment}));
 assert.ok(comparison.includes('420,000원'));
-assert.ok(client.includes('messageWindow')&&client.includes('conversationTimeline'));
+assert.ok(client.includes('messageWindow')&&client.includes('conversationTranscript'));
 assert.ok(client.includes("thread==='current'?':'+state.stage:''"),'current chat scroll restoration follows stage changes');
 assert.ok(!client.includes('activeCase.dialogue?.quickQuestions.map'),'reply choices are scene-bound');
 
