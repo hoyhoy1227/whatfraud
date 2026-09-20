@@ -235,6 +235,24 @@ export function messageParts(lines){
   return parts.map((text,part)=>({...message,text,sourceText:message.text,id:index+'-'+part,lastPart:part===parts.length-1}));
  });
 }
+/**
+ * Build one chronological transcript for every stage the player has reached.
+ *
+ * Keeping this in the narrative layer is important: a stage change (most
+ * notably confirming a transfer) must append the new scene after questions
+ * asked from an evidence card.  Rebuilding only the active scene can otherwise
+ * make the newly selected question look as though it belongs to the next
+ * scene.
+ */
+export function conversationTranscript(state,chats=[],visible=Infinity){
+ const current=state.stage;
+ return state.visited.flatMap(stageId=>{
+  const lines=conversationTimeline(displayedMessages(state,stageId),chats.filter(message=>message.stage===stageId));
+  const parts=messageParts(lines);
+  const shown=stageId===current?parts.slice(0,visible):parts;
+  return shown.map(message=>({...message,stageId}));
+ });
+}
 export function messagePreview(lines,fallback=''){
  const last=lines.at(-1);
  return last?(last.speaker==='나'?'나: ':'')+last.text:fallback;
