@@ -87,7 +87,7 @@ export function ChapterScene({state,page=0,resume=false,onNext,onContinue}:{stat
  <small>{resume?'멈췄던 순간':scene.time}</small><h2>{resume?'다시 휴대폰을 열었다':scene.title}</h2>
  <div key={resume?'resume':page} className="chapter-copy">{(resume?resumeContext(state):scene.lines).filter(Boolean).map(line=><p key={line}>{line}</p>)}</div>
  {!resume&&<p className="chapter-count">{page+1} / {pages.length}</p>}
- <button className="primary" onClick={last?onContinue:onNext}>{last?(resume?'멈춘 연락으로 돌아가기':chapterAction(state)):'시간을 이어가기'}</button>
+ <button className="primary" onClick={last?onContinue:onNext}>{last?(resume?'멈춘 연락으로 돌아가기':chapterAction(state)):'계속하기'}</button>
  {!last&&<button className="text-button" onClick={onContinue}>장면 건너뛰기</button>}
  </section>;
 }
