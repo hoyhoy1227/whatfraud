@@ -54,7 +54,11 @@ export default function StoryClient(){
   const chat=chats[c.id]??[];
 
   const ownEvidence=evidenceFor(state).filter(e=>e.chapter===state.chapter);
-  const scrollKey=(practiceOriginal?'practice:':'')+state.mode+':'+state.chapter+':'+app+':'+thread+':'+browserPage;
+  // A newly entered story stage appends a new block to the current thread.
+  // Give that block its own scroll-restoration key so returning from the AI
+  // side conversation cannot restore the old (now middle-of-thread) offset.
+  const threadStage=app==='messages'&&thread==='current'?':'+state.stage:'';
+  const scrollKey=(practiceOriginal?'practice:':'')+state.mode+':'+state.chapter+':'+app+':'+thread+threadStage+':'+browserPage;
   const narrative=narratives[state.chapter],sceneLines=useMemo(()=>messageParts(conversationTimeline(displayedMessages(state,state.stage),(chats[c.id]??[]).filter(m=>m.stage===state.stage))),[state,chats,c.id]);
   const beat=pendingBeat(state);
   const selectedChoices=chosenIds(state);

@@ -47,7 +47,7 @@ console.log('Story UI SSR tests passed: ledger, endings, pivot labels and contro
 assert.ok(messageClient.includes('자유답변(개인정보는 입력하지 마세요)'));
 assert.ok(client.includes("dialog==='ai-choice'")&&client.includes('준비된 답장으로 시작'));
 assert.ok(client.includes('scheduleMessage')&&client.includes('visibleCount')&&client.includes('대화 바로 보기'));
-assert.ok(client.includes("visibleStages.flatMap(section=>section.lines.map(message=>({...message,stageId:section.id})))"),'all stages form one continuous messenger transcript');
+assert.ok(client.includes('conversationTranscript(state,chat,resolved?Infinity:visibleCount)'),'all stages form one continuous messenger transcript');
 assert.ok(client.includes("showSender={i===0||visibleMessages[i-1].speaker!==m.speaker}"),'sender grouping continues across stage boundaries');
 assert.equal((client.match(/<section className="chat-stage">/g)||[]).length,1,'stage changes do not create a new chat section');
 assert.ok(messageClient.includes("inputMode:'story-message'")&&messageClient.includes('준비된 메시지'),'free failures are explicit');
@@ -80,6 +80,7 @@ advance('confirm','paper-profit:extra');
 comparison=renderToStaticMarkup(createElement(ui.RecordComparison,{state:investment}));
 assert.ok(comparison.includes('420,000원'));
 assert.ok(client.includes('messageWindow')&&client.includes('conversationTimeline'));
+assert.ok(client.includes("thread==='current'?':'+state.stage:''"),'current chat scroll restoration follows stage changes');
 assert.ok(!client.includes('activeCase.dialogue?.quickQuestions.map'),'reply choices are scene-bound');
 
 const n=await import('../app/story/narrative.js');
@@ -156,7 +157,7 @@ console.log('Context SSR passed: entry, demo, resume, bridge skip, new-contact a
 const narrativeSource=await readFile('app/story/narrative.js','utf8');
 assert.ok(!narrativeSource.includes('상태에 저녁 약속')&&!narrativeSource.includes('공개된 상태 메시지에'));
 assert.ok(narrativeSource.includes('휴대폰 화면·상태·캘린더·다른 대화는 볼 수 없다'));
-assert.ok(narrativeSource.includes('잠깐 부탁할 게 있어서 연락했어.'));
+assert.ok(narrativeSource.includes('그거보다 부탁 하나만 물어보려고.'));
 for(const unread of [false,true]){
  const row=renderToStaticMarkup(createElement(ui.ConversationRow,{name:'준호',initial:'준',preview:'약속 확인',detail:'저장된 연락처',unread,onOpen:noop}));
  assert.ok(row.includes('conversation-row')&&row.includes('약속 확인'));
