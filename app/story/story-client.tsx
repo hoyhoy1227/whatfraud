@@ -6,7 +6,7 @@ import {ChatBubbles} from './chat-bubbles';
 import type { AiChatMessage } from '../ai-dialogue';
 import {arrivalContext,chapterPages,resumeContext} from './context';
 import StoryMessage, {type MessageMemory} from './story-message';
-import {emptyMessageMemory,peerRecordReady,supportReady,messageThreadVisible,resetMessageMemory,threadPreview,threadReceipt} from './presentation';
+import {currentThreadReceipt,emptyMessageMemory,peerRecordReady,supportReady,messageThreadVisible,resetMessageMemory,threadPreview,threadReceipt} from './presentation';
 import {messageWindow,messageStatus,messageConsequences,messageStyle,branchUseAllowed,peerFollowupText,attachmentText} from './one-shot';
 import { chapters, createRun, currentCase, currentStage, transition, SAVE_KEY, serializeRun, restoreRun, replayBefore, evidenceFor, verified, offerFor, money, gameTime, isResolved, outcomeText, chapterSpent } from './engine';
 import { budgetKey, restoreBudget } from './session-budget';
@@ -70,7 +70,7 @@ export default function StoryClient(){
   const progressLocked=paused||state.completed||resolved||sceneTyping;
   const visibleStages=state.visited.map(id=>({id,lines:id===state.stage?sceneLines.slice(0,resolved?undefined:visibleCount):messageParts(conversationTimeline(displayedMessages(state,id),chat.filter(m=>m.stage===id)))}));
   const visibleMessages=visibleStages.flatMap(section=>section.lines);
-  const currentReceipt='current:'+state.stage+':'+(resolved?sceneLines.length:Math.max(1,visibleCount));
+  const currentReceipt=currentThreadReceipt(state.stage,visibleCount,resolved,sceneLines.length);
   const unread=!state.read.includes(state.chapter+':'+currentReceipt);
   const peerMemory=messageMemory[(practiceOriginal?'practice:':'')+state.mode+':peer']??emptyMessageMemory();
   const friendMemory=messageMemory[(practiceOriginal?'practice:':'')+state.mode+':friend']??emptyMessageMemory();
@@ -113,8 +113,10 @@ export default function StoryClient(){
   useEffect(()=>{
     const viewport=window.visualViewport;
     const update=()=>document.documentElement.style.setProperty('--phone-viewport',Math.round(viewport?.height??window.innerHeight)+'px');
-    update();viewport?.addEventListener('resize',update);
-    return()=>{viewport?.removeEventListener('resize',update);document.documentElement.style.removeProperty('--phone-viewport');};
+    update();
+    window.addEventListener('resize',update);
+    viewport?.addEventListener('resize',update);
+    return()=>{window.removeEventListener('resize',update);viewport?.removeEventListener('resize',update);document.documentElement.style.removeProperty('--phone-viewport');};
   },[]);
   useEffect(()=>{
     let live=true;const activeGate=gate.current;
