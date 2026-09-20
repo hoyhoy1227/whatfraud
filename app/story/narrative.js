@@ -253,6 +253,15 @@ export function conversationTranscript(state,chats=[],visible=Infinity){
   return shown.map(message=>({...message,stageId}));
  });
 }
+/**
+ * The public scenario room is authored only; free-form AI belongs to side threads.
+ * @param {any} state
+ * @param {number} visible
+ * @returns {Array<Message & {stageId:string,id:string,sourceText:string,lastPart:boolean}>}
+ */
+export function scenarioTranscript(state,visible=Infinity){
+ return conversationTranscript(state,[],visible);
+}
 export function messagePreview(lines,fallback=''){
  const last=lines.at(-1);
  return last?(last.speaker==='나'?'나: ':'')+last.text:fallback;

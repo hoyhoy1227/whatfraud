@@ -124,6 +124,9 @@ const baseLines=[{speaker:'운영자',text:'처음 안내'},{speaker:'나',text:
 const transient=[{role:'user',content:'자유 질문',anchor:1,speaker:'운영자'},{role:'assistant',content:'자유 답장',anchor:1,speaker:'운영자'}];
 assert.deepEqual(n.conversationTimeline(baseLines,transient).map(m=>m.text),['처음 안내','자유 질문','자유 답장','선택 질문','선택 답장']);
 assert.deepEqual(n.conversationTimeline(baseLines,transient,1).map(m=>m.text),['처음 안내','자유 질문','자유 답장']);
+let authoredRoom=e.createRun('demo');
+authoredRoom=step(authoredRoom,'talk','paper-note-meaning');
+assert.ok(!n.scenarioTranscript(authoredRoom,Infinity).some(message=>message.text==='자유 질문'),'scenario room excludes free-form AI messages');
 let ordered=e.createRun('demo');
 for(const choice of ['paper-intro-purpose','paper-intro-proof'])ordered=step(ordered,'talk',choice);
 ordered=step(ordered,'advance');
