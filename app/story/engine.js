@@ -65,6 +65,10 @@ export function outcomeText(state) {
   if(r.kind==='stopped') return '추가 요청을 중단했다. 이미 나간 돈은 거래 기록에 남아 있다.';
   return '처리 중이라는 말만 남았다. 은행에는 출금 내역이 남아 있다.';
 }
+export function conversationEndText(state) {
+  const result=state.results.find(r=>r.chapter===state.chapter);
+  return result?.kind==='loss'?'상대방에게서 더 도착할 답장은 없습니다. 이 대화는 여기서 끝났습니다.':'';
+}
 function move(state,id) { state.stage=id; if(!state.visited.includes(id))state.visited.push(id); }
 function settle(state,kind) {
   if (isResolved(state))return false;

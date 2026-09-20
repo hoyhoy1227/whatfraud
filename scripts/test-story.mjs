@@ -4,6 +4,7 @@ const step=(s,type,data='')=>e.transition(s,{type,chapter:s.chapter,data});
 const inspectAll=s=>e.currentCase(s).story.evidence.reduce((v,clue)=>step(v,'inspect',e.currentCase(v).id+':'+clue.id),s);
 const finish=(s,kind)=>step(step(s,'resolve',kind),'next');
 const spend=s=>{const offer=e.offerFor(s);assert.ok(offer);return step(s,'confirm',offer.id);};
+const noMoreReplies='상대방에게서 더 도착할 답장은 없습니다. 이 대화는 여기서 끝났습니다.';
 assert.equal(e.chapters.length,3);
 for(const kind of ['paused','blocked','verified']){
  let s=e.createRun();
@@ -31,6 +32,7 @@ for(const a of ['paused','blocked','verified','loss']){
      if(s.chapter===1){s=step(s,'withdraw');s=spend(s);}
     }
     const previous=s;s=step(s,'resolve',kind);assert.notEqual(s,previous,kind);
+    assert.equal(e.conversationEndText(s),kind==='loss'?noMoreReplies:'','only unanswered loss endings close the conversation');
     s=step(s,'next');
    }
    assert.equal(s.completed,true);
