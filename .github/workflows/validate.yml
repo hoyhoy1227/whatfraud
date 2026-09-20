@@ -34,6 +34,7 @@ jobs:
       - run: node scripts/test-attachment-branches.mjs
       - run: node scripts/test-decision-messages.mjs
       - run: node scripts/test-story-ui.mjs
+      - run: node scripts/test-message-transcript.mjs
       - run: node scripts/test-response-report.mjs
       - run: pnpm lint
       - if: ${{ !cancelled() }}

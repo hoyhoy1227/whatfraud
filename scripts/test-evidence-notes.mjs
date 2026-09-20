@@ -9,7 +9,7 @@ import {decisionWindows,validateDecisionContext} from '../app/story/decision-mes
 import {narratives} from '../app/story/narrative.js';
 
 let source=await readFile('app/story/evidence-detail.tsx','utf8');
-for(const module of ['engine','fraud-context'])source=source.replace("'./"+module+"'",JSON.stringify(new URL('../app/story/'+module+'.js',import.meta.url).href));
+for(const moduleName of ['engine','fraud-context'])source=source.replace("'./"+moduleName+"'",JSON.stringify(new URL('../app/story/'+moduleName+'.js',import.meta.url).href));
 const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime')));
 const {default:EvidenceDetail}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
 const render=(state,id)=>renderToStaticMarkup(createElement(EvidenceDetail,{state,e:{...chapters[state.chapter].story.evidence.find(e=>e.id===id),chapter:state.chapter}}));

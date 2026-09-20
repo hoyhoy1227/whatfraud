@@ -1,6 +1,35 @@
 import {messageChapter, messageWindow, messageStyle,peerOpening,messageStatus,peerFollowupText,friendFollowupLines} from './one-shot.js';
 // Presentation-only helpers. No financial decisions or model calls.
-export const emptyMessageMemory=()=>({draft:'',sent:'',reply:'',attachment:'none',sentAttachment:'none',preparedSent:'',callStep:0});
+/** @typedef {{id:string,speaker:string,text:string,attachment?:string}} ChatEntry */
+/** @typedef {{draft:string,sent:string,reply:string,attachment:string,sentAttachment:string,preparedSent:string,transcript?:ChatEntry[],callStep:number}} MessageMemory */
+/** @returns {MessageMemory} */
+export const emptyMessageMemory=()=>({draft:'',sent:'',reply:'',attachment:'none',sentAttachment:'none',preparedSent:'',transcript:[],callStep:0});
+/** Convert legacy slots to the best available chronological order. @param {MessageMemory} memory */
+export function messageTranscript(memory=emptyMessageMemory(),counterpart='상대방'){
+ if(Array.isArray(memory.transcript))return memory.transcript.filter(entry=>entry&&typeof entry.id==='string'&&typeof entry.speaker==='string'&&typeof entry.text==='string').map(entry=>({...entry,...(typeof entry.attachment==='string'&&entry.attachment!=='none'?{attachment:entry.attachment}:{})}));
+ /** @type {ChatEntry[]} */
+ const transcript=[];
+ if(memory.sent)transcript.push({id:'legacy-sent',speaker:'나',text:memory.sent,...(memory.sentAttachment&&memory.sentAttachment!=='none'?{attachment:memory.sentAttachment}:{})});
+ if(memory.reply)transcript.push({id:'legacy-reply',speaker:counterpart,text:memory.reply});
+ if(memory.preparedSent)transcript.push({id:'legacy-prepared',speaker:'나',text:memory.preparedSent});
+ return transcript;
+}
+/** @param {MessageMemory} memory @param {Array<Partial<ChatEntry>&Pick<ChatEntry,'speaker'|'text'>>} entries */
+export function appendMessageTranscript(memory,entries,counterpart='상대방'){
+ const current=messageTranscript(memory,counterpart),used=new Set(current.map(entry=>entry.id));
+ return [...current,...entries.map((entry,index)=>{
+  let sequence=current.length+index+1,id=entry.id;
+  while(!id||used.has(id)){id='message-'+sequence;sequence++;}
+  used.add(id);
+  return {id,speaker:entry.speaker,text:entry.text,...(entry.attachment&&entry.attachment!=='none'?{attachment:entry.attachment}:{})};
+ })];
+}
+/** Anchor AI text between authored lines without changing authored stage ordering.
+ * @param {{stage?:string,after:number}} anchor
+ */
+export function historyAt(anchor,stage,after,lineCount){
+ return anchor.stage===stage&&Math.min(anchor.after,lineCount)===after;
+}
 export function messageOpening(state,scene){
  if(scene==='peer')return peerOpening(state.chapter===1?state.stage:state.events.some(e=>e.chapter===1&&e.type==='withdraw')?'withdrawal':'group');
  if(state.calls.includes('0:junho'))return '아까 새 계정으로 확인했던 일이구나. 무슨 일이 있었는지 알려줘.';
@@ -34,8 +63,8 @@ export function resetMessageMemory(memory,mode){
 export function threadPreview(state,scene,memory=emptyMessageMemory()){
  const followed=state.events.some(e=>e.type==='message-followup'&&e.data===(scene==='peer'?'peer:record':'friend:call'));
  if(followed)return scene==='peer'?peerFollowupText(state):friendFollowupLines(state)[Math.max(0,memory.callStep-1)]??'준호가 연락 내용을 남겼어요.';
- if(memory.reply)return memory.reply;
- if(memory.preparedSent||memory.sent)return '나: '+(memory.preparedSent||memory.sent);
+ const last=messageTranscript(memory,scene==='peer'?'지수':'준호').at(-1);
+ if(last)return (last.speaker==='나'?'나: ':'')+last.text;
  const status=messageStatus(state,scene);
  if(!['ready','attempt'].includes(status))return status==='skip'?'지금은 말하지 않기로 했습니다.':'이 대화는 마쳤습니다.';
  return messageOpening(state,scene);
@@ -43,5 +72,5 @@ export function threadPreview(state,scene,memory=emptyMessageMemory()){
 export function threadReceipt(state,scene,memory=emptyMessageMemory()){
  const status=messageStatus(state,scene);
  const followed=state.events.some(e=>e.type==='message-followup'&&e.data===(scene==='peer'?'peer:record':'friend:call'));
- return scene+':'+status+':'+(followed?'followup':'message')+':'+memory.callStep;
+ return scene+':'+status+':'+(followed?'followup':'message')+':'+memory.callStep+':'+messageTranscript(memory,scene==='peer'?'지수':'준호').length;
 }

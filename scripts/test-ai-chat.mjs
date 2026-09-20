@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
-import { attachmentReply, parseStoryReply } from '../app/story/one-shot.js';
+import { attachmentReply, attachmentText, parseStoryReply } from '../app/story/one-shot.js';
 
 const cases = JSON.parse(await readFile(new URL('../content/generated/cases.json', import.meta.url), 'utf8'));
 const dialogueSource = await readFile(new URL('../app/ai-dialogue.ts', import.meta.url), 'utf8');
@@ -118,8 +118,8 @@ try{
  route=await freshRoute();let captured;
  globalThis.fetch=async(_url,options)=>{captured=JSON.parse(options.body);return successful();};
  assert.equal((await route.POST(request('예전 안내를 봐주세요','prompt-session-0001',{attachment:'first-notice'}))).status,200);
- assert.ok(captured.systemInstruction.parts[0].text.includes('자료를 읽는 것과 별도 참여는 구분됩니다'));
- assert.ok(captured.systemInstruction.parts[0].text.includes('상세 투자 분석 자료 이용료 300,000원을 가상 송금했다'));
+ assert.ok(captured.systemInstruction.parts[0].text.includes(attachmentText['first-notice']));
+ assert.ok(captured.systemInstruction.parts[0].text.includes('투자 참여금 300,000원을 가상 송금했다'));
  assert.ok(captured.systemInstruction.parts[0].text.includes('예시 문장이나 고정 답안에서 고르지 말고'));
  assert.equal(captured.generationConfig.responseMimeType,'application/json');
  assert.equal(captured.contents.length,1);
