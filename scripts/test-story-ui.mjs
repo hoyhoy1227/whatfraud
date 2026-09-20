@@ -46,6 +46,9 @@ console.log('Story UI SSR tests passed: ledger, endings, pivot labels and contro
 assert.ok(messageClient.includes('자유답변(개인정보는 입력하지 마세요)'));
 assert.ok(client.includes("dialog==='ai-choice'")&&client.includes('준비된 답장으로 시작'));
 assert.ok(client.includes('scheduleMessage')&&client.includes('visibleCount')&&client.includes('대화 바로 보기'));
+assert.ok(client.includes("visibleStages.flatMap(section=>section.lines.map(message=>({...message,stageId:section.id})))"),'all stages form one continuous messenger transcript');
+assert.ok(client.includes("showSender={i===0||visibleMessages[i-1].speaker!==m.speaker}"),'sender grouping continues across stage boundaries');
+assert.equal((client.match(/<section className="chat-stage">/g)||[]).length,1,'stage changes do not create a new chat section');
 assert.ok(messageClient.includes("inputMode:'story-message'")&&messageClient.includes('준비된 메시지'),'free failures are explicit');
 const {scheduleMessage,messageDelay}=await import('../app/story/message-pacing.js');
 assert.ok(messageDelay('짧은 메시지')>=650);
