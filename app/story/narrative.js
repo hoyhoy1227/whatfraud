@@ -235,6 +235,10 @@ export function messageParts(lines){
   return parts.map((text,part)=>({...message,text,sourceText:message.text,id:index+'-'+part,lastPart:part===parts.length-1}));
  });
 }
+/** Flatten stage history without introducing a second conversation boundary. */
+export function continuousTimeline(stages){
+ return stages.flatMap(stage=>stage.lines.map(message=>({...message,stageId:stage.id})));
+}
 export function messagePreview(lines,fallback=''){
  const last=lines.at(-1);
  return last?(last.speaker==='나'?'나: ':'')+last.text:fallback;

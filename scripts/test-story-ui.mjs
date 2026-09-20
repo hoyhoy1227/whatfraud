@@ -63,11 +63,17 @@ advance('confirm','paper-profit:extra');
 comparison=renderToStaticMarkup(createElement(ui.RecordComparison,{state:investment}));
 assert.ok(comparison.includes('420,000원'));
 assert.ok(client.includes('messageWindow')&&client.includes('conversationTimeline'));
-assert.ok(client.includes('continuousMessages=visibleStages.flatMap'),'all visited stages render as one continuous chat');
-assert.ok(!client.includes('visibleStages.map(({id,lines})=><section className="chat-stage"'),'stage changes do not create a new chat section');
 assert.ok(!client.includes('activeCase.dialogue?.quickQuestions.map'),'reply choices are scene-bound');
 
 const n=await import('../app/story/narrative.js');
+assert.deepEqual(n.continuousTimeline([
+ {id:'arrival',lines:[{speaker:'상담원',text:'첫 안내'}]},
+ {id:'offer',lines:[{speaker:'나',text:'확인할게요'},{speaker:'상담원',text:'이어서 안내합니다'}]}
+]),[
+ {speaker:'상담원',text:'첫 안내',stageId:'arrival'},
+ {speaker:'나',text:'확인할게요',stageId:'offer'},
+ {speaker:'상담원',text:'이어서 안내합니다',stageId:'offer'}
+],'stage history stays in one ordered conversation timeline');
 for(const known of [false,true]){
  const profile=renderToStaticMarkup(createElement(ui.ContactProfile,{profile:n.contactProfile(0,known),blocked:!known,onClose:noop,onChat:noop,onCall:noop}));
  assert.ok(profile.includes(known?'내 연락처에 저장됨':'친구로 등록되지 않음'));

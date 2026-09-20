@@ -11,7 +11,7 @@ import {messageWindow,messageStatus,messageConsequences,messageStyle,branchUseAl
 import { chapters, createRun, currentCase, currentStage, transition, SAVE_KEY, serializeRun, restoreRun, replayBefore, evidenceFor, verified, offerFor, money, gameTime, isResolved, outcomeText, chapterSpent } from './engine';
 import { budgetKey, restoreBudget } from './session-budget';
 import { ReplyGate } from './reply-gate';
-import { narratives, displayedMessages, pendingBeat, chosenIds, choiceAllowed, conversationTimeline, friendFollowup, retainedQuestion, contactProfile, messageParts, messagePreview } from './narrative';
+import { narratives, displayedMessages, pendingBeat, chosenIds, choiceAllowed, conversationTimeline, continuousTimeline, friendFollowup, retainedQuestion, contactProfile, messageParts, messagePreview } from './narrative';
 import { scheduleMessage } from './message-pacing';
 import { Ledger, Rewind, RecordComparison, Closing, PhoneStatus, ContactProfile, ChapterScene, ConversationRow, InvestmentScreen, PlayGuide } from './panels';
 type Run = ReturnType<typeof createRun>;
@@ -70,7 +70,7 @@ export default function StoryClient(){
   const progressLocked=paused||state.completed||resolved||sceneTyping;
   const visibleStages=state.visited.map(id=>({id,lines:id===state.stage?sceneLines.slice(0,resolved?undefined:visibleCount):messageParts(conversationTimeline(displayedMessages(state,id),chat.filter(m=>m.stage===id)))}));
   const visibleMessages=visibleStages.flatMap(section=>section.lines);
-  const continuousMessages=visibleStages.flatMap(section=>section.lines.map(message=>({...message,stageId:section.id})));
+  const continuousMessages=continuousTimeline(visibleStages);
   const currentReceipt='current:'+state.stage+':'+(resolved?sceneLines.length:Math.max(1,visibleCount));
   const unread=!state.read.includes(state.chapter+':'+currentReceipt);
   const peerMemory=messageMemory[(practiceOriginal?'practice:':'')+state.mode+':peer']??emptyMessageMemory();
