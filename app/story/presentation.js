@@ -44,3 +44,9 @@ export function threadReceipt(state,scene,memory=emptyMessageMemory()){
  const followed=state.events.some(e=>e.type==='message-followup'&&e.data===(scene==='peer'?'peer:record':'friend:call'));
  return scene+':'+status+':'+(followed?'followup':'message')+':'+memory.callStep;
 }
+
+/** A receipt only advances after a message has actually appeared on screen. */
+export function currentThreadReceipt(stage,visibleCount,resolved,total){
+ const delivered=resolved?total:Math.max(0,Math.min(visibleCount,total));
+ return 'current:'+stage+':'+delivered;
+}
