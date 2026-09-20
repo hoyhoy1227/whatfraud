@@ -139,6 +139,15 @@ const evidenceReply=orderedTranscript.indexOf('그 조회와 저희 방 안내�
 const paidReply=orderedTranscript.indexOf('이용 화면에서 표시 상태를 보실 수 있습니다.');
 assert.ok(evidenceQuestion>=0&&evidenceQuestion<evidenceReply&&evidenceReply<paidReply,'evidence question and reply stay before post-transfer messages');
 assert.deepEqual(n.conversationTranscript(ordered,[],1).filter(message=>message.stageId==='paid').map(message=>message.text),['이용 화면에서 표시 상태를 보실 수 있습니다.']);
+let afterAi=step(ordered,'withdraw');
+afterAi=step(afterAi,'message','peer:attempt');
+afterAi=step(afterAi,'message','peer:check');
+afterAi=step(afterAi,'message-style','peer:cautious:none');
+afterAi=spend(afterAi);
+const afterAiTranscript=n.conversationTranscript(afterAi).map(message=>({stage:message.stageId,text:message.text}));
+assert.equal(afterAiTranscript.at(-1).stage,'extra-paid','post-AI transfer messages append at the end of the room');
+assert.ok(afterAiTranscript.findIndex(message=>message.stage==='paid')<afterAiTranscript.findIndex(message=>message.stage==='withdrawal'));
+assert.ok(afterAiTranscript.findIndex(message=>message.stage==='withdrawal')<afterAiTranscript.findIndex(message=>message.stage==='extra-paid'));
 const restoredBudget=restoreBudget({session:'test-session-0000001',counts:[0,1,0],last:12,cooldown:0,moments:['paper-entry','paper-entry','invented']},'replacement');
 assert.deepEqual(restoredBudget.moments,['paper-entry']);
 assert.deepEqual(used.moments,[],'old budget remains compatible and retains counts');

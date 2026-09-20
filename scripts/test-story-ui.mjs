@@ -82,6 +82,7 @@ comparison=renderToStaticMarkup(createElement(ui.RecordComparison,{state:investm
 assert.ok(comparison.includes('420,000원'));
 assert.ok(client.includes('messageWindow')&&client.includes('conversationTranscript'));
 assert.ok(client.includes("thread==='current'?':'+state.stage:''"),'current chat scroll restoration follows stage changes');
+assert.ok(client.includes('useLayoutEffect')&&client.includes("previous.key!==scrollKey"),'stage changes restore the latest-message position before paint');
 assert.ok(!client.includes('activeCase.dialogue?.quickQuestions.map'),'reply choices are scene-bound');
 
 const n=await import('../app/story/narrative.js');
