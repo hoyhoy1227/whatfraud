@@ -10,7 +10,7 @@ import {messageWindow,messageStatus,messageConsequences,messageStyle,branchUseAl
 import { chapters, createRun, currentCase, currentStage, transition, SAVE_KEY, serializeRun, restoreRun, replayBefore, evidenceFor, verified, offerFor, money, gameTime, isResolved, outcomeText, conversationEndText, chapterSpent } from './engine';
 import { budgetKey, restoreBudget } from './session-budget';
 import { ReplyGate } from './reply-gate';
-import { narratives, displayedMessages, pendingBeat, chosenIds, choiceAllowed, scenarioTranscript, friendFollowup, retainedQuestion, contactProfile, messageParts, messagePreview } from './narrative';
+import { narratives, displayedMessages, pendingBeat, chosenIds, choiceAllowed, conversationTranscript, friendFollowup, retainedQuestion, contactProfile, messageParts, messagePreview } from './narrative';
 import { scheduleMessage } from './message-pacing';
 import { Ledger, Rewind, RecordComparison, Closing, PhoneStatus, ContactProfile, ChapterScene, ConversationRow, InvestmentScreen, PlayGuide } from './panels';
 type Run = ReturnType<typeof createRun>;
@@ -71,7 +71,7 @@ export default function StoryClient(){
   const progressLocked=paused||state.completed||resolved||sceneTyping;
   // Rebuild the whole thread in visited-stage order. In particular, an
   // evidence-card question remains before the paid scene after a transfer.
-  const visibleMessages=scenarioTranscript(state,resolved?Infinity:visibleCount);
+  const visibleMessages=conversationTranscript(state,resolved?Infinity:visibleCount);
   const currentReceipt=currentThreadReceipt(state.stage,visibleCount,resolved,sceneLines.length);
   const unread=!state.read.includes(state.chapter+':'+currentReceipt);
   const peerMemory=messageMemory[(practiceOriginal?'practice:':'')+state.mode+':peer']??emptyMessageMemory();

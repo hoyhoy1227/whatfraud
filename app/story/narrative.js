@@ -175,17 +175,6 @@ export function aiMoment(caseId,stageId){
  if(caseId==='recovery-team'&&stageId==='offer')return 'recovery-check';
  return null;
 }
-/** Merge transient chat at its authored-message position; never persist player text. */
-export function conversationTimeline(lines,chat,visible=lines.length){
- const result=[];
- for(let index=0;index<=Math.min(visible,lines.length);index++){
-  for(const message of chat.filter(m=>Math.min(m.anchor??lines.length,lines.length)===index)){
-   result.push({speaker:message.role==='user'?'나':message.speaker,text:message.content});
-  }
-  if(index<Math.min(visible,lines.length))result.push(lines[index]);
- }
- return result;
-}
 /** Only the real friend's conversation can see earlier voluntary disclosures. */
 export function friendFollowup(state){
  if(state.chapter===2&&messageStyle(state,'friend').mode==='listen')return '아까 못다 한 얘기는 나중에 해도 돼. 집에 가는 길엔 잠깐 쉬어.';
@@ -243,24 +232,17 @@ export function messageParts(lines){
  * asked from an evidence card.  Rebuilding only the active scene can otherwise
  * make the newly selected question look as though it belongs to the next
  * scene.
- */
-export function conversationTranscript(state,chats=[],visible=Infinity){
- const current=state.stage;
- return state.visited.flatMap(stageId=>{
-  const lines=conversationTimeline(displayedMessages(state,stageId),chats.filter(message=>message.stage===stageId));
-  const parts=messageParts(lines);
-  const shown=stageId===current?parts.slice(0,visible):parts;
-  return shown.map(message=>({...message,stageId}));
- });
-}
-/**
- * The public scenario room is authored only; free-form AI belongs to side threads.
  * @param {any} state
  * @param {number} visible
  * @returns {Array<Message & {stageId:string,id:string,sourceText:string,lastPart:boolean}>}
  */
-export function scenarioTranscript(state,visible=Infinity){
- return conversationTranscript(state,[],visible);
+export function conversationTranscript(state,visible=Infinity){
+ const current=state.stage;
+ return state.visited.flatMap(stageId=>{
+  const parts=messageParts(displayedMessages(state,stageId));
+  const shown=stageId===current?parts.slice(0,visible):parts;
+  return shown.map(message=>({...message,stageId}));
+ });
 }
 export function messagePreview(lines,fallback=''){
  const last=lines.at(-1);
