@@ -24,28 +24,6 @@
 
 이 저장소의 실행 코드·콘텐츠·자산·검증 스크립트는 **공개 데모 v76의 소스 `7aadfed`**를 기준으로 맞췄습니다. 게임명은 **사기방지위원회**, 영문 프로젝트 식별자는 `whatfraud`입니다.
 
-Sites 기록에서 공개 주소와 v76의 배포 성공을 확인했습니다. 문서·metadata 주소·검증 프롬프트 정리는 배포 원본에 추가한 변경이며, 이번 GitHub 정리로 공개 사이트를 재배포하지는 않습니다. [확인 근거와 범위](docs/PUBLIC_DEMO.md#확인-기준)를 참고하세요.
-
-## 로컬에서 시작하기
-
-Node.js **22.13 이상**과 pnpm을 사용합니다. 설치 버전은 `package.json`과 `pnpm-lock.yaml`이 기준입니다.
-
-```bash
-pnpm install --frozen-lockfile
-pnpm dev
-```
-
-AI 없이 실행할 수 있습니다. 선택적 Gemini 연결과 D1 설정은 [운영 안내](OPERATIONS.md#선택적-ai-설정)를 참고하세요.
-
-```bash
-pnpm content:check
-pnpm dialogue:check
-pnpm lint
-pnpm build
-```
-
-공개 기준 정리의 게임 검사·타입·빌드는 통과했습니다. 기존 고정 의존성의 감사는 미보완 경고로 실패했으며, [검증 기록](OPERATIONS.md#공개-기준-정리-검증-기록)과 [남은 과제](ROADMAP.md)에서 추적합니다.
-
 ## 목적별 문서
 
 | 목적 | 문서 | 읽을 내용 |
