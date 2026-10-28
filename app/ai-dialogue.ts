@@ -6,6 +6,14 @@ export { aiMoment, decisionReadyFor } from './story/narrative.js';
 export type AiChatMessage = { role: 'user' | 'assistant'; content: string };
 export type DialogueEmotion = 'friendly' | 'evasive' | 'deflecting' | 'pressuring' | 'disappointed' | 'closed';
 export type DialogueReplyMode = 'short' | 'normal';
+export const AI_REPLY_TIMEOUT_MS=55_000;
+
+export function aiReplyFailureMessage(code:unknown,clientTimedOut=false){
+  if(code==='provider_quota')return '현재 Gemini의 일시적인 사용량 한도에 도달해 답장을 생성할 수 없습니다. 추가 호출 없이 준비된 답장으로 계속해 주세요.';
+  if(code==='provider_token_limit')return 'Gemini 답변이 출력 토큰 한도 안에 완료되지 않아 사용할 수 없습니다. 추가 호출 없이 준비된 답장으로 계속해 주세요.';
+  if(code==='provider_timeout'||clientTimedOut)return 'Gemini 답변을 기다렸지만 제한 시간 안에 완료되지 않았습니다. 다시 요청하지 않고 준비된 답장으로 계속할 수 있습니다.';
+  return 'AI 답장을 받지 못했습니다. 다시 요청하지 않고 준비된 답장으로 계속할 수 있습니다.';
+}
 
 const emotionDirections: Record<DialogueEmotion, string> = {
   friendly: '친근하고 여유 있게 답하며 선택권이 있는 것처럼 말한다.',
@@ -59,7 +67,7 @@ export function buildSystemPrompt(gameCase: CaseData, messages: AiChatMessage[],
   const lengthDirection = replyMode === 'short'
     ? '8~35자의 자연스러운 한 문장. 인사말·칭찬·질문 반복 없이 바로 반응한다.'
     : '35~100자의 1~2문장. 첫 문장에서 질문에 답하고 필요한 경우에만 두 번째 문장으로 회유한다.';
-  return `당신은 가상 스마트폰 스릴러 "수익률 24시" 속 가상 NPC다.
+  return `당신은 가상 스마트폰 스릴러 "사기방지위원회" 속 가상 NPC다.
 역할: ${gameCase.role}
 목표: ${gameCase.npcGoal}
 인물 고정 설정:
@@ -106,10 +114,10 @@ export function sanitizePlayerText(text: string) {
 
 export function validateAiReply(text: string, emotion?: DialogueEmotion, replyMode?: DialogueReplyMode, scope?: 'story') {
   const trimmed = text.trim();
-  const maximumLength = emotion === 'closed' ? 70 : replyMode === 'short' ? 55 : 140;
+  const maximumLength = scope === 'story' ? 360 : emotion === 'closed' ? 70 : replyMode === 'short' ? 55 : 140;
   if (trimmed.length < 2 || trimmed.length > maximumLength) return false;
   const sentenceCount = trimmed.split(/[.!?。！？]+/).filter((part) => part.trim()).length;
-  if (sentenceCount > (emotion === 'closed' || replyMode === 'short' ? 1 : 2)) return false;
+  if (sentenceCount > (scope === 'story' ? 4 : emotion === 'closed' || replyMode === 'short' ? 1 : 2)) return false;
   if (/https?:\/\/|www\.|계좌번호\s*[:：]?\s*\d{4}|\b\d{2,4}[- ]\d{3,4}[- ]\d{4}\b/i.test(trimmed)) return false;
   if (/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(trimmed)) return false;
   if (/정답|판정 결과|시스템 프롬프트|개발자 메시지|범죄 실행|수사 회피/.test(trimmed)) return false;
@@ -122,6 +130,10 @@ export function validateAiReply(text: string, emotion?: DialogueEmotion, replyMo
     : trimmed;
   if (/(?:지금|바로).{0,12}(?:충전|입금|송금|결제|가입)|(?:충전|입금|송금|결제|가입).{0,12}(?:지금|바로)/.test(urgencyText)) return false;
   if (/죽|해코지|찾아가|가족.{0,8}(?:위험|해치|알고)|신상.{0,8}(?:공개|유포)|해킹|보복|가만두지|두고\s*보자|병신|멍청/.test(trimmed)) return false;
+  // Story branches are validated from categorical model fields. Keep reply
+  // validation limited to safety and impossible completed actions, rather than
+  // inferring a branch again from a handful of Korean keywords.
+  if (scope === 'story' && /환급.*완료|신고.*완료|돈.*돌려받았|이미.*(?:전화|통화)/.test(trimmed)) return false;
   if (emotion === 'closed') {
     if (!/(?:연락|안내|대화).{0,10}(?:않|그만|종료|마치)|여기서.{0,8}(?:마치|끝)/.test(trimmed)) return false;
     if (/나중|언제든|궁금|찾아|다시|필요하시면|생각이\s*바뀌/.test(trimmed)) return false;

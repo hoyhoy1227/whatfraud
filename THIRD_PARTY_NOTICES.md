@@ -1,6 +1,6 @@
-# 제3자 라이선스 고지
+# 사기방지위원회 — 제3자 구성 요소·자산 고지
 
-이 문서는 WhatFraud가 직접 사용하거나 사용자가 선택적으로 연결할 수 있는 주요 제3자 구성 요소를 안내합니다. 정확한 의존성 버전은 `package.json`과 `pnpm-lock.yaml`에서 확인할 수 있으며, 각 구성 요소의 원본 배포물과 라이선스 파일이 최종 기준입니다.
+목적: 사기방지위원회(`whatfraud`)의 주요 제3자 구성 요소와 자산 출처 기록을 보관합니다. 정확한 의존성 버전은 `package.json`과 `pnpm-lock.yaml`이 기준이며, 원본 배포물과 라이선스 파일이 최종 기준입니다. 이 문서는 전체 권리 감사 완료를 뜻하지 않습니다.
 
 ## 공모전 제출 시 적용
 
@@ -10,14 +10,14 @@
 
 공개 게임의 선택적 보조 대화는 Google Gemini API를 사용하며 현재 저장소의 설정 모델 ID는 `gemini-3.5-flash-lite`입니다. 모델 제공 상태와 사용 가능 여부는 해당 프로젝트에서 별도로 확인합니다. 게임은 선택적 대화에 이 API를 호출합니다. Gemini 모델 가중치나 Google SDK는 이 저장소에 포함하지 않으며, 서버가 HTTPS REST API를 호출합니다. 이용에는 [Gemini API 추가 서비스 약관](https://ai.google.dev/gemini-api/terms)과 [요금·무료 등급 조건](https://ai.google.dev/gemini-api/docs/pricing)이 적용됩니다. 무료 등급의 입력·출력 데이터 취급 조건은 유료 서비스와 다를 수 있으므로 실제 개인정보를 입력하지 않아야 합니다.
 
-약관 확인일: 2026-09-06. Google의 생성물 소유권 비주장은 독점적 저작권이나 비침해 보장이 아닙니다. 공모전의 AI 사용·표기 조건은 별도로 확인합니다. 현재 약관에는 API 이용자 및 API 클라이언트의 대상 연령, 서비스 지역 제한이 있으므로 청소년 대상 또는 일반 공개 시연의 적합성을 출품 전에 확인해야 합니다. 유료 프로젝트의 사용량 제한이 추가 과금 면제를 뜻하지는 않으며, 결제 조건과 앱의 D1 요청 예산은 별개입니다.
+기존 문서의 약관 확인 기록: 2026-09-06. 이번 정리에서 최신 약관을 재검증하지 않았습니다. 생성물 권리, 대상 연령·지역, 입력·출력 데이터 취급과 공모전 AI 표기는 실제 사용·제출 전에 확인해야 합니다. 서비스의 생성물 소유권 비주장을 독점적 저작권·비침해 보장으로 해석하지 않습니다. 결제 조건과 앱의 D1 요청 예산은 별개입니다.
 
 ## 주요 웹 애플리케이션 의존성
 
 | 구성 요소 | 현재 선언 버전 | 라이선스 | 공식 정보 |
 | --- | ---: | --- | --- |
 | React / React DOM | 19.2.8 | MIT License | [React 라이선스](https://github.com/facebook/react/blob/main/LICENSE) |
-| Next.js | 16.2.11 | MIT License | [Next.js 라이선스](https://github.com/vercel/next.js/blob/canary/license.md) |
+| Next.js | 16.3.3 | MIT License | [Next.js 라이선스](https://github.com/vercel/next.js/blob/canary/license.md) |
 | Vinext | 1.0.0-beta.3 | MIT License | [Vinext 공식 저장소](https://github.com/cloudflare/vinext) |
 | Vite | 8.0.16 | MIT License | [Vite 라이선스](https://github.com/vitejs/vite/blob/main/LICENSE) |
 | Tailwind CSS | 4.2.1 | MIT License | [Tailwind CSS 공식 저장소](https://github.com/tailwindlabs/tailwindcss) |
@@ -38,13 +38,24 @@
 | phone-wallpaper.png | 잠금·홈 배경 |
 | phone-app-icons.png | 4×3 앱 아이콘 스프라이트 |
 
-기존 제작 메모는 특정 게임의 지도·캐릭터·상표를 복제하지 않고 1990년대 휴대용 게임기의 해상도·팔레트·픽셀 표현을 참고했으며, 제3자 에셋 팩이나 실제 금융기관 로고를 사용하지 않았다고 기록했습니다. 이는 제작 메모의 보존이며 별도 권리 감사 완료를 뜻하지 않습니다. 현재 사용 여부·생성 도구·당시 약관·수정 내역은 출품 전 확인해야 합니다. 자체 자료의 조건은 LICENSE.md를 따릅니다. 이번 문서 통합에서는 이미지 파일을 삭제하지 않습니다.
+기존 제작 메모는 특정 게임의 지도·캐릭터·상표를 복제하지 않고 1990년대 휴대용 게임기의 해상도·팔레트·픽셀 표현을 참고했으며, 제3자 에셋 팩이나 실제 금융기관 로고를 사용하지 않았다고 기록했습니다. 이는 제작 메모의 보존이며 별도 권리 감사 완료를 뜻하지 않습니다. 현재 app·scripts·콘텐츠에는 위 픽셀 경로의 런타임 참조가 없습니다. 다만 public 파일은 배포에 포함될 수 있으므로 출처 기록과 파일을 보존합니다. 생성 도구·당시 약관·수정 내역은 확인이 필요합니다.
+
+### 현재 공유 이미지와 음원
+
+| 대상 | 현재 근거 | 확인할 사항 |
+| --- | --- | --- |
+| `public/committee-thumbnail.svg`, `committee-og.png`, `og.png`, `screenshot.jpeg` | 배포 소스 `7aadfed`의 사기방지위원회 공유 자산과 생성 스크립트 재사용. 실제 플레이 캡처가 아닌 홍보용 그래픽 | 원본 제작·이용 조건 증빙 |
+| 음악·효과음 | `app/story/use-game-audio.ts`, `public/audio/main-ost.wav`를 공개 데모 소스로 반영 | 음원 원본의 권리·공개 배포·출품 허락 범위. 제공 사실만으로 허락 완료를 단정하지 않음 |
+
+메인 OST는 사용자가 제공한 `The Waiting Line.wav`를 웹 배포용으로 리샘플링한 파일로 기록되어 있습니다. 원본 SHA-256은 `5473AFA924CE3EE34B78C22C11560DAA5E98265EE072CC7A9D783A6DBDFC41C6`, 배포본은 `05CD8A12D1BFA26B8277A23ECDE310DD3DEB38C13C48FB9476F561CB237E132D`입니다. 효과음은 Web Audio 오실레이터 합성이며 외부 샘플 파일을 포함하지 않습니다. 음원의 권리는 원 권리자에게 남으며 이용 허락 증빙은 별도로 보관해야 합니다.
+
+배포본의 출처 기록은 [배포 소스 문서](https://github.com/hoyhoy1227/whatfraud/blob/7aadfedae6a9cb83f7792a74d93d0c5b083d8f3b/THIRD_PARTY_NOTICES.md)에서 확인합니다. 라이선스 조건은 [LICENSE](LICENSE.md), 제출 증빙은 [CONTEST_SUBMISSION](CONTEST_SUBMISSION.md)에서 관리합니다.
 
 ## 프로젝트 자료와 제3자 자료의 관계
 
-- WhatFraud가 직접 작성한 코드와 콘텐츠에는 [LICENSE.md](LICENSE.md)가 적용됩니다.
+- 사기방지위원회의 자체 코드와 콘텐츠에는 [LICENSE.md](LICENSE.md)가 적용됩니다.
 - 제3자 구성 요소는 각 구성 요소의 원래 라이선스에 따라 사용할 수 있습니다.
-- 제3자 오픈 소스 라이선스가 WhatFraud 자체 콘텐츠의 별도 사용 권한을 부여하는 것은 아닙니다.
+- 제3자 오픈 소스 라이선스가 사기방지위원회 자체 콘텐츠의 별도 사용 권한을 부여하는 것은 아닙니다.
 - 저장소에는 AI 모델 가중치, 실제 금융기관의 상표·로고 또는 실존 피해자의 개인정보가 포함되지 않습니다.
 
 이 문서는 편의를 위한 정보이며 법률 자문이 아닙니다. 배포 방식이나 상업적 이용 범위에 따라 추가 의무가 생길 수 있습니다.

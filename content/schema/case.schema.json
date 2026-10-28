@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://whatfraud.invalid/schema/case.schema.json",
-  "title": "WhatFraud scenario case",
+  "title": "사기방지위원회 시나리오 사건",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -302,7 +302,7 @@
         "evidence": {
           "type": "array",
           "minItems": 3,
-          "maxItems": 5,
+          "maxItems": 10,
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -336,6 +336,69 @@
               },
               "key": {
                 "type": "boolean"
+              },
+              "type": {
+                "type": "string",
+                "minLength": 1,
+                "enum": [
+                  "investment-report",
+                  "success-story",
+                  "withdrawal-notice",
+                  "recovery-intake",
+                  "fee-request",
+                  "identity-request",
+                  "official-guidance",
+                  "bank-ledger",
+                  "contact-history"
+                ]
+              },
+              "content": {
+                "type": "string",
+                "minLength": 1
+              },
+              "claimedFact": {
+                "type": "string",
+                "minLength": 1
+              },
+              "provenance": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sourceType": {
+                "type": "string",
+                "minLength": 1,
+                "enum": [
+                  "sender-attachment",
+                  "sender-message",
+                  "independent-record",
+                  "player-record"
+                ]
+              },
+              "availableAt": {
+                "type": "string",
+                "minLength": 1
+              },
+              "missingInfo": {
+                "type": "string",
+                "minLength": 1
+              },
+              "claimIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "redFlags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "independentCheck": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               }
             }
           }

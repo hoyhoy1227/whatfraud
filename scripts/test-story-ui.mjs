@@ -4,15 +4,23 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import ts from 'typescript';
 import * as engine from '../app/story/engine.js';
+import * as presentation from '../app/story/presentation.js';
 let source=await readFile('app/story/panels.tsx','utf8');
+const reportSource=(await readFile('app/story/analysis-report.tsx','utf8')).replace("'./response-report.js'",JSON.stringify(new URL('../app/story/response-report.js',import.meta.url).href)).replace("'./engine'",JSON.stringify(new URL('../app/story/engine.js',import.meta.url).href));
+const reportJs=ts.transpileModule(reportSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime')));
+source=source.replace("'./analysis-report'",JSON.stringify('data:text/javascript;base64,'+Buffer.from(reportJs).toString('base64')));
 source=source.replace("from './context'","from "+JSON.stringify(new URL('../app/story/context.js',import.meta.url).href));
 source=source.replace("from './one-shot'","from "+JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
+source=source.replace("from './decision-message'","from "+JSON.stringify(new URL('../app/story/decision-message.js',import.meta.url).href));
 source=source.replace("from './engine'","from "+JSON.stringify(new URL('../app/story/engine.js',import.meta.url).href));
 const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime')));
 const ui=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
 const noop=()=>{};
 let state=engine.createRun();
-const step=(type,data='')=>{state=engine.transition(state,{type,data,chapter:state.chapter});};
+const step=(type,data='')=>{
+ if(type==='next'&&state.chapter===0){state=engine.transition(state,{type:'message',data:'friend:skip',chapter:0});state=engine.transition(state,{type:'message-close',data:'friend',chapter:0});}
+ state=engine.transition(state,{type,data,chapter:state.chapter});
+};
 let ledger=renderToStaticMarkup(createElement(ui.Ledger,{state}));
 assert.ok(ledger.includes('680,000원')&&ledger.includes('출금된 거래가 없습니다'));
 step('advance');step('confirm','familiar-request:main');
@@ -21,46 +29,31 @@ assert.ok(ledger.includes('600,000원')&&ledger.includes('한별 서비스'));
 step('resolve','stopped');step('next');step('resolve','paused');step('next');step('resolve','paused');step('next');
 const rewind=renderToStaticMarkup(createElement(ui.Rewind,{state,onReplay:noop,onRestart:noop}));
 assert.ok(rewind.includes('멈춰 세운 하루')&&rewind.includes('80,000원')&&rewind.includes('선택 직전'));
-assert.ok(rewind.includes('게임이 종료되었습니다')&&rewind.includes('나의 사기 대응 리포트')&&rewind.includes('잘한 점')&&rewind.includes('다음에 조심할 사기 수법'));
-const review=ui.buildPlayerReview(state);
-assert.ok(review.strengths.length>0&&review.risks.some(item=>item.title==='피해 회복 사기'));
 assert.ok(rewind.includes('지나친 단서')&&!rewind.includes('정답률'));
+assert.ok(rewind.includes('사기방지위원회에서 진행한 사기 대응 분석 테스트였습니다'));
+assert.ok(rewind.includes('실제 공공기관의 검사')&&rewind.includes('경찰청 · 사이버범죄 신고 절차'));
+assert.equal((rewind.match(/class="report-case"/g)||[]).length,3);
 const client=await readFile('app/story/story-client.tsx','utf8');
-for(const label of ['저장된 번호로 확인하기','이 계정과의 대화 보기','출금 요청','보관한 자료로 접수','메모에 보관','보내기','일단 보류하기','이 계정 차단하기','최근 앱','일시정지','움직임 줄이기','글자 크게'])assert.ok(client.includes(label),label);
-assert.ok(!client.includes('확인 요청을 보냈습니다. 아직 답장이 없습니다.'));
-assert.ok(!client.includes('확인 요청에 답이 없습니다.'));
-assert.ok(!client.includes("act('call','current')"),'opening an unverified account must not invent an outgoing message');
-assert.ok(client.indexOf('혹시 다른 계정으로 결제를 부탁했어?')<client.indexOf('<ChatBubbles speaker="준호" text={junhoReply}/>'),'the sent verification message precedes Junho’s reply');
+for(const label of ['준호에게 메시지 보내기','송금 안내','보관한 자료로 접수','메모에 보관','보내기','일단 보류하기','이 계정 차단하기','최근 앱','일시정지','움직임 줄이기','글자 크게'])assert.ok(client.includes(label),label);
 assert.ok(client.includes('showModal()')&&client.includes('onCancel='));
-assert.ok(client.includes("window.addEventListener('resize',update)")&&client.includes("window.removeEventListener('resize',update)"),'mobile viewport fallback is installed and cleaned up');
 const messageClient=await readFile('app/story/story-message.tsx','utf8');
 assert.ok(messageClient.includes('signal:aborter.signal')&&client.includes('practiceOriginal'));
 assert.ok(!/href=|tel:|mailto:|window.open|location.href/.test(client),'no external action escapes phone');
 assert.equal((rewind.match(/class="pivot"/g)||[]).length,3,'one summary per act');
 assert.ok(rewind.includes('이 순간으로 돌아가기')&&rewind.includes('pivot-details'));
 assert.ok(client.includes('message-dock')&&client.includes('보류·차단')&&client.includes("dialog==='reply'"));
-assert.ok(client.includes('conversationEndText(state)')&&client.includes('<p className="system-message">{conversationEndText(state)}</p>'),'every loss branch renders the shared no-more-replies notice');
 assert.ok(!client.includes('내용 확인하기'),'record titles are the affordance');
-assert.ok(client.includes("browserPage==='platform'?e.id==='success-post'"),'official records stay outside fake platform');
+assert.ok(client.includes("browserPage==='platform'?['success-post'].includes(e.id)"),'official records stay outside fake platform');
 console.log('Story UI SSR tests passed: ledger, endings, pivot labels and controls. Browser/device QA is separate.');
 
 assert.ok(messageClient.includes('자유답변(개인정보는 입력하지 마세요)'));
 assert.ok(client.includes("dialog==='ai-choice'")&&client.includes('준비된 답장으로 시작'));
 assert.ok(client.includes('scheduleMessage')&&client.includes('visibleCount')&&client.includes('대화 바로 보기'));
-assert.ok(client.includes('conversationTranscript(state,[],resolved?Infinity:visibleCount)'),'all authored stages form one continuous messenger transcript');
-assert.ok(!client.includes('setChats')&&!client.includes('AiChatMessage'),'the scenario room cannot retain or insert free-form AI chat');
-assert.ok(client.includes("showSender={i===0||visibleMessages[i-1].speaker!==m.speaker}"),'sender grouping continues across stage boundaries');
-assert.equal((client.match(/<section className="chat-stage">/g)||[]).length,1,'stage changes do not create a new chat section');
 assert.ok(messageClient.includes("inputMode:'story-message'")&&messageClient.includes('준비된 메시지'),'free failures are explicit');
 const {scheduleMessage,messageDelay}=await import('../app/story/message-pacing.js');
 assert.ok(messageDelay('짧은 메시지')>=650);
 assert.ok(messageDelay('긴 메시지'.repeat(100))<=1600);
 assert.equal(messageDelay('문장',true),0);
-const {currentThreadReceipt}=await import('../app/story/presentation.js');
-assert.equal(currentThreadReceipt('arrival',0,false,3),'current:arrival:0','a queued message is not marked as read before delivery');
-assert.equal(currentThreadReceipt('arrival',1,false,3),'current:arrival:1');
-assert.equal(currentThreadReceipt('arrival',9,false,3),'current:arrival:3','receipt cannot exceed the transcript');
-assert.equal(currentThreadReceipt('arrival',0,true,3),'current:arrival:3','resolved threads expose the complete transcript');
 let callback,delivered=0,cleared=false;
 const cancel=scheduleMessage('문장',false,()=>delivered++,fn=>{callback=fn;return 1;},()=>{cleared=true;});
 cancel();callback();assert.equal(delivered,0);assert.equal(cleared,true);
@@ -80,9 +73,7 @@ assert.ok(!comparison.includes('이용 화면에서 출금 요청을 하는 방�
 advance('confirm','paper-profit:extra');
 comparison=renderToStaticMarkup(createElement(ui.RecordComparison,{state:investment}));
 assert.ok(comparison.includes('420,000원'));
-assert.ok(client.includes('messageWindow')&&client.includes('conversationTranscript'));
-assert.ok(client.includes("thread==='current'?':'+state.stage:''"),'current chat scroll restoration follows stage changes');
-assert.ok(client.includes('useLayoutEffect')&&client.includes("previous.key!==scrollKey"),'stage changes restore the latest-message position before paint');
+assert.ok(client.includes('messageWindow')&&client.includes('conversationTimeline'));
 assert.ok(!client.includes('activeCase.dialogue?.quickQuestions.map'),'reply choices are scene-bound');
 
 const n=await import('../app/story/narrative.js');
@@ -95,15 +86,53 @@ for(const known of [false,true]){
 const statusHtml=renderToStaticMarkup(createElement(ui.PhoneStatus,{time:'09:10'}));
 assert.ok(statusHtml.includes('wifi-icon')&&statusHtml.includes('battery-icon'));
 assert.ok(!statusHtml.includes('가상 체험')&&!statusHtml.includes('▂▄▆'));
-for(let step=0;step<4;step++)assert.ok(renderToStaticMarkup(createElement(ui.Closing,{state,step,onNext:noop,onSkip:noop})).includes(['마지막 대화','생활 계좌','준호','휴대폰을 잠갔다'][step]));
+for(let step=0;step<4;step++)assert.ok(renderToStaticMarkup(createElement(ui.Closing,{state,step,onNext:noop,onSkip:noop})).includes(['마지막 대화','생활 계좌','지금까지의 정리','휴대폰을 잠갔다'][step]));
+assert.ok(!renderToStaticMarkup(createElement(ui.Closing,{state,step:2,onNext:noop,onSkip:noop})).includes('준호'));
+assert.ok(client.includes('지금까지 내용 정리하고 종료하기'));
+assert.ok(!client.includes('준호에게 오늘 일을 말하기'));
 assert.ok(client.includes('StoryMessage')&&client.includes('visualViewport')&&client.includes('openProfile'));
 assert.ok(!client.slice(client.indexOf("dialog==='reply'?")).includes('<textarea'));
 
-let messageSource=messageClient.replace("from './presentation'","from "+JSON.stringify(new URL('../app/story/presentation.js',import.meta.url).href)).replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './one-shot'","from "+JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
+let messageSource=messageClient.replace("from './engine'","from "+JSON.stringify(new URL('../app/story/engine.js',import.meta.url).href)).replace("from './presentation'","from "+JSON.stringify(new URL('../app/story/presentation.js',import.meta.url).href)).replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './one-shot'","from "+JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
 const bubbleJs=ts.transpileModule(await readFile('app/story/chat-bubbles.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime')));
+const pickerSource=(await readFile('app/story/attachment-picker.tsx','utf8')).replace("'./one-shot'",JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
+const pickerJs=ts.transpileModule(pickerSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime'))).replace("from 'react'","from "+JSON.stringify(import.meta.resolve('react')));
+messageSource=messageSource.replace("'./attachment-picker'",JSON.stringify('data:text/javascript;base64,'+Buffer.from(pickerJs).toString('base64')));
 messageSource=messageSource.replace("from './chat-bubbles'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(bubbleJs).toString('base64')));
 const compiled=ts.transpileModule(messageSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime'))).replace("from 'react'","from "+JSON.stringify(import.meta.resolve('react')));
 const Message=(await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'))).default;
+// Exercise actual send/prepared handlers with mocked hooks and fetch, no browser
+// or live API. Functional memory patches must observe the latest appended user.
+const hooksUrl='data:text/javascript;base64,'+Buffer.from('export const useEffect=()=>{}; export const useRef=value=>({current:value}); export const useState=value=>[value,()=>{}];').toString('base64');
+const MockMessage=(await import('data:text/javascript;base64,'+Buffer.from(compiled.replace('from '+JSON.stringify(import.meta.resolve('react')),'from '+JSON.stringify(hooksUrl))).toString('base64'))).default;
+function elements(node){return Array.isArray(node)?node.flatMap(elements):node&&typeof node==='object'?[node,...elements(node.props?.children)]:[];}
+const originalFetch=globalThis.fetch;
+try{
+ for(const failed of [false,true]){
+  let run=investment,mem={...presentation.emptyMessageMemory(),draft:'입금 전 안내를 확인할게요.'},calls=0;
+  const props=()=>({state:run,memory:mem,scene:'peer',aiAllowed:true,getSession:()=> 'mock-session',remaining:1,practice:false,reduced:true,paused:false,onEvent:(type,data)=>{const next=engine.transition(run,{type,data,chapter:run.chapter});if(next===run)return false;run=next;return true;},onMemory:patch=>{mem={...mem,...(typeof patch==='function'?patch(mem):patch)};},onBack:noop,onContinue:noop,onProfile:noop});
+  globalThis.fetch=async()=>{calls++;if(failed)throw new DOMException('cancelled','AbortError');return Response.json({provider:'gemini',reply:'저도 아직 결정하지 않았어요. 안내부터 같이 볼게요.',reaction:'check',supportMode:'cautious',focus:'none'});};
+  const form=elements(MockMessage(props())).find(node=>node.type==='form');
+  assert.ok(form);
+  await form.props.onSubmit({preventDefault:noop});
+  assert.equal(calls,1);
+  assert.ok(run.events.some(event=>event.data==='peer:attempt'));
+  assert.equal(JSON.stringify(run.events).includes('입금 전 안내를 확인할게요'),false,'raw player input never enters durable events');
+  assert.equal(mem.transcript[0].text,'입금 전 안내를 확인할게요.');
+  if(failed){
+   assert.equal(mem.transcript.length,1,'failed request keeps its sent message');
+   const tree=MockMessage(props());
+   assert.equal(elements(tree).some(node=>node.type==='form'),false,'attempt prevents retry');
+   const button=elements(tree).find(node=>node.type==='button'&&node.props.children==='확신할 근거는 없지만 걱정돼요. 보내기 전에 더 확인해 봐요.');
+   assert.ok(button);button.props.onClick();
+   assert.equal(calls,1,'prepared continuation makes no additional API request');
+   assert.deepEqual(mem.transcript.map(entry=>entry.speaker),['나','나','지수']);
+  }else{
+   assert.deepEqual(mem.transcript.map(entry=>entry.speaker),['나','지수']);
+   assert.equal(mem.transcript[1].text,'저도 아직 결정하지 않았어요. 안내부터 같이 볼게요.');
+  }
+ }
+}finally{globalThis.fetch=originalFetch;}
 for(const aiAllowed of [false,true]){
  const html=renderToStaticMarkup(createElement(Message,{state:investment,scene:'peer',aiAllowed,getSession:()=> 'test-ui-session-0001',remaining:2,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
  assert.ok(html.includes('지수')&&html.includes('준비된 메시지로 보내기'));
@@ -112,22 +141,65 @@ for(const aiAllowed of [false,true]){
 }
 console.log('One-shot message SSR passed: input opt-in, prepared alternative, profile and story context.');
 
-let late=engine.createRun('demo');
-for(const [type,data] of [['resolve','paused'],['message','friend:together'],['next','']])late=engine.transition(late,{type,data,chapter:late.chapter});
+let late=engine.createRun();
+for(const [type,data] of [['resolve','paused'],['message','friend:together']])late=engine.transition(late,{type,data,chapter:late.chapter});
 const lateHtml=renderToStaticMarkup(createElement(Message,{state:late,scene:'friend',aiAllowed:true,getSession:()=> 'test-ui-session-0001',remaining:1,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
-assert.ok(lateHtml.includes('연락 내용 보기')&&lateHtml.includes('내 연락으로 돌아가기'));
+assert.ok(lateHtml.includes('연락 내용 보기')&&lateHtml.includes('이 사건 마무리하기'));
 assert.ok(!lateHtml.includes('<textarea'),'history permits call, not another generation');
 const restoredHtml=renderToStaticMarkup(createElement(Message,{state:investment,scene:'peer',memory:{draft:'작성 중인 문장',sent:'첫 메시지',reply:'받은 답장',attachment:'none',sentAttachment:'none',preparedSent:'준비된 후속 메시지',callStep:0},aiAllowed:true,getSession:()=> 'test-ui-session-0001',remaining:1,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
 for(const line of ['작성 중인 문장','첫 메시지','받은 답장','준비된 후속 메시지'])assert.ok(restoredHtml.includes(line));
+assert.ok(restoredHtml.indexOf('첫 메시지')<restoredHtml.indexOf('받은 답장')&&restoredHtml.indexOf('받은 답장')<restoredHtml.indexOf('준비된 후속 메시지'),'legacy message slots migrate in chronological order');
+const transcriptHtml=renderToStaticMarkup(createElement(Message,{state:investment,scene:'peer',memory:{...presentation.emptyMessageMemory(),transcript:[{id:'ai-user',speaker:'나',text:'AI 채팅 내용'},{id:'ai-reply',speaker:'지수',text:'AI 답변'},{id:'follow-user',speaker:'나',text:'송금 후 후속 메시지',attachment:'terms-note'},{id:'follow-reply',speaker:'지수',text:'후속 답변'}]},aiAllowed:true,getSession:()=> 'test-ui-session-0001',remaining:1,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
+const transcriptOrder=['AI 채팅 내용','AI 답변','송금 후 후속 메시지','후속 답변'].map(text=>transcriptHtml.indexOf(text));
+assert.ok(transcriptOrder.every((position,index)=>position>=0&&(index===0||position>transcriptOrder[index-1])),'transcript renders only in occurrence order');
 assert.ok(client.includes("act('message-followup','peer:checked-bank')"));
 console.log('Deferred call and in-memory transcript SSR passed.');
+
+// Remounting the decision composer after navigation must retain the transcript,
+// including at later stages; a reload intentionally receives empty memory.
+let decisionSource=await readFile('app/story/decision-composer.tsx','utf8');
+for(const name of ['decision-message','one-shot','narrative'])decisionSource=decisionSource.replace("from './"+name+"'","from "+JSON.stringify(new URL('../app/story/'+name+'.js',import.meta.url).href));
+decisionSource=decisionSource.replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './chat-bubbles'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(bubbleJs).toString('base64'))).replace("from './attachment-picker'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(pickerJs).toString('base64')));
+const decisionJs=ts.transpileModule(decisionSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime'))).replace("from 'react'","from "+JSON.stringify(import.meta.resolve('react')));
+const decisionUi=await import('data:text/javascript;base64,'+Buffer.from(decisionJs).toString('base64'));
+// Render the same boundary predicate as the main chat, across a transfer and
+// two later authored replies. The model exchange must not remain at the tail.
+const anchoredMemory={...decisionUi.emptyDecisionMemory(),sent:'AI 질문 원문',reply:'AI 응답 원문',anchor:{stage:'offer',after:1}};
+const stages=[{id:'offer',lines:[{speaker:'운영자',text:'참여 전 안내'},{speaker:'나',text:'추가 확인 질문'}]},{id:'paid',lines:[{speaker:'나',text:'송금 후 질문'},{speaker:'운영자',text:'송금 후 답변'},{speaker:'나',text:'두 번째 질문'},{speaker:'운영자',text:'두 번째 답변'}]}];
+const renderedStages=stages.flatMap(({id,lines})=>lines.flatMap((line,index)=>[
+ createElement('p',{key:id+index},line.text),
+ ...(presentation.historyAt(anchoredMemory.anchor,id,index+1,lines.length)?[createElement(decisionUi.DecisionHistory,{key:id+'-ai',memory:anchoredMemory,chapter:1})]:[])
+]));
+const anchoredHtml=renderToStaticMarkup(createElement('section',null,...renderedStages));
+const anchoredOrder=['참여 전 안내','AI 질문 원문','AI 응답 원문','추가 확인 질문','송금 후 질문','송금 후 답변','두 번째 질문','두 번째 답변'].map(text=>anchoredHtml.indexOf(text));
+assert.ok(anchoredOrder.every((position,index)=>position>=0&&(index===0||position>anchoredOrder[index-1])));
+assert.ok(client.includes('decisionHistoryAt(id,i+1,lines.length)')&&client.includes('<DecisionComposer historyElsewhere'),'main renderer uses stage anchors, not a trailing duplicate');
+assert.equal(presentation.historyAt({stage:'offer',after:2},'paid',2,2),false);
+assert.equal(presentation.historyAt({stage:'offer',after:2},'offer',1,3),false,'late replies do not reuse an earlier send boundary');
+assert.equal(presentation.historyAt({stage:'offer',after:2},'offer',2,3),true);
+const memory={...decisionUi.emptyDecisionMemory(),sent:'받는 이름을 확인할게.',reply:'받는 이름이 달라서 확인하려는 거구나.'};
+for(const stage of ['request','waiting','paid']){
+ const run={...engine.createRun(),stage};
+ const props={state:run,memory,onMemory:noop,enabled:false,remaining:0,blocked:false,getSession:()=>'',onEvent:()=>false};
+ const first=renderToStaticMarkup(createElement(decisionUi.default,props));
+ const remounted=renderToStaticMarkup(createElement(decisionUi.default,props));
+ assert.equal(first,remounted);
+ assert.ok(remounted.includes(memory.sent)&&remounted.includes(memory.reply));
+ assert.ok(!renderToStaticMarkup(createElement(decisionUi.default,{...props,memory:decisionUi.emptyDecisionMemory()})).includes(memory.reply));
+}
+const {dinnerContext}=await import('../app/story/context.js');
+for(const [mode,focus,expected] of [['listen','none','조언보다 들어'],['verify','contact','함께 확인']]){
+ let run=engine.createRun();
+ for(const [type,data] of [['resolve','paused'],['message','friend:together'],['message-style','friend:'+mode+':'+focus]])run=engine.transition(run,{type,data,chapter:0});
+ assert.ok(dinnerContext({...run,chapter:2}).includes(expected),'current saves preserve dinner choice');
+}
 
 assert.ok(!messageClient.includes('음성 통화')&&!messageClient.includes('계속 듣기'));
 assert.ok(messageClient.includes('연락 요약')&&client.includes('연락 요약 보기'));
 
 for(const [mode,focus] of [['records','records'],['listen','none']]){
- let branch=engine.createRun('demo');
- for(const [type,data] of [['resolve','paused'],['message','friend:together'],['message-style','friend:'+mode+':'+focus],['message-followup','friend:call']])branch=engine.transition(branch,{type,data,chapter:1});
+ let branch=engine.createRun();
+ for(const [type,data] of [['resolve','paused'],['message','friend:together'],['message-style','friend:'+mode+':'+focus],['message-followup','friend:call']])branch=engine.transition(branch,{type,data,chapter:0});
  const html=renderToStaticMarkup(createElement(Message,{state:branch,scene:'friend',memory:{draft:'',sent:'',reply:'',attachment:'none',sentAttachment:'none',preparedSent:'',callStep:4},aiAllowed:false,getSession:()=>'',remaining:0,practice:false,reduced:true,paused:false,onEvent:()=>true,onBack:noop,onContinue:noop,onProfile:noop}));
  assert.ok(html.includes(mode==='listen'?'지금 다 설명':'화면에 적힌 금액'));
  if(mode==='listen')assert.ok(!html.includes('은행에서 실제로'));
@@ -149,17 +221,18 @@ interlude=engine.transition(interlude,{type:'next',data:'',chapter:1});
 for(const page of [0,1]){
  const html=renderToStaticMarkup(createElement(ui.ChapterScene,{state:interlude,page,onNext:noop,onContinue:noop}));
  assert.ok(html.includes(page===0?'약속은 그대로였다':'귀갓길에 도착한 연락'));
- assert.equal(html.includes('장면 건너뛰기'),page===0);
+ assert.equal(html.includes('장면 건너뛰기'),false);
+ assert.equal(html.includes('계속 진행'),page===0);
 }
 assert.ok(client.includes("setDialog(resume&&mainSaved.current?.completed?null:'chapter')"));
-assert.ok(client.includes("if(state.chapter<2){setChapterPage(0);setChapterResume(false);setDialog('chapter');}"));
+assert.ok(client.includes("if(current.chapter<2){setChapterResume(false);setDialog('chapter');}"));
 for(const label of ['점심시간으로','지금까지의 하루','도착한 새 연락 보기'])assert.ok(client.includes(label));
 console.log('Context SSR passed: entry, demo, resume, bridge skip, new-contact affordance.');
 
 const narrativeSource=await readFile('app/story/narrative.js','utf8');
 assert.ok(!narrativeSource.includes('상태에 저녁 약속')&&!narrativeSource.includes('공개된 상태 메시지에'));
 assert.ok(narrativeSource.includes('휴대폰 화면·상태·캘린더·다른 대화는 볼 수 없다'));
-assert.ok(narrativeSource.includes('그거보다 부탁 하나만 물어보려고.'));
+assert.ok(narrativeSource.includes('잠깐 부탁할 게 있어서 연락했어.'));
 for(const unread of [false,true]){
  const row=renderToStaticMarkup(createElement(ui.ConversationRow,{name:'준호',initial:'준',preview:'약속 확인',detail:'저장된 연락처',unread,onOpen:noop}));
  assert.ok(row.includes('conversation-row')&&row.includes('약속 확인'));
@@ -169,10 +242,22 @@ const embedded=renderToStaticMarkup(createElement(Message,{embedded:true,state:i
 assert.ok(!embedded.includes('chat-back')&&!embedded.includes('chat-profile'),'parent owns the single chat header');
 assert.ok(client.includes("openApp(a,a==='messages'?'list':'current')"),'app icon opens inbox');
 assert.ok(client.includes("if(app==='messages'&&thread!=='list')openApp('messages','list')"),'all chat threads return to inbox');
-assert.ok(client.includes("if(next==='messages'&&conversation!=='list')act('read',conversation)"),'opening inbox does not read a chat');
+assert.ok(client.includes("if(next==='messages'&&conversation!=='list')act('read',receiptFor(conversation))"),'opening a thread records its exact receipt');
+const messageScrollerAt=client.indexOf("<div className={'screen-scroll app-'");
+assert.ok(client.indexOf("thread!=='list'&&thread!=='jisu'&&peerInvitationUnread")<messageScrollerAt,'other-thread notification is rendered above the scrollable conversation');
+assert.ok(client.indexOf('new-message-pill message-alert-top')<messageScrollerAt,'same-thread new-message control is rendered above the scrollable conversation');
+assert.ok(client.includes("!state.read.includes(state.chapter+':'+peerReceipt)"),'opened peer notification stays dismissed through its exact read receipt');
+assert.ok(!client.includes('notification peer-invitation'),'other-thread notification is not injected at the bottom of the active conversation');
 assert.equal((client.match(/onClick={phoneBack}/g)||[]).length,2,'header and system back agree');
 assert.ok(!client.includes("onClick={()=>setThread("),'navigation preserves per-thread scroll through openApp');
 assert.ok(client.includes('이전 약속 대화 보기'),'unified friend row retains older history');
+const audioSource=await readFile('app/story/use-game-audio.ts','utf8');
+const ost=await readFile('public/audio/main-ost.wav');
+assert.equal(ost.toString('ascii',0,4),'RIFF');
+assert.equal(ost.toString('ascii',8,12),'WAVE');
+assert.ok(ost.length>1_000_000&&audioSource.includes("new Audio('/audio/main-ost.wav')"),'main OST is packaged and wired');
+for(const effect of ['tap','message','transfer','result'])assert.ok(audioSource.includes(effect));
+assert.ok(client.includes('음악 <output>')&&client.includes('효과음 <output>')&&client.includes("onIncoming={()=>playEffect('message')}"));
 console.log('Messenger SSR passed: bounded character knowledge, unified header, inbox rows and consistent back navigation.');
 
 const parts=n.messageParts([{speaker:'지수',text:'첫 문장. 다음 문장?'}]);
@@ -182,11 +267,12 @@ assert.equal(parts[1].lastPart,true);
 assert.equal(parts[1].sourceText,'첫 문장. 다음 문장?');
 assert.equal(n.messagePreview(parts.slice(0,1)),'첫 문장.');
 assert.equal(n.messagePreview([{speaker:'나',text:'확인할게.'}]),'나: 확인할게.');
-const presentation=await import('../app/story/presentation.js');
 const oneShot=await import('../app/story/one-shot.js');
 assert.ok(!oneShot.peerOpening('offer').includes('추가 비용 설명'));
 assert.ok(oneShot.peerOpening('withdrawal').includes('추가 비용 설명'));
 assert.ok(oneShot.storyPrompt('peer','none',2,'offer').includes(oneShot.peerOpening('offer')));
+assert.deepEqual(oneShot.storyContextFor(investment,'peer'),['peer-joined-room','peer-offer-seen','peer-main-transfer','peer-withdrawal-requested','peer-extra-transfer']);
+assert.ok(oneShot.storyPrompt('peer','none',2,'extra-paid',oneShot.storyContextText(oneShot.storyContextFor(investment,'peer'))).includes('투자 참여금 300,000원을 가상 송금했다'));
 const draftMemory={...presentation.emptyMessageMemory(),draft:'작성 중'};
 assert.equal(presentation.threadReceipt(engine.createRun('demo'),'peer',draftMemory),presentation.threadReceipt(engine.createRun('demo'),'peer'));
 assert.equal(presentation.threadPreview(engine.createRun('demo'),'peer',draftMemory),presentation.messageOpening(engine.createRun('demo'),'peer'));
