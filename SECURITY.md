@@ -19,6 +19,8 @@
 
 상세 운영·복구·잔여 작업은 [OPERATIONS.md](OPERATIONS.md)를 따릅니다.
 
+2026-10-28 공개 소스 정리의 [CI 의존성 감사](https://github.com/hoyhoy1227/whatfraud/actions/runs/40703626921)는 기존 고정 패키지의 미보완 경고로 실패했습니다. 아래 image-size 자체 패치가 다른 패키지 경고까지 해결하는 것은 아닙니다. 검증 결과는 [운영 기록](OPERATIONS.md#공개-기준-정리-검증-기록), 보안 갱신 과제는 [ROADMAP](ROADMAP.md)에서 관리합니다.
+
 ## image-size의 한시적 소스 패치
 
 프로젝트는 image-size 2.0.2의 ICNS와 JXL/HEIF 무한 반복 취약점(GHSA-w3rx-r6r6-pgpr, GHSA-5p2g-fcmc-qvqq)에 대한 pnpm 자체 패치를 유지하고 있습니다. 모든 CJS/ESM 배포 사본의 박스·엔트리 크기가 최소 8바이트이고 입력 범위를 넘지 않도록 검사합니다. 모호한 0길이 박스는 거부하며 PNG 동작을 회귀 검증합니다. 공식 수정 버전의 현재 제공 여부는 의존성 갱신 시 확인해야 합니다.

@@ -37,6 +37,24 @@ pnpm dev
 
 AI 실호출과 브라우저·실기기 검수는 위 자동 검사와 별개입니다.
 
+## 공개 기준 정리 검증 기록
+
+2026-10-28, 공개 v76 소스를 반영한 커밋 `900ac76`의 [GitHub Validate game 실행](https://github.com/hoyhoy1227/whatfraud/actions/runs/40703626921)을 확인했습니다.
+
+| 검사 | 결과 |
+| --- | --- |
+| 고정 lockfile 설치·Drizzle 생성/diff·추적 파일 보안 검사 | GitHub CI 통과 |
+| 진행·첨부·결정 메시지·대화 순서·보고서·모의 AI·공용 예산 | GitHub CI 통과 |
+| 콘텐츠·대사·lint·타입·프로덕션 빌드 | 로컬 및 GitHub CI 통과 |
+| 증거 메모 검사·UTF-8·문서 내부 링크 | 로컬 통과 |
+| 의존성 감사 | GitHub CI 실패: 미보완 경고 항목 51개. image-size 자체 패치로 보완한 2개 ID와 구분 |
+
+의존성 감사에는 Next.js·Vite·undici·fast-uri 등 직접/전이 패키지가 포함되며 중복 경로가 있을 수 있습니다. 이 수치를 서로 다른 취약점 51종으로 단정하지 않습니다. 패키지·lockfile은 공개 데모 원본과 동일하게 유지했고, 보안 갱신은 [ROADMAP](ROADMAP.md)에 남겼습니다. 검사 예외를 늘리거나 실패를 성공으로 바꾸지 않았습니다.
+
+로컬 Windows에서는 `check-dependencies.mjs`의 파서 패치 검사는 실행됐지만 `spawnSync('pnpm')`이 ENOENT로 실패해 감사 전체를 완료하지 못했습니다. 위 감사 결과는 Ubuntu CI에서 실제 실행된 결과입니다. 브라우저 직접 검토·실제 Gemini 호출·공개 재배포는 수행하지 않았습니다.
+
+## 로컬 산출물과 lint
+
 ESLint는 공개 데모 소스의 설정대로 `.sites-runtime/` 로컬 배포 산출물을 제외합니다. `.wrangler/`·`.vinext/` 등의 도구 산출물까지 남아 있는 환경에서는 아래 명령으로 추가 제외할 수 있습니다. 기본 CI는 `pnpm lint`를 사용합니다.
 
 ```bash
