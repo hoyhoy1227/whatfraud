@@ -17,9 +17,9 @@
 | 구성 요소 | 현재 선언 버전 | 라이선스 | 공식 정보 |
 | --- | ---: | --- | --- |
 | React / React DOM | 19.2.8 | MIT License | [React 라이선스](https://github.com/facebook/react/blob/main/LICENSE) |
-| Next.js | 16.3.3 | MIT License | [Next.js 라이선스](https://github.com/vercel/next.js/blob/canary/license.md) |
+| Next.js | 16.4.1 | MIT License | [Next.js 라이선스](https://github.com/vercel/next.js/blob/canary/license.md) |
 | Vinext | 1.0.0-beta.3 | MIT License | [Vinext 공식 저장소](https://github.com/cloudflare/vinext) |
-| Vite | 8.0.16 | MIT License | [Vite 라이선스](https://github.com/vitejs/vite/blob/main/LICENSE) |
+| Vite | 8.1.6 | MIT License | [Vite 라이선스](https://github.com/vitejs/vite/blob/main/LICENSE) |
 | Tailwind CSS | 4.2.1 | MIT License | [Tailwind CSS 공식 저장소](https://github.com/tailwindlabs/tailwindcss) |
 
 위 표는 이해를 돕기 위한 주요 항목 요약이며 전체 전이 의존성 목록을 대신하지 않습니다. 빌드 결과나 의존성 자체를 배포하기 전에는 설치된 각 패키지에 포함된 `LICENSE`, `NOTICE`, `COPYING` 파일과 패키지 메타데이터를 확인하고 필요한 고지를 함께 제공해야 합니다. 특히 프레임워크가 묶어 배포하는 전이 의존성에는 서로 다른 라이선스가 적용될 수 있습니다.

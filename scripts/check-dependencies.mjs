@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 await import('./test-image-parser.mjs');
-const result=spawnSync('pnpm',['audit','--json'],{encoding:'utf8',timeout:60000,maxBuffer:8*1024*1024});
+// Windows cannot launch a pnpm.cmd shim directly with spawnSync.
+// The command is fixed; no user-controlled arguments are passed to cmd.exe.
+const command=process.platform==='win32'?(process.env.ComSpec??'cmd.exe'):'pnpm';
+const args=process.platform==='win32'?['/d','/s','/c','pnpm audit --json']:['audit','--json'];
+const result=spawnSync(command,args,{encoding:'utf8',timeout:60000,maxBuffer:8*1024*1024});
 assert.ifError(result.error);
 const report=JSON.parse(result.stdout);
 assert.ok(report.metadata?.vulnerabilities && report.advisories && typeof report.advisories==='object','audit response missing expected metadata');

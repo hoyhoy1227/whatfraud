@@ -56,6 +56,26 @@ AI 실호출과 브라우저·실기기 검수는 위 자동 검사와 별개입
 
 로컬 Windows에서는 `check-dependencies.mjs`의 파서 패치 검사는 실행됐지만 `spawnSync('pnpm')`이 ENOENT로 실패해 감사 전체를 완료하지 못했습니다. 위 감사 결과는 Ubuntu CI에서 실제 실행된 결과입니다. 브라우저 직접 검토·실제 Gemini 호출·공개 재배포는 수행하지 않았습니다.
 
+## 검사 #131 실패 원인과 보완
+
+2026-10-29 확인한 [검사 #131](https://github.com/hoyhoy1227/whatfraud/actions/runs/40819833335)은 PR #43의 병합 이후 실행된 Validate game입니다. 파일명·게임 검사·타입·빌드는 통과했고, 마지막 의존성 감사에서 미보완 경고 항목 51개로 실패했습니다.
+
+| 대상 | 보완 |
+| --- | --- |
+| Next.js / eslint-config-next | 16.4.1로 함께 갱신 |
+| Vite | 8.1.6으로 고정 |
+| HTTP·URI 처리 | undici 7.30.1, fast-uri 3.1.9 |
+| 빌드·이미지 처리 | brace-expansion 1.1.21/5.0.12, source-map-js 1.2.2, sharp 0.35.5 |
+| 스키마·렌더링·압축 | zod 4.6.6, satori 0.33.5, fflate 0.7.5 |
+| 설치 재현 | 수정 버전을 overrides와 lockfile에 고정, frozen-lockfile 설치 확인 |
+| Windows 감사 실행 | pnpm.cmd를 직접 실행하던 ENOENT를 고정된 cmd 실행 경로로 보완 |
+
+공식 npm 메타데이터의 배포 버전·호환 조건과 감사의 수정 범위를 확인했습니다. Next.js·Vite 등의 근거는 [Next.js 보안 고지](https://github.com/vercel/next.js/security/advisories), [Vite 보안 고지](https://github.com/vitejs/vite/security/advisories)를 참고할 수 있습니다.
+
+보완 후 로컬 `node scripts/check-dependencies.mjs` 결과는 `unmitigated: []`입니다. 갱신 과정에서 새로 드러난 fflate 경고도 포함해 수정했습니다. image-size의 기존 경고 2개는 아래 보안 정책대로 패치·악성 입력 종료·PNG 회귀 검증을 통과한 경우에만 보완됨으로 분류하며, 예외 목록은 늘리지 않았습니다. 전체 보안 감사 완료를 뜻하지 않습니다.
+
+문서 정리는 `docs:check`로 추적 파일명·UTF-8·로컬 링크를 검사합니다. GitHub의 최종 상태는 [최신 Validate game 실행](https://github.com/hoyhoy1227/whatfraud/actions/workflows/validate.yml)을 기준으로 확인합니다. 과거 실패 실행 #131은 원인 기록으로 보존합니다.
+
 ## 로컬 산출물과 lint
 
 ESLint는 공개 데모 소스의 설정대로 `.sites-runtime/` 로컬 배포 산출물을 제외합니다. `.wrangler/`·`.vinext/` 등의 도구 산출물까지 남아 있는 환경에서는 아래 명령으로 추가 제외할 수 있습니다. 기본 CI는 `pnpm lint`를 사용합니다.

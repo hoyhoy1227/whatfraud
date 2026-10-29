@@ -19,7 +19,7 @@
 
 상세 운영·복구·잔여 작업은 [OPERATIONS.md](docs/operations/OPERATIONS.md)를 따릅니다.
 
-2026-10-28 공개 소스 정리의 [CI 의존성 감사](https://github.com/hoyhoy1227/whatfraud/actions/runs/40703626921)는 기존 고정 패키지의 미보완 경고로 실패했습니다. 아래 image-size 자체 패치가 다른 패키지 경고까지 해결하는 것은 아닙니다. 검증 결과는 [운영 기록](docs/operations/OPERATIONS.md#공개-기준-정리-검증-기록), 보안 갱신 과제는 [ROADMAP](docs/development/ROADMAP.md)에서 관리합니다.
+2026-10-28 공개 소스 정리와 10-29의 검사 #131은 기존 고정 패키지의 미보완 경고로 실패했습니다. 10-29에 수정 버전·lockfile과 Windows 감사 실행을 보완했고, 로컬 gate에서 미보완 경고 0개를 확인했습니다. [보완 기록](docs/operations/OPERATIONS.md#검사-131-실패-원인과-보완)과 최신 workflow 결과를 참고하세요. 아래 image-size 자체 패치는 다른 패키지 경고의 예외로 사용하지 않습니다.
 
 ## image-size의 한시적 소스 패치
 
