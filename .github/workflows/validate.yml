@@ -24,6 +24,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - run: pnpm docs:check
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
       - run: git diff --exit-code -- drizzle/

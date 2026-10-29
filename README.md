@@ -2,7 +2,7 @@
 
 평범한 스마트폰 연락에서 시작해, 확인과 선택이 남긴 결과를 돌아보는 인터랙티브 사기 체험 게임입니다.
 
-**[공개 데모 플레이](https://whatfraud.hoyhoy1227.chatgpt.site/)** · [게임 안내](docs/PUBLIC_DEMO.md) · [개발 시행착오](docs/DEVELOPMENT_JOURNEY.md)
+**[공개 데모 플레이](https://whatfraud.hoyhoy1227.chatgpt.site/)** · [게임 안내](docs/game/PUBLIC_DEMO.md) · [개발 시행착오](docs/development/DEVELOPMENT_JOURNEY.md)
 
 ## 어떤 게임인가요?
 
@@ -26,16 +26,18 @@
 
 ## 목적별 문서
 
+전체 폴더 구성은 [문서 안내](docs/README.md)에서 확인할 수 있습니다.
+
 | 목적 | 문서 | 읽을 내용 |
 | --- | --- | --- |
-| 시작하기 | [README](README.md), [실행·검증](OPERATIONS.md#실행과-검증) | 데모 진입, 로컬 실행, 검사 명령 |
-| 게임 이해 | [공개 데모 안내](docs/PUBLIC_DEMO.md) | 3막·앱·선택·첨부·보고서·저장 |
-| 개발/구조 | [프로젝트 구조](docs/PROJECT_STRUCTURE.md) | 게임 파일 지도, 콘텐츠 빌드와 비활성 자료 |
-| 개발/구조 | [개발 시행착오](docs/DEVELOPMENT_JOURNEY.md) | 문제·원인·해결·결과와 근거 커밋 |
-| 개발/구조 | [남은 과제](ROADMAP.md), [UI 검수](UI_REVIEW.md) | 구현 범위, 미검증 항목, 화면 검수 기준 |
-| 운영/권리 | [운영](OPERATIONS.md), [보안](SECURITY.md) | 배포·복구·AI 예산, 방어 범위와 제보 |
-| 운영/권리 | [라이선스](LICENSE.md), [제3자 고지](THIRD_PARTY_NOTICES.md) | 자체 자료의 권리 유보와 외부 구성 요소 조건 |
+| 시작하기 | [README](README.md), [실행·검증](docs/operations/OPERATIONS.md#실행과-검증) | 데모 진입, 로컬 실행, 검사 명령 |
+| 게임 이해 | [공개 데모 안내](docs/game/PUBLIC_DEMO.md) | 3막·앱·선택·첨부·보고서·저장 |
+| 개발/구조 | [프로젝트 구조](docs/development/PROJECT_STRUCTURE.md) | 게임 파일 지도, 콘텐츠 빌드와 비활성 자료 |
+| 개발/구조 | [개발 시행착오](docs/development/DEVELOPMENT_JOURNEY.md) | 문제·원인·해결·결과와 근거 커밋 |
+| 개발/구조 | [남은 과제](docs/development/ROADMAP.md), [UI 검수](docs/development/UI_REVIEW.md) | 구현 범위, 미검증 항목, 화면 검수 기준 |
+| 운영/권리 | [운영](docs/operations/OPERATIONS.md), [보안](SECURITY.md) | 배포·복구·AI 예산, 방어 범위와 제보 |
+| 운영/권리 | [라이선스](LICENSE.md), [제3자 고지](docs/legal/THIRD_PARTY_NOTICES.md) | 자체 자료의 권리 유보와 외부 구성 요소 조건 |
 
-특정 공모전의 요강·제출 형식·권리 증빙은 운영 문서에서 연결하는 별도 준비 기록으로 관리합니다. 플레이 시간 실측, 실기기 검수, 출품 적격성은 확인이 필요합니다.
+출품·공개 시연의 이용 조건은 라이선스와 자산 고지를 따릅니다. 개별 검수 상태는 UI 검수, 미완료 과제는 ROADMAP에서 관리합니다.
 
 공개 데모를 플레이할 수 있다는 사실이 소스·콘텐츠의 재사용 허락을 뜻하지는 않습니다.

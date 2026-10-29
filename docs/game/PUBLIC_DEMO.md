@@ -1,6 +1,6 @@
 # 사기방지위원회 — 공개 데모 안내
 
-목적: 실제 공개 체험과 저장소의 실행 기준을 설명합니다. 파일 지도는 [프로젝트 구조](PROJECT_STRUCTURE.md), 향후 과제는 [ROADMAP](../ROADMAP.md)에서 관리합니다.
+목적: 실제 공개 체험과 저장소의 실행 기준을 설명합니다. 파일 지도는 [프로젝트 구조](../development/PROJECT_STRUCTURE.md), 향후 과제는 [ROADMAP](../development/ROADMAP.md)에서 관리합니다.
 
 ## 확인 기준
 
@@ -20,10 +20,10 @@
 
 | 순서 | 상황 | 주요 확인·행동 | 활성 원본 |
 | --- | --- | --- | --- |
-| 1막 | 준호 이름의 새 계정에서 온 부탁 | 기존 연락처, 대화와 수취인 비교, 확인·보류·가상 송금 | [01-familiar-request.json](../content/cases/01-familiar-request.json) |
-| 2막 | 온결 자료방의 분석 자료 안내 | 무료 요약 → 상세 분석 자료 이용료 → 정밀 분석 추가 비용 → 자료 미제공. 전후 안내와 기록 비교 | [02-paper-profit.json](../content/cases/02-paper-profit.json) |
-| 3막 | 피해 회수를 약속하는 연락 | 이전 손실·참여 여부를 배경으로 공식 기록 확인, 중단·보관·접수 | [03-recovery-team.json](../content/cases/03-recovery-team.json) |
-| 결말 | 하루 동안 남긴 선택과 거래 | 대응 보고서, 3결말, 선택 이전 되감기 | [analysis-report.tsx](../app/story/analysis-report.tsx), [panels.tsx](../app/story/panels.tsx) |
+| 1막 | 준호 이름의 새 계정에서 온 부탁 | 기존 연락처, 대화와 수취인 비교, 확인·보류·가상 송금 | [01-familiar-request.json](../../content/cases/01-familiar-request.json) |
+| 2막 | 온결 자료방의 분석 자료 안내 | 무료 요약 → 상세 분석 자료 이용료 → 정밀 분석 추가 비용 → 자료 미제공. 전후 안내와 기록 비교 | [02-paper-profit.json](../../content/cases/02-paper-profit.json) |
+| 3막 | 피해 회수를 약속하는 연락 | 이전 손실·참여 여부를 배경으로 공식 기록 확인, 중단·보관·접수 | [03-recovery-team.json](../../content/cases/03-recovery-team.json) |
+| 결말 | 하루 동안 남긴 선택과 거래 | 대응 보고서, 3결말, 선택 이전 되감기 | [analysis-report.tsx](../../app/story/analysis-report.tsx), [panels.tsx](../../app/story/panels.tsx) |
 
 결말은 지켜낸 하루 / 멈춰 세운 하루 / 아직 끝나지 않은 하루로 나뉩니다. 접수·보고서가 실제 신고·환급·개인 취약성 진단을 뜻하지는 않습니다.
 

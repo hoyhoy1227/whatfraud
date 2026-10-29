@@ -6,6 +6,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "docs:check": "node scripts/check-docs.mjs",
     "content:build": "node scripts/build-content.mjs",
     "content:check": "node scripts/build-content.mjs --check",
     "dialogue:check": "node scripts/evaluate-dialogue.mjs",

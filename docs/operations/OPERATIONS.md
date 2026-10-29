@@ -1,6 +1,6 @@
 # 사기방지위원회 — 실행·검증·운영
 
-목적: 공개 데모 v76 기준 소스의 실행 명령, AI·DB 설정, 배포와 복구 절차를 관리합니다. 게임·콘텐츠 설명은 [공개 데모 안내](docs/PUBLIC_DEMO.md)와 [프로젝트 구조](docs/PROJECT_STRUCTURE.md)에 둡니다.
+목적: 공개 데모 v76 기준 소스의 실행 명령, AI·DB 설정, 배포와 복구 절차를 관리합니다. 게임·콘텐츠 설명은 [공개 데모 안내](../game/PUBLIC_DEMO.md)와 [프로젝트 구조](../development/PROJECT_STRUCTURE.md)에 둡니다.
 
 ## 실행과 검증
 
@@ -13,6 +13,7 @@ pnpm dev
 
 | 명령 | 범위 |
 | --- | --- |
+| `pnpm docs:check` | 추적 파일명·Markdown UTF-8·로컬 문서/파일/제목 링크 검사 |
 | `pnpm content:build` | 활성 3막 JSON 검사와 통합 생성 |
 | `pnpm content:check` | 원본 검수와 생성물 일치 확인 |
 | `pnpm dialogue:check` | 활성 3사건의 내장 후보 응답 안전·길이·반복 검사 |
@@ -25,7 +26,9 @@ pnpm dev
 
 ### CI 회귀 검사
 
-[Validate game](.github/workflows/validate.yml)의 실제 명령이 기준입니다.
+[Validate game](../../.github/workflows/validate.yml)의 실제 명령이 기준입니다.
+
+- `docs:check`: 비정상 파일명, 삭제된 파일 참조, 이동 후 링크·제목 누락 검사.
 
 - Drizzle 생성 후 `drizzle/` diff 검사.
 - `check-security.mjs`: 현재 추적 파일의 비밀 형식·인증 파일 검사.
@@ -49,7 +52,7 @@ AI 실호출과 브라우저·실기기 검수는 위 자동 검사와 별개입
 | 증거 메모 검사·UTF-8·문서 내부 링크 | 로컬 통과 |
 | 의존성 감사 | GitHub CI 실패: 미보완 경고 항목 51개. image-size 자체 패치로 보완한 2개 ID와 구분 |
 
-의존성 감사에는 Next.js·Vite·undici·fast-uri 등 직접/전이 패키지가 포함되며 중복 경로가 있을 수 있습니다. 이 수치를 서로 다른 취약점 51종으로 단정하지 않습니다. 패키지·lockfile은 공개 데모 원본과 동일하게 유지했고, 보안 갱신은 [ROADMAP](ROADMAP.md)에 남겼습니다. 검사 예외를 늘리거나 실패를 성공으로 바꾸지 않았습니다.
+의존성 감사에는 Next.js·Vite·undici·fast-uri 등 직접/전이 패키지가 포함되며 중복 경로가 있을 수 있습니다. 이 수치를 서로 다른 취약점 51종으로 단정하지 않습니다. 패키지·lockfile은 공개 데모 원본과 동일하게 유지했고, 보안 갱신은 [ROADMAP](../development/ROADMAP.md)에 남겼습니다. 검사 예외를 늘리거나 실패를 성공으로 바꾸지 않았습니다.
 
 로컬 Windows에서는 `check-dependencies.mjs`의 파서 패치 검사는 실행됐지만 `spawnSync('pnpm')`이 ENOENT로 실패해 감사 전체를 완료하지 못했습니다. 위 감사 결과는 Ubuntu CI에서 실제 실행된 결과입니다. 브라우저 직접 검토·실제 Gemini 호출·공개 재배포는 수행하지 않았습니다.
 
@@ -65,7 +68,7 @@ pnpm lint --ignore-pattern .sites-runtime --ignore-pattern .wrangler --ignore-pa
 
 | 항목 | 공개 데모 기준 구현 |
 | --- | --- |
-| 키 | 서버 전용 `GEMINI_API_KEY`; [예시](.env.example). 공개 접두사 사용 금지 |
+| 키 | 서버 전용 `GEMINI_API_KEY`; [예시](../../.env.example). 공개 접두사 사용 금지 |
 | 중단 스위치 | `GEMINI_ENABLED=false`는 생성을 중단. 준비된 메시지로 게임 진행 가능 |
 | 모델 ID | 코드의 `gemini-3.5-flash-lite`. 공급자 사용 가능 여부는 별도 확인 |
 | UI 생성 창구 | 결정 직전 메시지와 인물 메시지. 사건별 2/2/1, 새 실행 전체 최대 5회 |
@@ -83,11 +86,11 @@ pnpm lint --ignore-pattern .sites-runtime --ignore-pattern .wrangler --ignore-pa
 - 인스턴스 제한과 Origin 검사는 인증·봇 차단·전체 과금 상한이 아닙니다. 이 배포 외 동일 키 사용과 공급자 청구는 별개입니다.
 - 실제 키를 소스·채팅·CI·로그·캡처에 넣지 않습니다. Sites 런타임 Secret과 로컬 예시 파일·hosting 설정은 별개입니다.
 
-공급자 조건·권리 확인은 [제3자 고지](THIRD_PARTY_NOTICES.md), 방어 한계는 [SECURITY](SECURITY.md)에 둡니다.
+공급자 조건·권리 확인은 [제3자 고지](../legal/THIRD_PARTY_NOTICES.md), 방어 한계는 [SECURITY](../../SECURITY.md)에 둡니다.
 
 ## 배포 기준과 절차
 
-공개 URL·버전·소스·확인 범위는 [공개 데모 안내](docs/PUBLIC_DEMO.md#확인-기준) 한 곳에서 관리합니다. 저장소 수정·소스 동기화·공개 배포는 별개이며, 이번 정리에서는 배포하지 않습니다.
+공개 URL·버전·소스·확인 범위는 [공개 데모 안내](../game/PUBLIC_DEMO.md#확인-기준) 한 곳에서 관리합니다. 저장소 수정·소스 동기화·공개 배포는 별개이며, 이번 정리에서는 배포하지 않습니다.
 
 1. 대상 커밋과 CI 결과를 확인합니다. 대상 소스가 공개 기준에서 어떻게 달라지는지 검토합니다.
 2. `.openai/hosting.json`의 기존 project ID와 `d1: DB`를 유지합니다.
@@ -121,8 +124,7 @@ pnpm lint --ignore-pattern .sites-runtime --ignore-pattern .wrangler --ignore-pa
 
 | 문서 | 역할 |
 | --- | --- |
-| [SECURITY](SECURITY.md) | 제보·방어 범위·의존성 패치 예외 |
-| [CONTEST_SUBMISSION](CONTEST_SUBMISSION.md) | 특정 출품 시에만 필요한 요건·증빙 체크리스트 |
-| [LICENSE](LICENSE.md), [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md) | 자체 권리와 제3자 조건 |
+| [SECURITY](../../SECURITY.md) | 제보·방어 범위·의존성 패치 예외 |
+| [LICENSE](../../LICENSE.md), [THIRD_PARTY_NOTICES](../legal/THIRD_PARTY_NOTICES.md) | 자체 권리와 제3자 조건 |
 
 특정 기기의 로컬 폴더·동기화 관행을 프로젝트 공통 개발 제한으로 두지 않습니다. 브랜치 보호·출품 적격성·전체 자산 증빙은 실제 설정과 자료를 확인해야 합니다.

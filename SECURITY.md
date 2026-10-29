@@ -17,9 +17,9 @@
 
 이 검사는 전체 과거 이력, 알려지지 않은 비밀 형식, 모든 의존성/런타임 취약점, 프롬프트 주입을 완전히 탐지하는 보안 감사가 아닙니다. 공개 API는 인증되지 않았고 공용 제한도 이 배포 외의 사용량이나 전역 과금 상한을 보장하지 않습니다. main 브랜치 보호는 저장소 소유자가 별도로 설정해야 합니다.
 
-상세 운영·복구·잔여 작업은 [OPERATIONS.md](OPERATIONS.md)를 따릅니다.
+상세 운영·복구·잔여 작업은 [OPERATIONS.md](docs/operations/OPERATIONS.md)를 따릅니다.
 
-2026-10-28 공개 소스 정리의 [CI 의존성 감사](https://github.com/hoyhoy1227/whatfraud/actions/runs/40703626921)는 기존 고정 패키지의 미보완 경고로 실패했습니다. 아래 image-size 자체 패치가 다른 패키지 경고까지 해결하는 것은 아닙니다. 검증 결과는 [운영 기록](OPERATIONS.md#공개-기준-정리-검증-기록), 보안 갱신 과제는 [ROADMAP](ROADMAP.md)에서 관리합니다.
+2026-10-28 공개 소스 정리의 [CI 의존성 감사](https://github.com/hoyhoy1227/whatfraud/actions/runs/40703626921)는 기존 고정 패키지의 미보완 경고로 실패했습니다. 아래 image-size 자체 패치가 다른 패키지 경고까지 해결하는 것은 아닙니다. 검증 결과는 [운영 기록](docs/operations/OPERATIONS.md#공개-기준-정리-검증-기록), 보안 갱신 과제는 [ROADMAP](docs/development/ROADMAP.md)에서 관리합니다.
 
 ## image-size의 한시적 소스 패치
 

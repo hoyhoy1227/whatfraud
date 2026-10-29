@@ -15,7 +15,7 @@
 | 사건별 판정만으로는 하루의 인과가 약함 | 이전 콘텐츠가 개별 정상·주의·사기 판정과 복기 규격으로 구성됨 | 활성 사건을 지인 사칭 → 투자 → 회수 사칭의 3막으로 연결 | 활성 원본 3개, 허용 순서 검사. 이전 6사건은 `archive/v2`에 보존 |
 | 과거 기획이 현재 기능처럼 읽힘 | 로드맵에 초기 체크리스트·구현 기록·실측 전 시간 목표가 누적됨 | 현재 설명·시행착오·남은 과제를 문서별로 분리 | README는 방문자용, 이 문서는 결정 근거, ROADMAP은 미완료 과제로 제한 |
 
-근거: [`5efb819` — 6사건·근거 중심 구조](https://github.com/hoyhoy1227/whatfraud/commit/5efb819), [`5ae6b9a` — 3막 진행 엔진](https://github.com/hoyhoy1227/whatfraud/commit/5ae6b9a), [콘텐츠 빌더](../scripts/build-content.mjs).
+근거: [`5efb819` — 6사건·근거 중심 구조](https://github.com/hoyhoy1227/whatfraud/commit/5efb819), [`5ae6b9a` — 3막 진행 엔진](https://github.com/hoyhoy1227/whatfraud/commit/5ae6b9a), [콘텐츠 빌더](../../scripts/build-content.mjs).
 
 ## 콘텐츠와 진행 구조에서 발견한 문제
 
@@ -25,7 +25,7 @@
 | 확인·보관·접수가 한 행동처럼 보임 | 조회 기록과 후속 결과의 경계가 불명확 | 확인·저장·후속 연락을 별도 이벤트와 버튼으로 분리 | 읽음이 보관을 뜻하지 않으며 접수가 환급을 만들지 않음 |
 | 투자 화면 수치를 입금으로 오해할 수 있음 | 서비스 게시 수치와 은행 원장의 표현이 섞임 | 앱 표면과 기록을 구분하고 전후 안내 대조 제공 | 화면 수익과 게임 내 은행 입금은 별개로 유지 |
 
-근거: [`fdced9e` — 스키마·대화 종료 정합성](https://github.com/hoyhoy1227/whatfraud/commit/fdced9e), [`6c7c553` — 일상·전환 맥락](https://github.com/hoyhoy1227/whatfraud/commit/6c7c553), [`9eb158c` — 휴대폰 정보 경계](https://github.com/hoyhoy1227/whatfraud/commit/9eb158c), [narrative.js](../app/story/narrative.js), [panels.tsx](../app/story/panels.tsx).
+근거: [`fdced9e` — 스키마·대화 종료 정합성](https://github.com/hoyhoy1227/whatfraud/commit/fdced9e), [`6c7c553` — 일상·전환 맥락](https://github.com/hoyhoy1227/whatfraud/commit/6c7c553), [`9eb158c` — 휴대폰 정보 경계](https://github.com/hoyhoy1227/whatfraud/commit/9eb158c), [narrative.js](../../app/story/narrative.js), [panels.tsx](../../app/story/panels.tsx).
 
 ## 데이터 재생과 중복 처리
 
@@ -36,7 +36,7 @@
 | 체험·연습이 본편을 덮어쓸 위험 | 모드 간 상태·저장 위치 공유 | 본편/짧은 체험 저장 키와 되감기 원본 분리 | 원본 유지 검증. 공개 v76의 v3/v4 이벤트 호환 처리를 함께 반영. 실제 기기 저장 검수는 추가 확인 필요 |
 | 이동 후 늦은 AI 응답이 다른 방에 나타날 위험 | 비동기 응답의 수명과 화면 상태 불일치 | ReplyGate 취소·현재 요청 확인, 장면별 원문 메모리 분리 | 취소·복원 경로 검사. 실제 네트워크·모바일 복귀 검수는 별도 |
 
-근거: [engine.js](../app/story/engine.js)의 `transition / serializeRun / restoreRun / replayBefore`, [reply-gate.js](../app/story/reply-gate.js), [test-story.mjs](../scripts/test-story.mjs).
+근거: [engine.js](../../app/story/engine.js)의 `transition / serializeRun / restoreRun / replayBefore`, [reply-gate.js](../../app/story/reply-gate.js), [test-story.mjs](../../scripts/test-story.mjs).
 
 ## UI·모바일·가독성 개선
 
@@ -44,9 +44,9 @@
 | --- | --- | --- | --- |
 | 본문·목록·읽음이 서로 다른 시점을 표시 | 메시지 표시 수·단계·미리보기 계산이 분산됨 | 표시 메시지 공통 계산, 대화별 읽음 위치, 도착·스크롤 조건 구분 | 소스·SSR 검증 가능. 전 화면 터치 검수는 미완료 |
 | 작성 대화·선택 답장·결정 응답의 순서가 뒤섞임 | 여러 메시지 묶음과 단계별 응답 위치 계산이 분산됨 | 시간순 타임라인 통합, 결정 답장의 원래 단계 고정 | 공개 v76의 대화 순서 회귀 검사로 확인. 사용자 체감 성과는 확인 필요 |
-| 좁은 화면에서 설명·버튼·입력 영역이 경쟁 | 긴 한글·고정 하단 영역·가상 키보드 높이 | 문장별 말풍선, 의미 단위 개행, 독립 행동 영역, viewport·안전영역 대응 | 큰 글자·동작 줄이기 지원. iOS/Android 실기기는 [UI 검수](../UI_REVIEW.md)로 유지 |
+| 좁은 화면에서 설명·버튼·입력 영역이 경쟁 | 긴 한글·고정 하단 영역·가상 키보드 높이 | 문장별 말풍선, 의미 단위 개행, 독립 행동 영역, viewport·안전영역 대응 | 큰 글자·동작 줄이기 지원. iOS/Android 실기기는 [UI 검수](UI_REVIEW.md)로 유지 |
 
-근거: [`7aadfed` — 시간순 대화와 단계별 결정 답장](https://github.com/hoyhoy1227/whatfraud/commit/7aadfed), [test-message-transcript.mjs](../scripts/test-message-transcript.mjs), [presentation.js](../app/story/presentation.js), [globals.css](../app/globals.css).
+근거: [`7aadfed` — 시간순 대화와 단계별 결정 답장](https://github.com/hoyhoy1227/whatfraud/commit/7aadfed), [test-message-transcript.mjs](../../scripts/test-message-transcript.mjs), [presentation.js](../../app/story/presentation.js), [globals.css](../../app/globals.css).
 
 ## AI를 진행 엔진에서 분리한 이유
 
@@ -56,7 +56,7 @@
 - 원문은 진행 저장에 넣지 않고 시도·반응·후속 행동만 저장합니다.
 - 공개 v76의 결정 메시지·첨부 반응·품질 보완·행동 근거 보고서를 실행 코드 및 검사와 함께 저장소 기준으로 반영했습니다.
 
-근거: [`fc65e32` — 두 메시지 창구](https://github.com/hoyhoy1227/whatfraud/commit/fc65e32), [one-shot.js](../app/story/one-shot.js), [API](../app/api/ai-chat/route.ts), [배포 기준표](PUBLIC_DEMO.md#공개-데모와-저장소의-기준).
+근거: [`fc65e32` — 두 메시지 창구](https://github.com/hoyhoy1227/whatfraud/commit/fc65e32), [one-shot.js](../../app/story/one-shot.js), [API](../../app/api/ai-chat/route.ts), [배포 기준표](../game/PUBLIC_DEMO.md#공개-데모와-저장소의-기준).
 
 ## 검증 스크립트를 둔 이유
 
@@ -69,7 +69,7 @@
 | AI·예산·출시 검사 | 모의 요청 방어, 공용 예약, 실행 순서·바인딩 회귀 | 공급자 운영 상태·전체 보안 감사 |
 | lint·타입·빌드 | 정적 오류·배포 산출 실패 | 공개 배포 완료 |
 
-검사는 [CI](../.github/workflows/validate.yml)에 연결합니다. 과거 기록의 성공 수치나 화면 확인을 이번 변경의 검증 결과로 재사용하지 않습니다.
+검사는 [CI](../../.github/workflows/validate.yml)에 연결합니다. 과거 기록의 성공 수치나 화면 확인을 이번 변경의 검증 결과로 재사용하지 않습니다.
 
 ## 공개 데모 기준으로 남기고 덜어낸 것
 
@@ -89,4 +89,4 @@
 - 실제 시연 빌드의 자산·서비스 이용 조건과 특정 출품 요건 확인.
 - 실응답 품질 평가는 기본 자동 검사와 분리해 필요한 범위만 실행.
 
-우선순위와 완료 조건은 [ROADMAP](../ROADMAP.md)에서 관리합니다. 이력의 상세 날짜·원문 변경은 Git 커밋을 기준으로 확인합니다.
+우선순위와 완료 조건은 [ROADMAP](ROADMAP.md)에서 관리합니다. 이력의 상세 날짜·원문 변경은 Git 커밋을 기준으로 확인합니다.
