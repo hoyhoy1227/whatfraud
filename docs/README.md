@@ -8,8 +8,8 @@
 | --- | --- |
 | 게임을 이해하고 싶어요 | [공개 데모 안내](game/PUBLIC_DEMO.md) |
 | 문제 해결 과정을 보고 싶어요 | [개발 시행착오](development/DEVELOPMENT_JOURNEY.md) → [남은 과제](development/ROADMAP.md) |
-| 코드를 수정하고 싶어요 | [전체 구조](development/PROJECT_STRUCTURE.md) → [게임 코드](../app/story/README.md) / [콘텐츠](../content/README.md) / [스크립트](../scripts/README.md) |
-| 실행·검증·배포를 관리해요 | [운영](operations/OPERATIONS.md) → [보안](../SECURITY.md) |
+| 코드를 수정하고 싶어요 | [전체 구조](development/PROJECT_STRUCTURE.md) → [게임 코드](../app/story/README.md) / [콘텐츠](../content/README.md) / [개발 도구](../tools/README.md) |
+| 실행·검증·배포를 관리해요 | [운영](operations/OPERATIONS.md) → [보안](../.github/SECURITY.md) |
 | 권리·출처를 확인해요 | [라이선스](../LICENSE.md) → [제3자·자산 고지](legal/THIRD_PARTY_NOTICES.md) |
 
 ## 문서 지도
@@ -24,7 +24,7 @@
 | operations | [OPERATIONS](operations/OPERATIONS.md) | 실행·검사·AI·배포·복구 |
 | legal | [THIRD_PARTY_NOTICES](legal/THIRD_PARTY_NOTICES.md) | 의존성·이미지·음원 출처 |
 
-README·LICENSE·SECURITY는 저장소 루트에 둡니다. 소스 폴더의 README는 그 폴더의 파일을 찾는 안내이며, 기능 설명·개발 기록·운영 절차의 본문은 위 문서 한 곳에서 관리합니다.
+README·LICENSE는 저장소 루트, 보안 정책은 `.github/SECURITY.md`에 둡니다. 소스 폴더의 README는 그 폴더의 파일을 찾는 안내이며, 기능 설명·개발 기록·운영 절차의 본문은 위 문서 한 곳에서 관리합니다.
 
 ## 문서를 고칠 때
 

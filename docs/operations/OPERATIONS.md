@@ -1,6 +1,6 @@
 # 사기방지위원회 — 실행·검증·운영
 
-목적: 개발 환경, AI·DB 설정, 배포와 복구 절차를 관리합니다. 파일별 검사 목록은 [스크립트 지도](../../scripts/README.md), 게임 설명은 [공개 데모 안내](../game/PUBLIC_DEMO.md)에 둡니다.
+목적: 개발 환경, AI·DB 설정, 배포와 복구 절차를 관리합니다. 파일별 검사 목록은 [개발 도구 지도](../../tools/README.md), 게임 설명은 [공개 데모 안내](../game/PUBLIC_DEMO.md)에 둡니다.
 
 ## 실행과 검증
 
@@ -19,7 +19,7 @@ pnpm dev
 | 보안·의존성 | `pnpm security:check` · `pnpm dependencies:check` |
 | DB 생성 확인 | `pnpm db:generate` 후 `git diff --exit-code -- drizzle/` |
 
-검사 범위는 [명령 안내](../../scripts/README.md#검사-선택), 실행 순서는 [CI](../../.github/workflows/validate.yml)가 기준입니다.
+검사 범위는 [명령 안내](../../tools/README.md#검사-선택), 실행 순서는 [CI](../../.github/workflows/validate.yml)가 기준입니다.
 
 - `predev / prebuild / prelint`는 Node로 사전 검사를 실행합니다.
 - 활성 원본 수정 후 `pnpm content:build`로 생성물을 갱신합니다. 생성물·Markdown은 LF를 유지합니다.
@@ -30,7 +30,7 @@ pnpm dev
 
 | 항목 | 공개 데모 기준 구현 |
 | --- | --- |
-| 키·중단 | 서버 전용 `GEMINI_API_KEY`, `GEMINI_ENABLED=false`는 생성 중단. [환경 예시](../../.env.example) |
+| 키·중단 | 서버 전용 `GEMINI_API_KEY`, `GEMINI_ENABLED=false`는 생성 중단. [환경 예시](../../tools/config/.env.example) |
 | 모델 | 코드의 `gemini-3.5-flash-lite`. 공급자 사용 가능 여부는 별도 확인 |
 | 생성 창구·한도 | 지정된 결정/인물 장면. 사건별 2/2/1, 새 실행 전체 최대 5회 |
 | 대기·출력 | 공급자 45초, 최대 500토큰. 브라우저는 공유 응답 제한 시간 사용 |
@@ -39,6 +39,7 @@ pnpm dev
 | 공용 D1 예약 | 모든 Worker 합계 분당 20/UTC 하루 240. 실패·지연·소진 시 생성 중단 |
 | 실패 처리 | 전송·할당량 자동 재시도 없음. 품질 실패는 원래 마감 안에서 수정 요청 최대 1회, 내장 대사 전환 |
 
+- 로컬 환경 변수가 필요하면 `tools/config/.env.example`을 루트 `.env.local`로 복사합니다. 실제 키가 든 파일은 커밋하지 않습니다.
 - AI는 기본 꺼짐이며 동의 화면에 허구·전송·개인정보·5회 한도를 안내합니다. 나이 확인 절차는 없습니다.
 - 지정된 장면·단계·첨부 ID·역할·길이를 검사합니다. 모든 자유 입력을 공급자로 보내지 않습니다.
 - 공용 예약은 생성 직전 원자적 SQL로 수행하며, 실패·취소된 요청도 환불하지 않습니다.
@@ -47,7 +48,7 @@ pnpm dev
 - Origin·세션·인스턴스 제한은 인증·봇 차단·전체 과금 상한이 아닙니다. 공급자 청구와 다른 배포의 같은 키 사용은 별개입니다.
 - 키는 서버 Secret에만 두고 소스·채팅·CI·로그·캡처에 넣지 않습니다. 런타임 Secret은 hosting 설정·환경 예시와 별개입니다.
 
-서비스 조건은 [제3자 고지](../legal/THIRD_PARTY_NOTICES.md), 방어 범위는 [SECURITY](../../SECURITY.md)를 참고하세요.
+서비스 조건은 [제3자 고지](../legal/THIRD_PARTY_NOTICES.md), 방어 범위는 [SECURITY](../../.github/SECURITY.md)를 참고하세요.
 
 ## 배포·DB·복구
 
@@ -56,7 +57,7 @@ pnpm dev
 1. 배포할 커밋·검증 결과·공개 기준과의 차이를 확인합니다.
 2. `.openai/hosting.json`의 기존 project ID와 `d1: DB`를 유지합니다.
 3. 배포 소스·빌드 SHA·저장 버전을 일치시킵니다.
-4. `db/schema.ts`, `drizzle/` SQL·metadata, D1 바인딩을 대조합니다. 런타임에서 임의 DDL을 실행하지 않습니다.
+4. `drizzle/schema.ts`, `drizzle/` SQL·metadata, D1 바인딩을 대조합니다. 런타임에서 임의 DDL을 실행하지 않습니다.
 5. 요청된 버전을 배포한 뒤 성공 상태·URL·SHA·검수 범위를 기록합니다.
 6. `GET /api/ai-chat`은 설정 모드 확인용입니다. DB 연결·실제 Gemini 응답 성공을 보장하지 않습니다.
 
@@ -93,6 +94,6 @@ pnpm dev
 
 Next.js·Vite와 전이 의존성을 수정 버전으로 고정하고 lockfile을 갱신했습니다. undici·fast-uri·brace-expansion·source-map-js·sharp·zod·satori와 갱신 과정에서 드러난 fflate를 포함합니다. Windows의 pnpm.cmd 실행 경로도 보완했습니다.
 
-미보완 경고는 0개로 확인했습니다. image-size의 기존 경고 2개는 [보안 정책](../../SECURITY.md)의 패치·악성 입력 종료·PNG 회귀 검사를 통과한 경우에만 보완됨으로 분류하며 예외 목록을 늘리지 않습니다. 전체 보안 감사 완료를 뜻하지는 않습니다.
+미보완 경고는 0개로 확인했습니다. image-size의 기존 경고 2개는 [보안 정책](../../.github/SECURITY.md)의 패치·악성 입력 종료·PNG 회귀 검사를 통과한 경우에만 보완됨으로 분류하며 예외 목록을 늘리지 않습니다. 전체 보안 감사 완료를 뜻하지는 않습니다.
 
 최종 상태는 [최신 Validate game](https://github.com/hoyhoy1227/whatfraud/actions/workflows/validate.yml)을 기준으로 확인합니다. 세부 보안 과제는 [ROADMAP](../development/ROADMAP.md), 이용 조건은 [LICENSE](../../LICENSE.md)에서 관리합니다.

@@ -15,7 +15,7 @@
 | 사건별 판정만으로는 하루의 인과가 약함 | 이전 콘텐츠가 개별 정상·주의·사기 판정과 복기 규격으로 구성됨 | 활성 사건을 지인 사칭 → 투자 → 회수 사칭의 3막으로 연결 | 활성 원본 3개, 허용 순서 검사. 이전 6사건은 `archive/v2`에 보존 |
 | 과거 기획이 현재 기능처럼 읽힘 | 로드맵에 초기 체크리스트·구현 기록·실측 전 시간 목표가 누적됨 | 현재 설명·시행착오·남은 과제를 문서별로 분리 | README는 방문자용, 이 문서는 결정 근거, ROADMAP은 미완료 과제로 제한 |
 
-근거: [`5efb819` — 6사건·근거 중심 구조](https://github.com/hoyhoy1227/whatfraud/commit/5efb819), [`5ae6b9a` — 3막 진행 엔진](https://github.com/hoyhoy1227/whatfraud/commit/5ae6b9a), [콘텐츠 빌더](../../scripts/content/build-content.mjs).
+근거: [`5efb819` — 6사건·근거 중심 구조](https://github.com/hoyhoy1227/whatfraud/commit/5efb819), [`5ae6b9a` — 3막 진행 엔진](https://github.com/hoyhoy1227/whatfraud/commit/5ae6b9a), [콘텐츠 빌더](../../tools/content/build-content.mjs).
 
 ## 콘텐츠와 진행 구조에서 발견한 문제
 
@@ -36,7 +36,7 @@
 | 체험·연습이 본편을 덮어쓸 위험 | 모드 간 상태·저장 위치 공유 | 본편/짧은 체험 저장 키와 되감기 원본 분리 | 원본 유지 검증. 공개 v76의 v3/v4 이벤트 호환 처리를 함께 반영. 실제 기기 저장 검수는 추가 확인 필요 |
 | 이동 후 늦은 AI 응답이 다른 방에 나타날 위험 | 비동기 응답의 수명과 화면 상태 불일치 | ReplyGate 취소·현재 요청 확인, 장면별 원문 메모리 분리 | 취소·복원 경로 검사. 실제 네트워크·모바일 복귀 검수는 별도 |
 
-근거: [engine.js](../../app/story/engine.js)의 `transition / serializeRun / restoreRun / replayBefore`, [reply-gate.js](../../app/story/reply-gate.js), [test-story.mjs](../../scripts/tests/test-story.mjs).
+근거: [engine.js](../../app/story/engine.js)의 `transition / serializeRun / restoreRun / replayBefore`, [reply-gate.js](../../app/story/reply-gate.js), [test-story.mjs](../../tools/tests/test-story.mjs).
 
 ## UI·모바일·가독성 개선
 
@@ -46,7 +46,7 @@
 | 작성 대화·선택 답장·결정 응답의 순서가 뒤섞임 | 여러 메시지 묶음과 단계별 응답 위치 계산이 분산됨 | 시간순 타임라인 통합, 결정 답장의 원래 단계 고정 | 공개 v76의 대화 순서 회귀 검사로 확인. 사용자 체감 성과는 확인 필요 |
 | 좁은 화면에서 설명·버튼·입력 영역이 경쟁 | 긴 한글·고정 하단 영역·가상 키보드 높이 | 문장별 말풍선, 의미 단위 개행, 독립 행동 영역, viewport·안전영역 대응 | 큰 글자·동작 줄이기 지원. iOS/Android 실기기는 [UI 검수](UI_REVIEW.md)로 유지 |
 
-근거: [`7aadfed` — 시간순 대화와 단계별 결정 답장](https://github.com/hoyhoy1227/whatfraud/commit/7aadfed), [test-message-transcript.mjs](../../scripts/tests/test-message-transcript.mjs), [presentation.js](../../app/story/presentation.js), [globals.css](../../app/globals.css).
+근거: [`7aadfed` — 시간순 대화와 단계별 결정 답장](https://github.com/hoyhoy1227/whatfraud/commit/7aadfed), [test-message-transcript.mjs](../../tools/tests/test-message-transcript.mjs), [presentation.js](../../app/story/presentation.js), [globals.css](../../app/globals.css).
 
 ## AI를 진행 엔진에서 분리한 이유
 

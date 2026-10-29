@@ -13,7 +13,7 @@ assert.ok(report.metadata?.vulnerabilities && report.advisories && typeof report
 assert.ok(result.status===0||result.status===1,'audit execution failed');
 const allowed=new Set(['GHSA-w3rx-r6r6-pgpr','GHSA-5p2g-fcmc-qvqq']);
 const workspace=readFileSync('pnpm-workspace.yaml','utf8');
-assert.ok(workspace.includes('image-size@2.0.2')&&workspace.includes('patches/image-size@2.0.2.patch'),'required pinned parser patch is missing');
+assert.ok(workspace.includes('image-size@2.0.2')&&workspace.includes('tools/patches/image-size@2.0.2.patch'),'required pinned parser patch is missing');
 const remaining=[],mitigated=[];
 for(const advisory of Object.values(report.advisories)){
  const id=advisory.github_advisory_id??String(advisory.url??'').split('/').at(-1);

@@ -1,4 +1,4 @@
-# 사기방지위원회 — 스크립트 지도
+# 사기방지위원회 — 개발 도구 지도
 
 목적: 작업 목적에 맞는 도구와 검사를 찾도록 안내합니다. 모든 명령은 저장소 루트에서 실행하며, Node.js 22.13 이상·pnpm 11.25.0을 사용합니다.
 
@@ -6,11 +6,24 @@
 
 | 폴더 | 들어 있는 도구 |
 | --- | --- |
+| [config/](config) | 코드 검사 설정·비밀 값 없는 환경 예시 |
 | [content/](content) | 활성 사건 검사·통합 생성 |
 | [dialogue/](dialogue) | 내장 대사 평가·공통 규칙·선택적 Gemini 평가 |
 | [checks/](checks) | 문서·보안·의존성·출시 조건 검사 |
 | [tests/](tests) | 진행·저장·첨부·대화·보고서·API·공용 예산 회귀 검사 |
 | [media/](media) | 공유 이미지 생성·음원 변환 |
+| [patches/](patches) | 고정 의존성의 기존 소스 패치 |
+
+## 설정과 패치
+
+| 위치 | 사용하는 곳 |
+| --- | --- |
+| [config/eslint.config.mjs](config/eslint.config.mjs) | `pnpm lint`가 경로를 지정해 코드 검사 |
+| [config/.env.example](config/.env.example) | 선택적 AI 환경 변수 예시. 필요 시 루트 `.env.local`로 복사하고 서버 전용 값 설정 |
+| [patches/image-size@2.0.2.patch](patches/image-size@2.0.2.patch) | 루트 `pnpm-workspace.yaml`에서 참조. 설치와 의존성 검사에서 적용·검증 |
+| [../drizzle/drizzle.config.ts](../drizzle/drizzle.config.ts) | DB 폴더에 함께 둔 생성 설정. `pnpm db:generate`에서 사용 |
+
+명령은 이 폴더 안으로 이동하지 않고 저장소 루트에서 실행합니다. 실제 `.env.local`·키 파일은 Git 추적 대상이 아닙니다.
 
 ## 검사 선택
 
@@ -38,7 +51,7 @@
 | 공유 이미지 생성 | [media/build-brand.mjs](media/build-brand.mjs) | 기존 SVG에서 PNG·JPEG·아이콘 사본 생성. 필요 시 sharp 모듈 경로 전달 |
 | 음원 변환 | [media/prepare-audio.mjs](media/prepare-audio.mjs) | 원본 WAV와 필요 시 출력 경로 전달. 원본 이용 조건 별도 확인 |
 
-예: `node scripts/media/prepare-audio.mjs <source.wav> [destination.wav]`
+예: `node tools/media/prepare-audio.mjs <source.wav> [destination.wav]`
 
 ## 검사 결과를 읽을 때
 
@@ -46,4 +59,4 @@
 - 내장 대사 검사와 모의 API 검사는 실제 Gemini 응답 품질 평가가 아닙니다.
 - 의존성 검사는 알려진 감사 결과와 기존 패치 검증이며 전체 보안 감사가 아닙니다.
 
-[운영·복구](../docs/operations/OPERATIONS.md) · [보안 정책](../SECURITY.md)
+[운영·복구](../docs/operations/OPERATIONS.md) · [보안 정책](../.github/SECURITY.md)

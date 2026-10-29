@@ -20,4 +20,4 @@ overrides:
   'satori@<0.33.5': 0.33.5
   'fflate@>=0.7.0 <0.7.5': 0.7.5
 patchedDependencies:
-  image-size@2.0.2: patches/image-size@2.0.2.patch
+  image-size@2.0.2: tools/patches/image-size@2.0.2.patch

@@ -21,20 +21,20 @@
 app/         게임 화면·진행·AI API
 content/     실행 콘텐츠·스키마·과거 자료
 public/      이미지·아이콘·음원
-scripts/     콘텐츠 생성·검사·테스트·자산 도구
 docs/        게임 안내·개발 기록·운영·권리 고지
-db/          DB 정의
-drizzle/     DB 변경 이력
-.github/     자동 검증·수동 평가
+tools/       개발 설정·검사·테스트·자산 도구·패치
+drizzle/     DB 정의·변경 이력·생성 설정
 ```
+
+자동 검증·보안 정책은 `.github/`, 배포 연결은 `.openai/`에서 관리합니다. 최상위 파일의 역할은 [전체 구조](docs/development/PROJECT_STRUCTURE.md#최상위에-남긴-파일)에서 확인할 수 있습니다.
 
 | 하고 싶은 일 | 바로 가기 |
 | --- | --- |
 | 게임 이해 | [공개 데모 안내](docs/game/PUBLIC_DEMO.md) |
 | 개발 과정 보기 | [문제 해결 기록](docs/development/DEVELOPMENT_JOURNEY.md) |
 | 파일·콘텐츠 찾기 | [전체 구조](docs/development/PROJECT_STRUCTURE.md) · [게임 코드](app/story/README.md) · [콘텐츠](content/README.md) |
-| 실행·검증하기 | [운영 안내](docs/operations/OPERATIONS.md) · [스크립트 안내](scripts/README.md) |
+| 실행·검증하기 | [운영 안내](docs/operations/OPERATIONS.md) · [개발 도구 안내](tools/README.md) |
 
 게임 기능·콘텐츠·자산은 공개 데모 v76의 소스 `7aadfed`를 기준으로 유지합니다. 문서·검증 도구·의존성은 이후 보완하며, [공개 기준](docs/game/PUBLIC_DEMO.md#확인-기준)에서 범위를 구분합니다. 영문 프로젝트 식별자는 `whatfraud`입니다.
 
-[라이선스](LICENSE.md) · [제3자·자산 고지](docs/legal/THIRD_PARTY_NOTICES.md) · [보안](SECURITY.md). 공개 데모 제공이 소스·콘텐츠 재사용 허락을 뜻하지는 않습니다.
+[라이선스](LICENSE.md) · [제3자·자산 고지](docs/legal/THIRD_PARTY_NOTICES.md) · [보안](.github/SECURITY.md). 공개 데모 제공이 소스·콘텐츠 재사용 허락을 뜻하지는 않습니다.

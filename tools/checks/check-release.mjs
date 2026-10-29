@@ -23,7 +23,7 @@ const route=await readFile('app/api/ai-chat/route.ts','utf8');
 for(const guard of ['reserveSharedBudget','validateRequestEnvelope','readBoundedBody','getScriptedReply','validateAiReply','MAX_PROVIDER_CONCURRENCY','AbortController','AI_CASE_LIMITS','AI_RUN_LIMIT','validateDecisionContext'])assert.ok(route.includes(guard),guard);
 const hosting=JSON.parse(await readFile('.openai/hosting.json','utf8'));
 assert.equal(hosting.project_id,'appgprj_6a93064a0e288191ae08e88bafdd694a');assert.equal(hosting.d1,'DB');
-const live=await readFile('scripts/dialogue/evaluate-live-gemini.mjs','utf8');
+const live=await readFile('tools/dialogue/evaluate-live-gemini.mjs','utf8');
 assert.ok(live.includes('--allow-live'),'live evaluation must remain opt-in');
 const client=await readFile('app/story/story-client.tsx','utf8');
 assert.ok(client.includes('useState(false)')&&client.includes('aiAllowed'));

@@ -39,7 +39,7 @@
 ## 함께 확인할 곳
 
 - 사건 원본·생성물: [콘텐츠 지도](../../content/README.md)
-- 진행·UI·API 검사: [스크립트 지도](../../scripts/README.md#검사-선택)
+- 진행·UI·API 검사: [스크립트 지도](../../tools/README.md#검사-선택)
 - 스타일·아이콘: [globals.css](../globals.css), [app-icon.tsx](../app-icon.tsx)
 - 페이지·공유 metadata: [page.tsx](../page.tsx), [layout.tsx](../layout.tsx)
 - 구현 이유·문제 해결 과정: [개발 시행착오](../../docs/development/DEVELOPMENT_JOURNEY.md)
