@@ -4,7 +4,7 @@
 
 ## 실행과 검증
 
-Node.js 22.13 이상과 pnpm을 사용합니다. 패키지·버전의 기준은 `package.json`, `pnpm-lock.yaml`, 설치 스크립트 허용 목록은 `pnpm-workspace.yaml`입니다.
+Node.js 22.13 이상과 pnpm 11.25.0을 사용합니다. `package.json`의 packageManager와 설치 workflow에서 같은 pnpm 버전을 고정합니다. 패키지·버전의 기준은 `package.json`, `pnpm-lock.yaml`, 설치 스크립트 허용 목록은 `pnpm-workspace.yaml`입니다.
 
 ```bash
 pnpm install --frozen-lockfile
@@ -69,6 +69,7 @@ AI 실호출과 브라우저·실기기 검수는 위 자동 검사와 별개입
 | 스키마·렌더링·압축 | zod 4.6.6, satori 0.33.5, fflate 0.7.5 |
 | 설치 재현 | 수정 버전을 overrides와 lockfile에 고정, frozen-lockfile 설치 확인 |
 | Windows 감사 실행 | pnpm.cmd를 직접 실행하던 ENOENT를 고정된 cmd 실행 경로로 보완 |
+| CI 설치 도구 | pnpm 10/11의 patchedDependencies 형식 차이를 해소하도록 packageManager와 설치 workflow를 모두 11.25.0으로 고정 |
 
 공식 npm 메타데이터의 배포 버전·호환 조건과 감사의 수정 범위를 확인했습니다. Next.js·Vite 등의 근거는 [Next.js 보안 고지](https://github.com/vercel/next.js/security/advisories), [Vite 보안 고지](https://github.com/vitejs/vite/security/advisories)를 참고할 수 있습니다.
 
