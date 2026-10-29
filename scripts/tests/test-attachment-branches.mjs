@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import {createRun,transition,serializeRun,restoreRun,totalSpent} from '../app/story/engine.js';
-import {canAttach,validateStoryContext,messageAttachment,messageConsequences,friendFollowupLines} from '../app/story/one-shot.js';
+import {createRun,transition,serializeRun,restoreRun,totalSpent} from '../../app/story/engine.js';
+import {canAttach,validateStoryContext,messageAttachment,messageConsequences,friendFollowupLines} from '../../app/story/one-shot.js';
 const step=(state,type,data='')=>transition(state,{chapter:state.chapter,type,data});
 let state=createRun();
 assert.equal(canAttach(state,'recipient-note'),false);

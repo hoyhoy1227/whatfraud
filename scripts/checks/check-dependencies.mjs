@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
-await import('./test-image-parser.mjs');
+await import('../tests/test-image-parser.mjs');
 // Windows cannot launch a pnpm.cmd shim directly with spawnSync.
 // The command is fixed; no user-controlled arguments are passed to cmd.exe.
 const command=process.platform==='win32'?(process.env.ComSpec??'cmd.exe'):'pnpm';

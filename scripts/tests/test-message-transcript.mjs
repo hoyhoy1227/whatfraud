@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {appendMessageTranscript,emptyMessageMemory,messageTranscript,resetMessageMemory} from '../app/story/presentation.js';
+import {appendMessageTranscript,emptyMessageMemory,messageTranscript,resetMessageMemory} from '../../app/story/presentation.js';
 
 const first=appendMessageTranscript(emptyMessageMemory(),[
  {speaker:'나',text:'첫 메시지'},

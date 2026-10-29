@@ -28,22 +28,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
       - run: git diff --exit-code -- drizzle/
-      - run: node scripts/check-security.mjs
-      - run: node scripts/test-ai-chat.mjs
-      - run: node scripts/test-budget.mjs
-      - run: node scripts/test-story.mjs
-      - run: node scripts/test-attachment-branches.mjs
-      - run: node scripts/test-decision-messages.mjs
-      - run: node scripts/test-story-ui.mjs
-      - run: node scripts/test-message-transcript.mjs
-      - run: node scripts/test-response-report.mjs
+      - run: pnpm security:check
+      - run: pnpm test:story
+      - run: pnpm test:ui
+      - run: pnpm test:api
       - run: pnpm lint
       - if: ${{ !cancelled() }}
         run: pnpm exec tsc --noEmit
       - if: ${{ !cancelled() }}
         run: pnpm build
       - if: ${{ !cancelled() }}
-        run: node scripts/check-dependencies.mjs
+        run: pnpm dependencies:check
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: whatfraud-build

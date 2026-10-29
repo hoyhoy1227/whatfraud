@@ -1,7 +1,7 @@
 // Explicit, bounded production evaluation. Synthetic inputs only; no secrets or real user logs.
-import {narratives} from '../app/story/narrative.js';
-import {validateDecisionContext} from '../app/story/decision-message.js';
-import {validateStoryContext} from '../app/story/one-shot.js';
+import {narratives} from '../../app/story/narrative.js';
+import {validateDecisionContext} from '../../app/story/decision-message.js';
+import {validateStoryContext} from '../../app/story/one-shot.js';
 if(!process.argv.includes('--allow-live')){console.log('No live requests: pass --allow-live to authorize at most five calls.');process.exit(0);}
 const argument=(key,fallback)=>{const i=process.argv.indexOf('--'+key);return i>=0?process.argv[i+1]:fallback;};
 const url=new URL('/api/ai-chat',argument('url',process.env.GEMINI_EVAL_URL??'https://whatfraud.hoyhoy1227.chatgpt.site'));

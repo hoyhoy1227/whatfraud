@@ -1,22 +1,22 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
-import { attachmentReply, attachmentText, parseStoryReply } from '../app/story/one-shot.js';
+import { attachmentReply, attachmentText, parseStoryReply } from '../../app/story/one-shot.js';
 
-const cases = JSON.parse(await readFile(new URL('../content/generated/cases.json', import.meta.url), 'utf8'));
-const dialogueSource = await readFile(new URL('../app/ai-dialogue.ts', import.meta.url), 'utf8');
-const routeSource = await readFile(new URL('../app/api/ai-chat/route.ts', import.meta.url), 'utf8');
+const cases = JSON.parse(await readFile(new URL('../../content/generated/cases.json', import.meta.url), 'utf8'));
+const dialogueSource = await readFile(new URL('../../app/ai-dialogue.ts', import.meta.url), 'utf8');
+const routeSource = await readFile(new URL('../../app/api/ai-chat/route.ts', import.meta.url), 'utf8');
 const compile = (source) => ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
 const moduleUrl = (source) => 'data:text/javascript;base64,' + Buffer.from(compile(source)).toString('base64');
-const dialogueUrl = moduleUrl(dialogueSource.replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)));
+const dialogueUrl = moduleUrl(dialogueSource.replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../../app/story/narrative.js',import.meta.url).href)));
 const dialogue = await import(dialogueUrl);
 let serial = 0;
 async function freshRoute() {
   const source = routeSource
     .replace("import { reserveSharedBudget } from '../ai-budget';", "const reserveSharedBudget = async () => globalThis.__budgetOutcome ?? 'allowed';")
     .replace("'../../ai-dialogue'", JSON.stringify(dialogueUrl))
-    .replace("'../../story/one-shot.js'",JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href))
-    .replace("'../../story/decision-message.js'",JSON.stringify(new URL('../app/story/decision-message.js',import.meta.url).href))
+    .replace("'../../story/one-shot.js'",JSON.stringify(new URL('../../app/story/one-shot.js',import.meta.url).href))
+    .replace("'../../story/decision-message.js'",JSON.stringify(new URL('../../app/story/decision-message.js',import.meta.url).href))
     .replace("import { cases } from '../../game-data';", 'const cases = ' + JSON.stringify(cases) + ';');
   return import(moduleUrl(source) + '#' + serial++);
 }
@@ -202,7 +202,7 @@ try{
  globalThis.fetch=originalFetch;Date.now=originalNow;delete globalThis.__budgetOutcome;
 }
 async function testClientCancellation() {
-  const {ReplyGate}=await import('../app/story/reply-gate.js');
+  const {ReplyGate}=await import('../../app/story/reply-gate.js');
   for(const context of ['block','app-switch','chapter','pause','unmount','rewind']){
     const gate=new ReplyGate();let release,requests=0,accepted=0,signal;
     const pending=new Promise(resolve=>{release=resolve;});

@@ -3,16 +3,16 @@ import {readFile} from 'node:fs/promises';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import ts from 'typescript';
-import * as engine from '../app/story/engine.js';
-import * as presentation from '../app/story/presentation.js';
+import * as engine from '../../app/story/engine.js';
+import * as presentation from '../../app/story/presentation.js';
 let source=await readFile('app/story/panels.tsx','utf8');
-const reportSource=(await readFile('app/story/analysis-report.tsx','utf8')).replace("'./response-report.js'",JSON.stringify(new URL('../app/story/response-report.js',import.meta.url).href)).replace("'./engine'",JSON.stringify(new URL('../app/story/engine.js',import.meta.url).href));
+const reportSource=(await readFile('app/story/analysis-report.tsx','utf8')).replace("'./response-report.js'",JSON.stringify(new URL('../../app/story/response-report.js',import.meta.url).href)).replace("'./engine'",JSON.stringify(new URL('../../app/story/engine.js',import.meta.url).href));
 const reportJs=ts.transpileModule(reportSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime')));
 source=source.replace("'./analysis-report'",JSON.stringify('data:text/javascript;base64,'+Buffer.from(reportJs).toString('base64')));
-source=source.replace("from './context'","from "+JSON.stringify(new URL('../app/story/context.js',import.meta.url).href));
-source=source.replace("from './one-shot'","from "+JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
-source=source.replace("from './decision-message'","from "+JSON.stringify(new URL('../app/story/decision-message.js',import.meta.url).href));
-source=source.replace("from './engine'","from "+JSON.stringify(new URL('../app/story/engine.js',import.meta.url).href));
+source=source.replace("from './context'","from "+JSON.stringify(new URL('../../app/story/context.js',import.meta.url).href));
+source=source.replace("from './one-shot'","from "+JSON.stringify(new URL('../../app/story/one-shot.js',import.meta.url).href));
+source=source.replace("from './decision-message'","from "+JSON.stringify(new URL('../../app/story/decision-message.js',import.meta.url).href));
+source=source.replace("from './engine'","from "+JSON.stringify(new URL('../../app/story/engine.js',import.meta.url).href));
 const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime')));
 const ui=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
 const noop=()=>{};
@@ -50,7 +50,7 @@ assert.ok(messageClient.includes('자유답변(개인정보는 입력하지 마�
 assert.ok(client.includes("dialog==='ai-choice'")&&client.includes('준비된 답장으로 시작'));
 assert.ok(client.includes('scheduleMessage')&&client.includes('visibleCount')&&client.includes('대화 바로 보기'));
 assert.ok(messageClient.includes("inputMode:'story-message'")&&messageClient.includes('준비된 메시지'),'free failures are explicit');
-const {scheduleMessage,messageDelay}=await import('../app/story/message-pacing.js');
+const {scheduleMessage,messageDelay}=await import('../../app/story/message-pacing.js');
 assert.ok(messageDelay('짧은 메시지')>=650);
 assert.ok(messageDelay('긴 메시지'.repeat(100))<=1600);
 assert.equal(messageDelay('문장',true),0);
@@ -76,7 +76,7 @@ assert.ok(comparison.includes('420,000원'));
 assert.ok(client.includes('messageWindow')&&client.includes('conversationTimeline'));
 assert.ok(!client.includes('activeCase.dialogue?.quickQuestions.map'),'reply choices are scene-bound');
 
-const n=await import('../app/story/narrative.js');
+const n=await import('../../app/story/narrative.js');
 for(const known of [false,true]){
  const profile=renderToStaticMarkup(createElement(ui.ContactProfile,{profile:n.contactProfile(0,known),blocked:!known,onClose:noop,onChat:noop,onCall:noop}));
  assert.ok(profile.includes(known?'내 연락처에 저장됨':'친구로 등록되지 않음'));
@@ -93,9 +93,9 @@ assert.ok(!client.includes('준호에게 오늘 일을 말하기'));
 assert.ok(client.includes('StoryMessage')&&client.includes('visualViewport')&&client.includes('openProfile'));
 assert.ok(!client.slice(client.indexOf("dialog==='reply'?")).includes('<textarea'));
 
-let messageSource=messageClient.replace("from './engine'","from "+JSON.stringify(new URL('../app/story/engine.js',import.meta.url).href)).replace("from './presentation'","from "+JSON.stringify(new URL('../app/story/presentation.js',import.meta.url).href)).replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './one-shot'","from "+JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
+let messageSource=messageClient.replace("from './engine'","from "+JSON.stringify(new URL('../../app/story/engine.js',import.meta.url).href)).replace("from './presentation'","from "+JSON.stringify(new URL('../../app/story/presentation.js',import.meta.url).href)).replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './one-shot'","from "+JSON.stringify(new URL('../../app/story/one-shot.js',import.meta.url).href));
 const bubbleJs=ts.transpileModule(await readFile('app/story/chat-bubbles.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime')));
-const pickerSource=(await readFile('app/story/attachment-picker.tsx','utf8')).replace("'./one-shot'",JSON.stringify(new URL('../app/story/one-shot.js',import.meta.url).href));
+const pickerSource=(await readFile('app/story/attachment-picker.tsx','utf8')).replace("'./one-shot'",JSON.stringify(new URL('../../app/story/one-shot.js',import.meta.url).href));
 const pickerJs=ts.transpileModule(pickerSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime'))).replace("from 'react'","from "+JSON.stringify(import.meta.resolve('react')));
 messageSource=messageSource.replace("'./attachment-picker'",JSON.stringify('data:text/javascript;base64,'+Buffer.from(pickerJs).toString('base64')));
 messageSource=messageSource.replace("from './chat-bubbles'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(bubbleJs).toString('base64')));
@@ -158,8 +158,8 @@ console.log('Deferred call and in-memory transcript SSR passed.');
 // Remounting the decision composer after navigation must retain the transcript,
 // including at later stages; a reload intentionally receives empty memory.
 let decisionSource=await readFile('app/story/decision-composer.tsx','utf8');
-for(const name of ['decision-message','one-shot','narrative'])decisionSource=decisionSource.replace("from './"+name+"'","from "+JSON.stringify(new URL('../app/story/'+name+'.js',import.meta.url).href));
-decisionSource=decisionSource.replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './chat-bubbles'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(bubbleJs).toString('base64'))).replace("from './attachment-picker'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(pickerJs).toString('base64')));
+for(const name of ['decision-message','one-shot','narrative'])decisionSource=decisionSource.replace("from './"+name+"'","from "+JSON.stringify(new URL('../../app/story/'+name+'.js',import.meta.url).href));
+decisionSource=decisionSource.replace("from '../ai-dialogue'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(ts.transpileModule((await readFile('app/ai-dialogue.ts','utf8')).replaceAll("'./story/narrative.js'",JSON.stringify(new URL('../../app/story/narrative.js',import.meta.url).href)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'))).replace("from './chat-bubbles'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(bubbleJs).toString('base64'))).replace("from './attachment-picker'","from "+JSON.stringify('data:text/javascript;base64,'+Buffer.from(pickerJs).toString('base64')));
 const decisionJs=ts.transpileModule(decisionSource,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace('from "react/jsx-runtime"','from '+JSON.stringify(import.meta.resolve('react/jsx-runtime'))).replace("from 'react'","from "+JSON.stringify(import.meta.resolve('react')));
 const decisionUi=await import('data:text/javascript;base64,'+Buffer.from(decisionJs).toString('base64'));
 // Render the same boundary predicate as the main chat, across a transfer and
@@ -187,7 +187,7 @@ for(const stage of ['request','waiting','paid']){
  assert.ok(remounted.includes(memory.sent)&&remounted.includes(memory.reply));
  assert.ok(!renderToStaticMarkup(createElement(decisionUi.default,{...props,memory:decisionUi.emptyDecisionMemory()})).includes(memory.reply));
 }
-const {dinnerContext}=await import('../app/story/context.js');
+const {dinnerContext}=await import('../../app/story/context.js');
 for(const [mode,focus,expected] of [['listen','none','조언보다 들어'],['verify','contact','함께 확인']]){
  let run=engine.createRun();
  for(const [type,data] of [['resolve','paused'],['message','friend:together'],['message-style','friend:'+mode+':'+focus]])run=engine.transition(run,{type,data,chapter:0});
@@ -267,7 +267,7 @@ assert.equal(parts[1].lastPart,true);
 assert.equal(parts[1].sourceText,'첫 문장. 다음 문장?');
 assert.equal(n.messagePreview(parts.slice(0,1)),'첫 문장.');
 assert.equal(n.messagePreview([{speaker:'나',text:'확인할게.'}]),'나: 확인할게.');
-const oneShot=await import('../app/story/one-shot.js');
+const oneShot=await import('../../app/story/one-shot.js');
 assert.ok(!oneShot.peerOpening('offer').includes('추가 비용 설명'));
 assert.ok(oneShot.peerOpening('withdrawal').includes('추가 비용 설명'));
 assert.ok(oneShot.storyPrompt('peer','none',2,'offer').includes(oneShot.peerOpening('offer')));

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import * as e from '../app/story/engine.js';
-import {closureScene,closureComplete,messageStatus} from '../app/story/one-shot.js';
+import * as e from '../../app/story/engine.js';
+import {closureScene,closureComplete,messageStatus} from '../../app/story/one-shot.js';
 // Financial path fixtures explicitly decline optional conversation before advancing.
 const step=(s,type,data='')=>{
  if(type==='next'&&e.isResolved(s)&&!closureComplete(s)){
@@ -91,14 +91,14 @@ s=finish(s,'paused');assert.ok(e.recoveryContext(s).includes('참여한 적 없�
 s=e.createRun('demo');s=step(s,'advance');s=finish(s,'paused');assert.ok(e.recoveryContext(s).includes('돈을 보내지는'));
 console.log('Story tests passed: 80 path combinations, no forced loss, idempotency, verification/report gates, privacy, restore, rewind, contextual recovery.');
 
-const {budgetKey,restoreBudget}=await import('../app/story/session-budget.js');
+const {budgetKey,restoreBudget}=await import('../../app/story/session-budget.js');
 assert.notEqual(budgetKey('full'),budgetKey('demo'),'demo budget must not overwrite campaign budget');
 const used=restoreBudget({session:'test-session-0000001',counts:[1,2,1],last:12,cooldown:0},'replacement');
 assert.deepEqual(used.counts,[1,2,1]);
 assert.deepEqual(restoreBudget({session:'bad',counts:[9,9,9]},'replacement').counts,[0,0,0]);
 console.log('Separate campaign/demo budget restore passed.');
 
-const n=await import('../app/story/narrative.js');
+const n=await import('../../app/story/narrative.js');
 for(let chapter=0;chapter<3;chapter++){
  assert.ok(n.narratives[chapter].background.length>=2);
  assert.ok(n.narratives[chapter].beats.length>=5);
@@ -160,7 +160,7 @@ assert.equal(step(captured,'capture','paper-question'),captured);
 assert.ok(n.decisionChecks(captured).includes('terms-comparison'));
 console.log('Evidence gates, retained deletion and profile metadata passed.');
 
-const shot=await import('../app/story/one-shot.js');
+const shot=await import('../../app/story/one-shot.js');
 
 for(const mode of ['full','demo']){
  let run=e.createRun(mode);
@@ -189,7 +189,7 @@ for(const mode of ['full','demo']){
  assert.equal(e.transition(run,{type:'message',chapter:oldChapter,data:scene+':together'}),run,'late old response rejected');
  assert.deepEqual(e.restoreRun(e.serializeRun(run)),run);
 }
-const presentation=await import('../app/story/presentation.js');
+const presentation=await import('../../app/story/presentation.js');
 let morning=step(e.createRun(),'resolve','blocked');
 assert.ok(presentation.messageThreadVisible(morning,'friend'));
 assert.ok(!presentation.messageOpening(morning,'friend').includes('퇴근'));
@@ -199,7 +199,7 @@ assert.equal(presentation.messageThreadVisible(afternoon,'friend'),false);
 assert.equal(step(afternoon,'message','friend:attempt'),afternoon);
 assert.equal(presentation.supportReady({...afternoon,chapter:2}),false);
 assert.equal(shot.branchUseAllowed({...afternoon,chapter:2},'verify'),false);
-const context=await import('../app/story/context.js');
+const context=await import('../../app/story/context.js');
 assert.equal(afternoon.scenePage,0);
 assert.equal(afternoon.sceneEntered,false);
 const pageEvent={type:'scene-page',chapter:1,data:'0'};

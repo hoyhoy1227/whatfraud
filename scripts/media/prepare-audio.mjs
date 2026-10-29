@@ -5,7 +5,7 @@ const source=process.argv[2];
 const destination=resolve(process.argv[3]??'public/audio/main-ost.wav');
 const targetRate=32000;
 
-if(!source)throw new Error('Usage: node scripts/prepare-audio.mjs <source.wav> [destination.wav]');
+if(!source)throw new Error('Usage: node scripts/media/prepare-audio.mjs <source.wav> [destination.wav]');
 
 const input=await readFile(resolve(source));
 if(input.toString('ascii',0,4)!=='RIFF'||input.toString('ascii',8,12)!=='WAVE')throw new Error('Only RIFF/WAVE input is supported.');

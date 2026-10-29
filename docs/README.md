@@ -1,41 +1,34 @@
 # 사기방지위원회 — 문서 안내
 
-목적: 공개 게임 설명, 개발 기록, 운영 절차와 권리 문서를 용도별로 찾을 수 있게 안내합니다. 게임 소개는 [저장소 README](../README.md)에서 시작합니다.
+게임 소개는 [저장소 README](../README.md), 세부 문서는 아래 목적별 안내에서 시작합니다.
 
-## 목적별 읽기
+## 먼저 고르기
 
-| 목적 | 문서 | 다루는 내용 |
+| 목적 | 읽는 순서 |
+| --- | --- |
+| 게임을 이해하고 싶어요 | [공개 데모 안내](game/PUBLIC_DEMO.md) |
+| 문제 해결 과정을 보고 싶어요 | [개발 시행착오](development/DEVELOPMENT_JOURNEY.md) → [남은 과제](development/ROADMAP.md) |
+| 코드를 수정하고 싶어요 | [전체 구조](development/PROJECT_STRUCTURE.md) → [게임 코드](../app/story/README.md) / [콘텐츠](../content/README.md) / [스크립트](../scripts/README.md) |
+| 실행·검증·배포를 관리해요 | [운영](operations/OPERATIONS.md) → [보안](../SECURITY.md) |
+| 권리·출처를 확인해요 | [라이선스](../LICENSE.md) → [제3자·자산 고지](legal/THIRD_PARTY_NOTICES.md) |
+
+## 문서 지도
+
+| 폴더 | 문서 | 담당 내용 |
 | --- | --- | --- |
-| 시작하기 | [README](../README.md), [실행·검증](operations/OPERATIONS.md#실행과-검증) | 공개 데모 진입, 개발 환경과 검사 |
-| 게임 이해 | [공개 데모 안내](game/PUBLIC_DEMO.md) | 체험 흐름·앱·첨부·보고서·저장·공개 기준 |
-| 개발/구조 | [프로젝트 구조](development/PROJECT_STRUCTURE.md) | 진입점과 콘텐츠 빌드의 파일 지도 |
-| 개발/구조 | [개발 시행착오](development/DEVELOPMENT_JOURNEY.md) | 문제·원인·해결·결과와 근거 |
-| 개발/구조 | [남은 과제](development/ROADMAP.md), [UI 검수](development/UI_REVIEW.md) | 범위·완료 조건·검수 기록 |
-| 운영/권리 | [운영](operations/OPERATIONS.md), [보안](../SECURITY.md) | AI·배포·복구·검증 및 제보 |
-| 운영/권리 | [라이선스](../LICENSE.md), [제3자·자산 고지](legal/THIRD_PARTY_NOTICES.md) | 저작권·이용 조건·출처 기록 |
+| game | [PUBLIC_DEMO](game/PUBLIC_DEMO.md) | 체험 흐름·기능·저장·공개 버전 |
+| development | [PROJECT_STRUCTURE](development/PROJECT_STRUCTURE.md) | 전체 폴더·실행 연결 |
+| development | [DEVELOPMENT_JOURNEY](development/DEVELOPMENT_JOURNEY.md) | 문제·원인·해결·결과 |
+| development | [ROADMAP](development/ROADMAP.md) | 미완료 과제·완료 조건·유형 근거 |
+| development | [UI_REVIEW](development/UI_REVIEW.md) | 화면 개선·검수 기록 |
+| operations | [OPERATIONS](operations/OPERATIONS.md) | 실행·검사·AI·배포·복구 |
+| legal | [THIRD_PARTY_NOTICES](legal/THIRD_PARTY_NOTICES.md) | 의존성·이미지·음원 출처 |
 
-## 문서 위치
+README·LICENSE·SECURITY는 저장소 루트에 둡니다. 소스 폴더의 README는 그 폴더의 파일을 찾는 안내이며, 기능 설명·개발 기록·운영 절차의 본문은 위 문서 한 곳에서 관리합니다.
 
-```text
-README.md                       방문자용 소개
-LICENSE.md                      프로젝트 이용 조건
-SECURITY.md                     보안 제보와 방어 범위
-docs/
-  README.md                     문서 안내
-  game/PUBLIC_DEMO.md            실제 공개 체험
-  development/
-    PROJECT_STRUCTURE.md        파일·데이터 흐름
-    DEVELOPMENT_JOURNEY.md      문제 해결 과정
-    ROADMAP.md                  남은 과제·유형 근거
-    UI_REVIEW.md                UI 개선·검수 기록
-  operations/OPERATIONS.md       실행·검증·운영
-  legal/THIRD_PARTY_NOTICES.md   외부 구성 요소·자산 출처
-```
+## 문서를 고칠 때
 
-## 편집 기준
-
-- 저장소 첫 화면과 GitHub 기본 안내에 쓰는 README·LICENSE·SECURITY는 루트에 둡니다.
-- 게임 소개는 game, 개발 기록은 development, 실행 절차는 operations, 자산 고지는 legal에서 관리합니다.
-- 경로를 바꾸면 문서 링크와 콘텐츠 검수 메타데이터의 근거 경로를 함께 갱신합니다.
-- 삭제된 출품 준비 문서는 복원하지 않습니다. 프로젝트 이용 조건은 LICENSE, 자산 고지는 legal 문서를 따릅니다.
-- 게임 코드·import·배포 설정·기존 저작권자 표기는 문서 이동 때문에 바꾸지 않습니다.
+- 기능·공개 버전: game에서 수정합니다.
+- 구현 이유·과거 결정: DEVELOPMENT_JOURNEY, 미완료 일: ROADMAP, 검수 상태: UI_REVIEW에서 관리합니다.
+- 파일을 옮기면 링크·실행 명령·콘텐츠의 근거 경로를 함께 갱신합니다.
+- 변경 후 `pnpm docs:check`를 실행합니다.

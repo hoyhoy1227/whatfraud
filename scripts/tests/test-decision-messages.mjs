@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import {createRun,transition,serializeRun,restoreRun,totalSpent} from '../app/story/engine.js';
-import {narratives} from '../app/story/narrative.js';
-import {AI_RUN_LIMIT,AI_CASE_LIMITS,decisionAvailable,decisionConsequence,validateDecisionContext,parseDecisionReply,decisionReplyIssue} from '../app/story/decision-message.js';
+import {createRun,transition,serializeRun,restoreRun,totalSpent} from '../../app/story/engine.js';
+import {narratives} from '../../app/story/narrative.js';
+import {AI_RUN_LIMIT,AI_CASE_LIMITS,decisionAvailable,decisionConsequence,validateDecisionContext,parseDecisionReply,decisionReplyIssue} from '../../app/story/decision-message.js';
 assert.equal(AI_RUN_LIMIT,5);assert.deepEqual(AI_CASE_LIMITS,[2,2,1]);
 let state=createRun();const step=(type,data='')=>{state=transition(state,{type,data,chapter:state.chapter});};
 step('advance');step('inspect','familiar-request:recipient');
@@ -16,7 +16,7 @@ assert.equal(parseDecisionReply('{"reply":"계정 정보를 다시 설명할게.
 assert.equal(parseDecisionReply('{"reply":"그 이름이라고? 내 이름과 다르네.","reaction":"share"}').reaction,'share');
 assert.equal(validateDecisionContext({caseId:'familiar-request',sceneId:'familiar-check',stageId:'paid',resolved:false,joined:false,attachment:'none',choices:[],checks:[]}),false);
 console.log('Decision message guards passed.');
-const {friendIdentityFallback}=await import('../app/story/one-shot.js');
+const {friendIdentityFallback}=await import('../../app/story/one-shot.js');
 assert.match(friendIdentityFallback({supportMode:'records',reply:'내 이름으로 온 건데 받는 곳이 다르다니 이상하네. 보낸 기록 같이 확인해 보자.'},'recipient-note'),/내가 결제해 달라고 한 곳이 아니야/);
 assert.equal(friendIdentityFallback({supportMode:'verify',reply:'그 계정은 내가 아니야. 알려줘서 고마워.'},'account-profile'),null);
 assert.equal(friendIdentityFallback({supportMode:'listen',reply:'응, 지금은 그냥 들을게.'},'recipient-note'),null);

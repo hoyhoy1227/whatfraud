@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import {createRun,transition,chapters,serializeRun,restoreRun} from '../app/story/engine.js';
-import {buildResponseReport} from '../app/story/response-report.js';
+import {createRun,transition,chapters,serializeRun,restoreRun} from '../../app/story/engine.js';
+import {buildResponseReport} from '../../app/story/response-report.js';
 const act=(s,type,data='')=>transition(s,{type,chapter:s.chapter,data});
 let state=createRun();
 assert.equal(buildResponseReport(state).cases.length,0);
